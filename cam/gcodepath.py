@@ -40,6 +40,7 @@ from .pattern import *
 from .polygon_utils_cam import *
 from .image_utils import *
 from .nc import iso
+from .opencamlib.opencamlib import *
 
 
 def pointonline(a, b, c, tolerence):
