@@ -63,7 +63,6 @@
 #############################################################################
 import math
 import sys
-import getopt
 
 TOLERANCE = 1e-9
 BIG_FLOAT = 1e38
@@ -511,7 +510,7 @@ class Edge(object):
     LE = 0  # left end indice --> edge.ep[Edge.LE]
     RE = 1  # right end indice
     EDGE_NUM = 0
-    DELETED = {}  # marker value
+    # DELETED = {}  # marker value
 
     def __init__(self):
         self.a = 0.0  # equation of the line a*x+b*y = c

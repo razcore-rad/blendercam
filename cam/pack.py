@@ -19,16 +19,17 @@
 #
 # ***** END GPL LICENCE BLOCK *****
 
-import bpy
-from . import utils, simple, polygon_utils_cam
-import shapely
-from shapely import geometry as sgeometry
-from shapely import affinity, prepared
-from shapely import speedups
-import random, time
-import mathutils
-from mathutils import Vector
+import random
+import time
 
+import bpy
+import mathutils
+import shapely  # type: ignore
+from shapely import affinity
+from shapely import geometry as sgeometry
+from shapely import prepared, speedups
+
+from . import polygon_utils_cam, simple, utils
 
 # this algorithm takes all selected curves,
 # converts them to polygons,
@@ -43,8 +44,8 @@ def srotate(s, r, x, y):
     ncoords = []
     e = mathutils.Euler((0, 0, r))
     for p in s.exterior.coords:
-        v1 = Vector((p[0], p[1], 0))
-        v2 = Vector((x, y, 0))
+        v1 = mathutils.Vector((p[0], p[1], 0))
+        v2 = mathutils.Vector((x, y, 0))
         v = v1 - v2
         v.rotate(e)
         ncoords.append((v[0], v[1]))
@@ -69,8 +70,8 @@ def packCurves():
     polyfield = []  # in this, position, rotation, and actual poly will be stored.
     for ob in bpy.context.selected_objects:
         simple.activate(ob)
-        bpy.ops.object.make_single_user(type='SELECTED_OBJECTS')
-        bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
+        bpy.ops.object.make_single_user(type="SELECTED_OBJECTS")
+        bpy.ops.object.origin_set(type="ORIGIN_GEOMETRY")
         z = ob.location.z
         bpy.ops.object.location_clear()
         bpy.ops.object.rotation_clear()
@@ -91,7 +92,7 @@ def packCurves():
     rotchange = rotate_angle  # in radians
 
     xmin, ymin, xmax, ymax = polyfield[0][2].bounds
-    if direction == 'X':
+    if direction == "X":
         mindist = -xmin
     else:
         mindist = -ymin
@@ -105,10 +106,10 @@ def packCurves():
         porig = pf[2]
         placed = False
         xmin, ymin, xmax, ymax = p.bounds
-        if direction == 'X':
+        if direction == "X":
             x = mindist
             y = -ymin
-        if direction == 'Y':
+        if direction == "Y":
             x = -xmin
             y = mindist
 
@@ -129,15 +130,21 @@ def packCurves():
             xmin, ymin, xmax, ymax = ptrans.bounds
             # print(iter,p.bounds)
 
-            if xmin > 0 and ymin > 0 and (
-                    (direction == 'Y' and xmax < sheetsizex) or (direction == 'X' and ymax < sheetsizey)):
+            if (
+                xmin > 0
+                and ymin > 0
+                and (
+                    (direction == "Y" and xmax < sheetsizex)
+                    or (direction == "X" and ymax < sheetsizey)
+                )
+            ):
                 if not allpoly.intersects(ptrans):
                     # we do more good solutions, choose best out of them:
                     hits += 1
                     if best is None:
                         best = [x, y, rot, xmax, ymax]
                         besthit = hits
-                    if direction == 'X':
+                    if direction == "X":
                         if xmax < best[3]:
                             best = [x, y, rot, xmax, ymax]
                             besthit = hits
@@ -146,7 +153,8 @@ def packCurves():
                         besthit = hits
 
             if hits >= 15 or (
-                    itera > 20000 and hits > 0):  # here was originally more, but 90% of best solutions are still 1
+                itera > 20000 and hits > 0
+            ):  # here was originally more, but 90% of best solutions are still 1
                 placed = True
                 pf[3].location.x = best[0]
                 pf[3].location.y = best[1]
@@ -171,13 +179,13 @@ def packCurves():
                 # cleanup allpoly
                 print(itera, hits, besthit)
             if not placed:
-                if direction == 'Y':
+                if direction == "Y":
                     x += shift
                     mindist = y
                     if xmax + shift > sheetsizex:
                         x = x - xmin
                         y += shift
-                if direction == 'X':
+                if direction == "X":
                     y += shift
                     mindist = x
                     if ymax + shift > sheetsizey:
@@ -189,5 +197,5 @@ def packCurves():
         i += 1
     t = time.time() - t
 
-    polygon_utils_cam.shapelyToCurve('test', sgeometry.MultiPolygon(placedpolys), 0)
+    polygon_utils_cam.shapelyToCurve("test", sgeometry.MultiPolygon(placedpolys), 0)
     print(t)

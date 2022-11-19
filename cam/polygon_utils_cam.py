@@ -20,12 +20,10 @@
 # ***** END GPL LICENCE BLOCK *****
 
 import math
-import mathutils
-import curve_simplify
 
-import shapely
-from shapely.geometry import polygon as spolygon
-from shapely import geometry as sgeometry
+import curve_simplify  # type: ignore
+import mathutils
+import shapely  # type: ignore
 
 SHAPELY = True
 
@@ -38,42 +36,50 @@ def Circle(r, np):
         c.append((v.x, v.y))
         v.rotate(e)
 
-    p = spolygon.Polygon(c)
+    p = shapely.geometry.Polygon(c)
     return p
 
 
-def shapelyRemoveDoubles(p, optimize_threshold):
-    optimize_threshold *= 0.000001
+# def shapelyRemoveDoubles(p, optimize_threshold):
+#     optimize_threshold *= 0.000001
 
-    soptions = ['distance', 'distance', 0.0, 5, optimize_threshold, 5, optimize_threshold]
-    for ci, c in enumerate(p.boundary):  # in range(0,len(p)):
+#     soptions = [
+#         "distance",
+#         "distance",
+#         0.0,
+#         5,
+#         optimize_threshold,
+#         5,
+#         optimize_threshold,
+#     ]
+#     for ci, c in enumerate(p.boundary):  # in range(0,len(p)):
 
-        veclist = []
-        for v in c:
-            veclist.append(mathutils.Vector((v[0], v[1])))
-        s = curve_simplify.simplify_RDP(veclist, soptions)
-        nc = []
-        for i in range(0, len(s)):
-            nc.append(c[s[i]])
+#         veclist = []
+#         for v in c:
+#             veclist.append(mathutils.Vector((v[0], v[1])))
+#         s = curve_simplify.simplify_RDP(veclist, soptions)
+#         nc = []
+#         for i in range(0, len(s)):
+#             nc.append(c[s[i]])
 
-        if len(nc) > 2:
-            pnew.addContour(nc, p.isHole(ci))
-        else:
-            pnew.addContour(p[ci], p.isHole(ci))
-    return pnew
+#         if len(nc) > 2:
+#             pnew.addContour(nc, p.isHole(ci))
+#         else:
+#             pnew.addContour(p[ci], p.isHole(ci))
+#     return pnew
 
 
 def shapelyToMultipolygon(anydata):
-    if anydata.type == 'MultiPolygon':
+    if anydata.type == "MultiPolygon":
         return anydata
-    elif anydata.type == 'Polygon':
+    elif anydata.type == "Polygon":
         if not anydata.is_empty:
             return shapely.geometry.MultiPolygon([anydata])
         else:
-            return sgeometry.MultiPolygon()
+            return shapely.geometry.MultiPolygon()
     else:
-        print(anydata.type, 'shapely conversion aborted')
-        return sgeometry.MultiPolygon()
+        print(anydata.type, "shapely conversion aborted")
+        return shapely.geometry.MultiPolygon()
 
 
 def shapelyToCoords(anydata):
@@ -83,7 +89,7 @@ def shapelyToCoords(anydata):
     # print(p.geom_type)
     if p.is_empty:
         return seq
-    elif p.type == 'Polygon':
+    elif p.type == "Polygon":
 
         # print('polygon')
         clen = len(p.exterior.coords)
@@ -92,7 +98,7 @@ def shapelyToCoords(anydata):
         # print(len(p.interiors))
         for interior in p.interiors:
             seq.append(interior.coords)
-    elif p.type == 'MultiPolygon':
+    elif p.type == "MultiPolygon":
         clen = 0
         seq = []
         for sp in p.geoms:
@@ -101,17 +107,17 @@ def shapelyToCoords(anydata):
             for interior in sp.interiors:
                 seq.append(interior.coords)
 
-    elif p.type == 'MultiLineString':
+    elif p.type == "MultiLineString":
         seq = []
         for linestring in p.geoms:
             seq.append(linestring.coords)
-    elif p.type == 'LineString':
+    elif p.type == "LineString":
         seq = []
         seq.append(p.coords)
 
-    elif p.type == 'MultiPoint':
+    elif p.type == "MultiPoint":
         return
-    elif p.type == 'GeometryCollection':
+    elif p.type == "GeometryCollection":
         # print(dir(p))
         # print(p.geometryType, p.geom_type)
         clen = 0
@@ -127,8 +133,10 @@ def shapelyToCoords(anydata):
 
 
 def shapelyToCurve(name, p, z):
-    import bpy, bmesh
+    import bmesh
+    import bpy
     from bpy_extras import object_utils
+
     verts = []
     edges = []
     vi = 0
@@ -139,15 +147,15 @@ def shapelyToCurve(name, p, z):
     seq = shapelyToCoords(p)
     w = 1  # weight
 
-    curvedata = bpy.data.curves.new(name=name, type='CURVE')
-    curvedata.dimensions = '3D'
+    curvedata = bpy.data.curves.new(name=name, type="CURVE")
+    curvedata.dimensions = "3D"
 
     objectdata = bpy.data.objects.new(name, curvedata)
     objectdata.location = (0, 0, 0)  # object origin
     bpy.context.collection.objects.link(objectdata)
 
     for c in seq:
-        polyline = curvedata.splines.new('POLY')
+        polyline = curvedata.splines.new("POLY")
         polyline.points.add(len(c) - 1)
         for num in range(len(c)):
             x, y = c[num][0], c[num][1]

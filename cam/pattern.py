@@ -19,16 +19,15 @@
 #
 # ***** END GPL LICENCE BLOCK *****
 
+import math
 import time
-import mathutils
-from mathutils import *
 
-from . import simple, chunk, utils, polygon_utils_cam
-from .simple import *
-from .chunk import *
-from .polygon_utils_cam import *
-from shapely import geometry as sgeometry
+import bpy
+import mathutils
 import numpy
+
+from . import simple
+from .chunk import camPathChunk, chunksRefine, parentChildDist, shapelyToChunks
 
 
 def getPathPatternParallel(o, angle):
@@ -39,22 +38,23 @@ def getPathPatternParallel(o, angle):
 
     xm = (o.max.x + o.min.x) / 2
     ym = (o.max.y + o.min.y) / 2
-    vm = Vector((xm, ym, 0))
+    vm = mathutils.Vector((xm, ym, 0))
     xdim = o.max.x - o.min.x
     ydim = o.max.y - o.min.y
     dim = (xdim + ydim) / 2.0
-    e = Euler((0, 0, angle))
+    e = mathutils.Euler((0, 0, angle))
     reverse = False
     if bpy.app.debug_value == 0:  # by default off
         # this is the original pattern method, slower, but well tested:
-        dirvect = Vector((0, 1, 0))
+        dirvect = mathutils.Vector((0, 1, 0))
         dirvect.rotate(e)
         dirvect.normalize()
         dirvect *= pathstep
-        for a in range(int(-dim / pathd),
-                       int(dim / pathd)):  # this is highly ineffective, computes path2x the area needed...
+        for a in range(
+            int(-dim / pathd), int(dim / pathd)
+        ):  # this is highly ineffective, computes path2x the area needed...
             chunk = camPathChunk([])
-            v = Vector((a * pathd, int(-dim / pathstep) * pathstep, 0))
+            v = mathutils.Vector((a * pathd, int(-dim / pathstep) * pathstep, 0))
             v.rotate(e)
             v += vm  # shifting for the rotation, so pattern rotates around middle...
             for b in range(int(-dim / pathstep), int(dim / pathstep)):
@@ -62,19 +62,31 @@ def getPathPatternParallel(o, angle):
 
                 if v.x > o.min.x and v.x < o.max.x and v.y > o.min.y and v.y < o.max.y:
                     chunk.points.append((v.x, v.y, zlevel))
-            if (reverse and o.movement_type == 'MEANDER') or (
-                    o.movement_type == 'CONVENTIONAL' and o.spindle_rotation_direction == 'CW') or (
-                    o.movement_type == 'CLIMB' and o.spindle_rotation_direction == 'CCW'):
+            if (
+                (reverse and o.movement_type == "MEANDER")
+                or (
+                    o.movement_type == "CONVENTIONAL"
+                    and o.spindle_rotation_direction == "CW"
+                )
+                or (
+                    o.movement_type == "CLIMB" and o.spindle_rotation_direction == "CCW"
+                )
+            ):
                 chunk.points.reverse()
 
             if len(chunk.points) > 0:
                 pathchunks.append(chunk)
-            if len(pathchunks) > 1 and reverse and o.parallel_step_back and not o.use_layers:
+            if (
+                len(pathchunks) > 1
+                and reverse
+                and o.parallel_step_back
+                and not o.use_layers
+            ):
                 # parallel step back - for finishing, best with climb movement, saves cutter life by going into
                 # material with climb, while using move back on the surface to improve finish
                 # (which would otherwise be a conventional move in the material)
 
-                if o.movement_type == 'CONVENTIONAL' or o.movement_type == 'CLIMB':
+                if o.movement_type == "CONVENTIONAL" or o.movement_type == "CLIMB":
                     pathchunks[-2].points.reverse()
                 changechunk = pathchunks[-1]
                 pathchunks[-1] = pathchunks[-2]
@@ -84,21 +96,32 @@ def getPathPatternParallel(o, angle):
         # print (chunk.points)
     else:  # alternative algorithm with numpy, didn't work as should so blocked now...
 
-        v = Vector((0, 1, 0))
+        v = mathutils.Vector((0, 1, 0))
         v.rotate(e)
-        e1 = Euler((0, 0, -math.pi / 2))
+        e1 = mathutils.Euler((0, 0, -math.pi / 2))
         v1 = v.copy()
         v1.rotate(e1)
 
-        axis_across_paths = numpy.array((numpy.arange(int(-dim / pathd), int(dim / pathd)) * pathd * v1.x + xm,
-                                         numpy.arange(int(-dim / pathd), int(dim / pathd)) * pathd * v1.y + ym,
-                                         numpy.arange(int(-dim / pathd), int(dim / pathd)) * 0))
+        axis_across_paths = numpy.array(
+            (
+                numpy.arange(int(-dim / pathd), int(dim / pathd)) * pathd * v1.x + xm,
+                numpy.arange(int(-dim / pathd), int(dim / pathd)) * pathd * v1.y + ym,
+                numpy.arange(int(-dim / pathd), int(dim / pathd)) * 0,
+            )
+        )
 
-        axis_along_paths = numpy.array((numpy.arange(int(-dim / pathstep), int(dim / pathstep)) * pathstep * v.x,
-                                        numpy.arange(int(-dim / pathstep), int(dim / pathstep)) * pathstep * v.y,
-                                        numpy.arange(int(-dim / pathstep),
-                                                     int(dim / pathstep)) * 0 + zlevel))  # rotate this first
-        progress(axis_along_paths)
+        axis_along_paths = numpy.array(
+            (
+                numpy.arange(int(-dim / pathstep), int(dim / pathstep))
+                * pathstep
+                * v.x,
+                numpy.arange(int(-dim / pathstep), int(dim / pathstep))
+                * pathstep
+                * v.y,
+                numpy.arange(int(-dim / pathstep), int(dim / pathstep)) * 0 + zlevel,
+            )
+        )  # rotate this first
+        simple.progress(axis_along_paths)
         chunks = []
         for a in range(0, len(axis_across_paths[0])):
             # progress(chunks[a,...,...].shape)
@@ -133,20 +156,27 @@ def getPathPatternParallel(o, angle):
 def getPathPattern(operation):
     o = operation
     t = time.time()
-    progress('building path pattern')
-    minx, miny, minz, maxx, maxy, maxz = o.min.x, o.min.y, o.min.z, o.max.x, o.max.y, o.max.z
+    simple.progress("building path pattern")
+    minx, miny, minz, maxx, maxy, maxz = (
+        o.min.x,
+        o.min.y,
+        o.min.z,
+        o.max.x,
+        o.max.y,
+        o.max.z,
+    )
 
     pathchunks = []
 
     zlevel = 1  # minz#this should do layers...
-    if o.strategy == 'PARALLEL':
+    if o.strategy == "PARALLEL":
         pathchunks = getPathPatternParallel(o, o.parallel_angle)
-    elif o.strategy == 'CROSS':
+    elif o.strategy == "CROSS":
 
         pathchunks.extend(getPathPatternParallel(o, o.parallel_angle))
         pathchunks.extend(getPathPatternParallel(o, o.parallel_angle - math.pi / 2.0))
 
-    elif o.strategy == 'BLOCK':
+    elif o.strategy == "BLOCK":
 
         pathd = o.dist_between_paths
         pathstep = o.dist_along_paths
@@ -163,7 +193,7 @@ def getPathPattern(operation):
         while maxxp - minxp > 0 and maxyp - minyp > 0:
 
             y = minyp
-            for a in range(ceil(minxp / pathstep), ceil(maxxp / pathstep), 1):
+            for a in range(math.ceil(minxp / pathstep), math.ceil(maxxp / pathstep), 1):
                 x = a * pathstep
                 chunk.points.append((x, y, zlevel))
 
@@ -173,7 +203,7 @@ def getPathPattern(operation):
 
             x = maxxp
 
-            for a in range(ceil(minyp / pathstep), ceil(maxyp / pathstep), 1):
+            for a in range(math.ceil(minyp / pathstep), math.ceil(maxyp / pathstep), 1):
                 y = a * pathstep
                 chunk.points.append((x, y, zlevel))
 
@@ -181,7 +211,9 @@ def getPathPattern(operation):
             chunk.points.append((maxxp, maxyp, zlevel))
 
             y = maxyp
-            for a in range(floor(maxxp / pathstep), ceil(minxp / pathstep), -1):
+            for a in range(
+                math.floor(maxxp / pathstep), math.ceil(minxp / pathstep), -1
+            ):
                 x = a * pathstep
                 chunk.points.append((x, y, zlevel))
 
@@ -189,7 +221,9 @@ def getPathPattern(operation):
             chunk.points.append((minxp, maxyp, zlevel))
 
             x = minxp
-            for a in range(floor(maxyp / pathstep), ceil(minyp / pathstep), -1):
+            for a in range(
+                math.floor(maxyp / pathstep), math.ceil(minyp / pathstep), -1
+            ):
                 y = a * pathstep
                 chunk.points.append((x, y, zlevel))
             chunk.points.append((minxp, minyp, zlevel))
@@ -197,16 +231,17 @@ def getPathPattern(operation):
             maxyp -= pathd
 
             i += 1
-        if o.movement_insideout == 'INSIDEOUT':
+        if o.movement_insideout == "INSIDEOUT":
             chunk.points.reverse()
-        if (o.movement_type == 'CLIMB' and o.spindle_rotation_direction == 'CW') or (
-                o.movement_type == 'CONVENTIONAL' and o.spindle_rotation_direction == 'CCW'):
+        if (o.movement_type == "CLIMB" and o.spindle_rotation_direction == "CW") or (
+            o.movement_type == "CONVENTIONAL" and o.spindle_rotation_direction == "CCW"
+        ):
             for si in range(0, len(chunk.points)):
                 s = chunk.points[si]
                 chunk.points[si] = (o.max.x + o.min.x - s[0], s[1], s[2])
         pathchunks = [chunk]
 
-    elif o.strategy == 'SPIRAL':
+    elif o.strategy == "SPIRAL":
         chunk = camPathChunk([])
         pathd = o.dist_between_paths
         pathstep = o.dist_along_paths
@@ -214,10 +249,10 @@ def getPathPattern(operation):
         midy = (o.max.y + o.min.y) / 2
         x = pathd / 4
         y = pathd / 4
-        v = Vector((pathd / 4, 0, 0))
+        v = mathutils.Vector((pathd / 4, 0, 0))
 
         # progress(x,y,midx,midy)
-        e = Euler((0, 0, 0))
+        e = mathutils.Euler((0, 0, 0))
         pi = math.pi
         chunk.points.append((midx + v.x, midy + v.y, zlevel))
         while midx + v.x > o.min.x or midy + v.y > o.min.y:
@@ -227,7 +262,7 @@ def getPathPattern(operation):
             e.z = 2 * pi * (pathstep / offset)
             v.rotate(e)
 
-            v.length = (v.length + pathd / (offset / pathstep))
+            v.length = v.length + pathd / (offset / pathstep)
             # progress(v.x,v.y)
             if o.max.x > midx + v.x > o.min.x and o.max.y > midy + v.y > o.min.y:
                 chunk.points.append((midx + v.x, midy + v.y, zlevel))
@@ -236,19 +271,21 @@ def getPathPattern(operation):
                 chunk = camPathChunk([])
         if len(chunk.points) > 0:
             pathchunks.append(chunk)
-        if o.movement_insideout == 'OUTSIDEIN':
+        if o.movement_insideout == "OUTSIDEIN":
             pathchunks.reverse()
         for chunk in pathchunks:
-            if o.movement_insideout == 'OUTSIDEIN':
+            if o.movement_insideout == "OUTSIDEIN":
                 chunk.points.reverse()
 
-            if (o.movement_type == 'CONVENTIONAL' and o.spindle_rotation_direction == 'CW') or (
-                    o.movement_type == 'CLIMB' and o.spindle_rotation_direction == 'CCW'):
+            if (
+                o.movement_type == "CONVENTIONAL"
+                and o.spindle_rotation_direction == "CW"
+            ) or (o.movement_type == "CLIMB" and o.spindle_rotation_direction == "CCW"):
                 for si in range(0, len(chunk.points)):
                     s = chunk.points[si]
                     chunk.points[si] = (o.max.x + o.min.x - s[0], s[1], s[2])
 
-    elif o.strategy == 'CIRCLES':
+    elif o.strategy == "CIRCLES":
 
         pathd = o.dist_between_paths
         pathstep = o.dist_along_paths
@@ -259,7 +296,7 @@ def getPathPattern(operation):
         maxr = math.sqrt(rx * rx + ry * ry)
 
         # progress(x,y,midx,midy)
-        e = Euler((0, 0, 0))
+        e = mathutils.Euler((0, 0, 0))
         pi = math.pi
         chunk = camPathChunk([])
         chunk.points.append((midx, midy, zlevel))
@@ -270,7 +307,7 @@ def getPathPattern(operation):
             r += pathd
             chunk = camPathChunk([])
             firstchunk = chunk
-            v = Vector((-r, 0, 0))
+            v = mathutils.Vector((-r, 0, 0))
             steps = 2 * pi * r / pathstep
             e.z = 2 * pi / steps
             laststepchunks = []
@@ -300,19 +337,21 @@ def getPathPattern(operation):
                 for p in currentstepchunks:
                     parentChildDist(p, ch, o)
 
-        if o.movement_insideout == 'OUTSIDEIN':
+        if o.movement_insideout == "OUTSIDEIN":
             pathchunks.reverse()
         for chunk in pathchunks:
-            if o.movement_insideout == 'OUTSIDEIN':
+            if o.movement_insideout == "OUTSIDEIN":
                 chunk.points.reverse()
-            if (o.movement_type == 'CONVENTIONAL' and o.spindle_rotation_direction == 'CW') or (
-                    o.movement_type == 'CLIMB' and o.spindle_rotation_direction == 'CCW'):
+            if (
+                o.movement_type == "CONVENTIONAL"
+                and o.spindle_rotation_direction == "CW"
+            ) or (o.movement_type == "CLIMB" and o.spindle_rotation_direction == "CCW"):
                 chunk.points.reverse()
             # for si in range(0,len(chunk.points)):
             # s=chunk.points[si]
             # chunk.points[si]=(o.max.x+o.min.x-s[0],s[1],s[2])
     # pathchunks=sortChunks(pathchunks,o)not until they get hierarchy parents!
-    elif o.strategy == 'OUTLINEFILL':
+    elif o.strategy == "OUTLINEFILL":
 
         polys = operation.silhouete
         pathchunks = []
@@ -338,14 +377,14 @@ def getPathPattern(operation):
 
                     nchunks = shapelyToChunks(p, zlevel)
 
-                    if o.movement_insideout == 'INSIDEOUT':
+                    if o.movement_insideout == "INSIDEOUT":
                         parentChildDist(lastchunks, nchunks, o)
                     else:
                         parentChildDist(nchunks, lastchunks, o)
                     pathchunks.extend(nchunks)
                     lastchunks = nchunks
                 percent = int(i / approxn * 100)
-                progress('outlining polygons ', percent)
+                simple.progress("outlining polygons ", percent)
                 i += 1
         pathchunks.reverse()
         if not o.inverse:  # dont do ambient for inverse milling
@@ -365,46 +404,57 @@ def getPathPattern(operation):
                     p = p.buffer(dist, o.circle_detail)
                     if not p.is_empty:
                         nchunks = shapelyToChunks(p, zlevel)
-                        if o.movement_insideout == 'INSIDEOUT':
+                        if o.movement_insideout == "INSIDEOUT":
                             parentChildDist(nchunks, lastchunks, o)
                         else:
                             parentChildDist(lastchunks, nchunks, o)
                         pathchunks.extend(nchunks)
                         lastchunks = nchunks
 
-        if o.movement_insideout == 'OUTSIDEIN':
+        if o.movement_insideout == "OUTSIDEIN":
             pathchunks.reverse()
 
         for chunk in pathchunks:
-            if o.movement_insideout == 'OUTSIDEIN':
+            if o.movement_insideout == "OUTSIDEIN":
                 chunk.points.reverse()
-            if (o.movement_type == 'CLIMB' and o.spindle_rotation_direction == 'CW') or (
-                    o.movement_type == 'CONVENTIONAL' and o.spindle_rotation_direction == 'CCW'):
+            if (
+                o.movement_type == "CLIMB" and o.spindle_rotation_direction == "CW"
+            ) or (
+                o.movement_type == "CONVENTIONAL"
+                and o.spindle_rotation_direction == "CCW"
+            ):
                 chunk.points.reverse()
 
         chunksRefine(pathchunks, o)
-    progress(time.time() - t)
+    simple.progress(time.time() - t)
     return pathchunks
 
 
 def getPathPattern4axis(operation):
     o = operation
     t = time.time()
-    progress('building path pattern')
-    minx, miny, minz, maxx, maxy, maxz = o.min.x, o.min.y, o.min.z, o.max.x, o.max.y, o.max.z
+    simple.progress("building path pattern")
+    minx, miny, minz, maxx, maxy, maxz = (
+        o.min.x,
+        o.min.y,
+        o.min.z,
+        o.max.x,
+        o.max.y,
+        o.max.z,
+    )
     pathchunks = []
     zlevel = 1  # minz#this should do layers...
 
     # set axes for various options, Z option is obvious nonsense now.
-    if o.rotary_axis_1 == 'X':
+    if o.rotary_axis_1 == "X":
         a1 = 0
         a2 = 1
         a3 = 2
-    if o.rotary_axis_1 == 'Y':
+    if o.rotary_axis_1 == "Y":
         a1 = 1
         a2 = 0
         a3 = 2
-    if o.rotary_axis_1 == 'Z':
+    if o.rotary_axis_1 == "Z":
         a1 = 2
         a2 = 0
         a3 = 1
@@ -415,11 +465,11 @@ def getPathPattern4axis(operation):
     radiusend = o.min.z
 
     mradius = max(radius, radiusend)
-    circlesteps = (mradius * pi * 2) / o.dist_along_paths
+    circlesteps = (mradius * math.pi * 2) / o.dist_along_paths
     circlesteps = max(4, circlesteps)
-    anglestep = 2 * pi / circlesteps
+    anglestep = 2 * math.pi / circlesteps
     # generalized rotation
-    e = Euler((0, 0, 0))
+    e = mathutils.Euler((0, 0, 0))
     e[a1] = anglestep
 
     # generalized length of the operation
@@ -428,12 +478,12 @@ def getPathPattern4axis(operation):
     steps = (maxl - minl) / o.dist_between_paths
 
     # set starting positions for cutter e.t.c.
-    cutterstart = Vector((0, 0, 0))
-    cutterend = Vector((0, 0, 0))  # end point for casting
+    cutterstart = mathutils.Vector((0, 0, 0))
+    cutterend = mathutils.Vector((0, 0, 0))  # end point for casting
 
-    if o.strategy4axis == 'PARALLELR':
+    if o.strategy4axis == "PARALLELR":
 
-        for a in range(0, floor(steps) + 1):
+        for a in range(0, math.floor(steps) + 1):
             chunk = camPathChunk([])
 
             cutterstart[a1] = o.min[a1] + a * o.dist_between_paths
@@ -445,12 +495,12 @@ def getPathPattern4axis(operation):
             cutterstart[a3] = radius
             cutterend[a3] = radiusend
 
-            for b in range(0, floor(circlesteps) + 1):
+            for b in range(0, math.floor(circlesteps) + 1):
                 # print(cutterstart,cutterend)
                 chunk.startpoints.append(cutterstart.to_tuple())
                 chunk.endpoints.append(cutterend.to_tuple())
                 rot = [0, 0, 0]
-                rot[a1] = a * 2 * pi + b * anglestep
+                rot[a1] = a * 2 * math.pi + b * anglestep
 
                 chunk.rotations.append(rot)
                 cutterstart.rotate(e)
@@ -464,18 +514,18 @@ def getPathPattern4axis(operation):
 
             pathchunks.append(chunk)
 
-    if o.strategy4axis == 'PARALLEL':
-        circlesteps = (mradius * pi * 2) / o.dist_between_paths
+    if o.strategy4axis == "PARALLEL":
+        circlesteps = (mradius * math.pi * 2) / o.dist_between_paths
         steps = (maxl - minl) / o.dist_along_paths
 
-        anglestep = 2 * pi / circlesteps
+        anglestep = 2 * math.pi / circlesteps
         # generalized rotation
-        e = Euler((0, 0, 0))
+        e = mathutils.Euler((0, 0, 0))
         e[a1] = anglestep
 
         reverse = False
 
-        for b in range(0, floor(circlesteps) + 1):
+        for b in range(0, math.floor(circlesteps) + 1):
             chunk = camPathChunk([])
             cutterstart[a2] = 0
             cutterstart[a3] = radius
@@ -488,7 +538,7 @@ def getPathPattern4axis(operation):
             cutterstart.rotate(e)
             cutterend.rotate(e)
 
-            for a in range(0, floor(steps) + 1):
+            for a in range(0, math.floor(steps) + 1):
                 cutterstart[a1] = o.min[a1] + a * o.dist_along_paths
                 cutterend[a1] = cutterstart[a1]
                 chunk.startpoints.append(cutterstart.to_tuple())
@@ -500,21 +550,28 @@ def getPathPattern4axis(operation):
             chunk.depth = radiusend - radius
             pathchunks.append(chunk)
 
-            if (reverse and o.movement_type == 'MEANDER') or (
-                    o.movement_type == 'CONVENTIONAL' and o.spindle_rotation_direction == 'CW') or (
-                    o.movement_type == 'CLIMB' and o.spindle_rotation_direction == 'CCW'):
+            if (
+                (reverse and o.movement_type == "MEANDER")
+                or (
+                    o.movement_type == "CONVENTIONAL"
+                    and o.spindle_rotation_direction == "CW"
+                )
+                or (
+                    o.movement_type == "CLIMB" and o.spindle_rotation_direction == "CCW"
+                )
+            ):
                 chunk.reverse()
 
             reverse = not reverse
 
-    if o.strategy4axis == 'HELIX':
-        print('helix')
+    if o.strategy4axis == "HELIX":
+        print("helix")
 
         a1step = o.dist_between_paths / circlesteps
 
         chunk = camPathChunk([])  # only one chunk, init here
 
-        for a in range(0, floor(steps) + 1):
+        for a in range(0, math.floor(steps) + 1):
 
             cutterstart[a1] = o.min[a1] + a * o.dist_between_paths
             cutterend[a1] = cutterstart[a1]
@@ -522,7 +579,7 @@ def getPathPattern4axis(operation):
             cutterstart[a3] = radius
             cutterend[a3] = radiusend
 
-            for b in range(0, floor(circlesteps) + 1):
+            for b in range(0, math.floor(circlesteps) + 1):
                 # print(cutterstart,cutterend)
                 cutterstart[a1] += a1step
                 cutterend[a1] += a1step
@@ -530,7 +587,7 @@ def getPathPattern4axis(operation):
                 chunk.endpoints.append(cutterend.to_tuple())
 
                 rot = [0, 0, 0]
-                rot[a1] = a * 2 * pi + b * anglestep
+                rot[a1] = a * 2 * math.pi + b * anglestep
                 chunk.rotations.append(rot)
 
                 cutterstart.rotate(e)

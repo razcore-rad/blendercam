@@ -24,8 +24,6 @@
 import bpy
 import mathutils
 import math
-import time
-from bpy.props import *
 import numpy as np
 from . import utils, simple, image_utils
 
