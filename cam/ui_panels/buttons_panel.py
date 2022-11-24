@@ -1,10 +1,10 @@
 import bpy
-import sys
+
 
 # Panel definitions
 class CAMButtonsPanel:
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
+    bl_space_type = "PROPERTIES"
+    bl_region_type = "WINDOW"
     bl_context = "render"
 
     # COMPAT_ENGINES must be defined in each subclass, external engines can add themselves here
@@ -17,9 +17,8 @@ class CAMButtonsPanel:
     def __init__(self):
         self.scene = bpy.context.scene
 
-
     def active_operation_index(self):
-        return(self.scene.cam_active_operation)
+        return self.scene.cam_active_operation
 
     def active_operation(self):
         active_op = None
@@ -28,17 +27,17 @@ class CAMButtonsPanel:
         except IndexError:
             print(f"Invalid operation index {self.active_operation_index()}")
 
-        return(active_op)
+        return active_op
 
     def operations_count(self):
-        return(len(self.scene.cam_operations))
+        return len(self.scene.cam_operations)
 
     def has_operations(self):
-        return (self.operations_count() > 0)
+        return self.operations_count() > 0
 
     def opencamlib_version(self):
         try:
-            import ocl
-            return(ocl.version())
-        except ImportError as e:
-            return
+            import ocl  # type: ignore
+            return ocl.version()
+        except ImportError:
+            pass
