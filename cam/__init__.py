@@ -21,7 +21,7 @@
 
 import math
 import shutil
-from operator import getitem
+from operator import itemgetter
 from pathlib import Path
 
 import bl_operators
@@ -637,7 +637,7 @@ def getStrategyList(scene, context):
             "Medial axis, must be used with V or ball cutter, for engraving various width shapes with a single stroke ",
         ),
     ]
-    result = sorted(result, key=getitem(1))
+    result = sorted(result, key=itemgetter(1))
     # use_experimental = bpy.context.preferences.addons["cam"].preferences.experimental
     #   if use_experimental:
     #       items.extend([('MEDIAL_AXIS', 'Medial axis - EXPERIMENTAL',

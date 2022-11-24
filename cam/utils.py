@@ -322,7 +322,7 @@ def samplePathLow(o, ch1, ch2, dosample):
     v.normalize()
 
     vref = mathutils.Vector((0, 0, 0))
-    bpath = chunk.amPathChunk([])
+    bpath = chunk.camPathChunk([])
     i = 0
     while vref.length < d:
         i += 1
