@@ -18930,5 +18930,1141 @@
       "timestamp": 1669199637082,
       "itemIds": []
     }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372109143,
+      "itemIds": [
+        "b0e5dde2-4057-c7d4-1dbd-f3c52fa3f771"
+      ]
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372110885,
+      "itemIds": []
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372112933,
+      "itemIds": [
+        "d8be1e8e-2c97-2752-28b1-845fec62c64e",
+        "eda181d0-41ac-8938-a874-7aa7d1bf392d",
+        "6dbec611-4b8e-09ac-281c-b9549070d9ca",
+        "0ad39bb9-a88e-d8fe-6659-d3def1086291",
+        "7a32579b-4b7a-f9b7-009f-e16353a5f885",
+        "246f8aa0-ed98-96d6-55f4-340bfb360441",
+        "6870739b-97a3-22f3-1e77-beac8600e8b8",
+        "873d8ea1-1740-3735-3bc6-08a858dab9ce",
+        "210698cb-01ad-6bef-df64-123a1d5a5db9",
+        "d4c22738-d6bf-2d2c-387b-e386fa448f0e",
+        "b5ac83aa-9cdf-f52f-60c6-70043a76b117",
+        "b0e5dde2-4057-c7d4-1dbd-f3c52fa3f771",
+        "1d26a021-9439-fa23-f7e3-f3a85f27d307",
+        "f4b560f7-a0e5-f183-e0b5-97eab8ebc6e6",
+        "757fcbcd-388f-0803-c6e0-9bbbcfc5eafb",
+        "9bb553e7-c028-bd36-6f73-45820fd1534a",
+        "db9a7b28-8b8b-e6db-5f11-5908614b59f2",
+        "b17cf653-d687-5673-fd74-c14cf1b08e46",
+        "91e55fee-5ff8-af15-3d5c-1d289cfb3e77",
+        "66cb6fad-57a2-642f-0db2-d817e4a26efa",
+        "26ac3e44-6d41-4491-de3a-810f0d049826",
+        "35c30e91-b5be-4b15-0bac-1a850df90f17",
+        "d35f33a9-e624-7a62-0df8-e2ca2cec1c1a",
+        "32b899f2-8b30-57e0-00f7-f545a1dc249a",
+        "a445b120-0368-ab90-0cd5-e9d0e72c63cf",
+        "67fb699d-0e6b-4a8d-e1df-b141fa5946f9",
+        "ce53a33f-0a4a-03e6-025c-3285b5462a26",
+        "ac95eab3-ae27-9a33-7afc-f9024fc193fe",
+        "95f85c08-8f9e-fdb4-9d53-81e5df696fda",
+        "3868ce43-bdfe-cd83-62be-aefceb0e03fd",
+        "b7036b1b-bb95-b045-339b-a04c15ba9ed4",
+        "c0765d44-d43f-e563-27f1-797928685adc",
+        "2261980b-4b62-4914-ae72-2f4481e4d98a",
+        "085126e9-a195-2408-ef54-8d068f7b0b88",
+        "c799eee7-bda0-c843-302e-dc0fa99f4f01"
+      ]
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372113615,
+      "itemIds": [
+        "d8be1e8e-2c97-2752-28b1-845fec62c64e",
+        "eda181d0-41ac-8938-a874-7aa7d1bf392d",
+        "6dbec611-4b8e-09ac-281c-b9549070d9ca",
+        "0ad39bb9-a88e-d8fe-6659-d3def1086291",
+        "7a32579b-4b7a-f9b7-009f-e16353a5f885",
+        "246f8aa0-ed98-96d6-55f4-340bfb360441",
+        "6870739b-97a3-22f3-1e77-beac8600e8b8",
+        "873d8ea1-1740-3735-3bc6-08a858dab9ce",
+        "210698cb-01ad-6bef-df64-123a1d5a5db9",
+        "d4c22738-d6bf-2d2c-387b-e386fa448f0e",
+        "b5ac83aa-9cdf-f52f-60c6-70043a76b117",
+        "b0e5dde2-4057-c7d4-1dbd-f3c52fa3f771",
+        "1d26a021-9439-fa23-f7e3-f3a85f27d307",
+        "f4b560f7-a0e5-f183-e0b5-97eab8ebc6e6",
+        "757fcbcd-388f-0803-c6e0-9bbbcfc5eafb",
+        "9bb553e7-c028-bd36-6f73-45820fd1534a",
+        "db9a7b28-8b8b-e6db-5f11-5908614b59f2",
+        "b17cf653-d687-5673-fd74-c14cf1b08e46",
+        "91e55fee-5ff8-af15-3d5c-1d289cfb3e77",
+        "66cb6fad-57a2-642f-0db2-d817e4a26efa",
+        "26ac3e44-6d41-4491-de3a-810f0d049826",
+        "35c30e91-b5be-4b15-0bac-1a850df90f17",
+        "d35f33a9-e624-7a62-0df8-e2ca2cec1c1a",
+        "32b899f2-8b30-57e0-00f7-f545a1dc249a",
+        "a445b120-0368-ab90-0cd5-e9d0e72c63cf",
+        "67fb699d-0e6b-4a8d-e1df-b141fa5946f9",
+        "ce53a33f-0a4a-03e6-025c-3285b5462a26",
+        "ac95eab3-ae27-9a33-7afc-f9024fc193fe",
+        "95f85c08-8f9e-fdb4-9d53-81e5df696fda",
+        "3868ce43-bdfe-cd83-62be-aefceb0e03fd",
+        "b7036b1b-bb95-b045-339b-a04c15ba9ed4",
+        "c0765d44-d43f-e563-27f1-797928685adc",
+        "2261980b-4b62-4914-ae72-2f4481e4d98a",
+        "085126e9-a195-2408-ef54-8d068f7b0b88",
+        "c799eee7-bda0-c843-302e-dc0fa99f4f01",
+        "72c28203-a479-7473-8fe4-917782ae2764"
+      ]
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372114066,
+      "itemIds": [
+        "d8be1e8e-2c97-2752-28b1-845fec62c64e",
+        "eda181d0-41ac-8938-a874-7aa7d1bf392d",
+        "6dbec611-4b8e-09ac-281c-b9549070d9ca",
+        "0ad39bb9-a88e-d8fe-6659-d3def1086291",
+        "7a32579b-4b7a-f9b7-009f-e16353a5f885",
+        "246f8aa0-ed98-96d6-55f4-340bfb360441",
+        "6870739b-97a3-22f3-1e77-beac8600e8b8",
+        "873d8ea1-1740-3735-3bc6-08a858dab9ce",
+        "210698cb-01ad-6bef-df64-123a1d5a5db9",
+        "d4c22738-d6bf-2d2c-387b-e386fa448f0e",
+        "b5ac83aa-9cdf-f52f-60c6-70043a76b117",
+        "b0e5dde2-4057-c7d4-1dbd-f3c52fa3f771",
+        "1d26a021-9439-fa23-f7e3-f3a85f27d307",
+        "f4b560f7-a0e5-f183-e0b5-97eab8ebc6e6",
+        "757fcbcd-388f-0803-c6e0-9bbbcfc5eafb",
+        "9bb553e7-c028-bd36-6f73-45820fd1534a",
+        "db9a7b28-8b8b-e6db-5f11-5908614b59f2",
+        "b17cf653-d687-5673-fd74-c14cf1b08e46",
+        "91e55fee-5ff8-af15-3d5c-1d289cfb3e77",
+        "66cb6fad-57a2-642f-0db2-d817e4a26efa",
+        "26ac3e44-6d41-4491-de3a-810f0d049826",
+        "35c30e91-b5be-4b15-0bac-1a850df90f17",
+        "d35f33a9-e624-7a62-0df8-e2ca2cec1c1a",
+        "32b899f2-8b30-57e0-00f7-f545a1dc249a",
+        "a445b120-0368-ab90-0cd5-e9d0e72c63cf",
+        "67fb699d-0e6b-4a8d-e1df-b141fa5946f9",
+        "ce53a33f-0a4a-03e6-025c-3285b5462a26",
+        "ac95eab3-ae27-9a33-7afc-f9024fc193fe",
+        "95f85c08-8f9e-fdb4-9d53-81e5df696fda",
+        "3868ce43-bdfe-cd83-62be-aefceb0e03fd",
+        "b7036b1b-bb95-b045-339b-a04c15ba9ed4",
+        "c0765d44-d43f-e563-27f1-797928685adc",
+        "2261980b-4b62-4914-ae72-2f4481e4d98a",
+        "085126e9-a195-2408-ef54-8d068f7b0b88",
+        "c799eee7-bda0-c843-302e-dc0fa99f4f01",
+        "72c28203-a479-7473-8fe4-917782ae2764",
+        "bdd13225-8c0c-35b8-370c-c8b3082fa10b"
+      ]
+    }
+  },
+  {
+    "type": "items/transform",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372118107,
+      "oldBounds": {
+        "position": {
+          "x": 415,
+          "y": 460
+        },
+        "size": {
+          "x": 830,
+          "y": 644
+        },
+        "rotation": 0
+      },
+      "newBounds": {
+        "position": {
+          "x": 415,
+          "y": 640
+        },
+        "size": {
+          "x": 830,
+          "y": 644
+        },
+        "rotation": 0
+      },
+      "itemIds": [
+        "d8be1e8e-2c97-2752-28b1-845fec62c64e",
+        "eda181d0-41ac-8938-a874-7aa7d1bf392d",
+        "6dbec611-4b8e-09ac-281c-b9549070d9ca",
+        "0ad39bb9-a88e-d8fe-6659-d3def1086291",
+        "7a32579b-4b7a-f9b7-009f-e16353a5f885",
+        "246f8aa0-ed98-96d6-55f4-340bfb360441",
+        "6870739b-97a3-22f3-1e77-beac8600e8b8",
+        "873d8ea1-1740-3735-3bc6-08a858dab9ce",
+        "210698cb-01ad-6bef-df64-123a1d5a5db9",
+        "d4c22738-d6bf-2d2c-387b-e386fa448f0e",
+        "b5ac83aa-9cdf-f52f-60c6-70043a76b117",
+        "b0e5dde2-4057-c7d4-1dbd-f3c52fa3f771",
+        "1d26a021-9439-fa23-f7e3-f3a85f27d307",
+        "f4b560f7-a0e5-f183-e0b5-97eab8ebc6e6",
+        "757fcbcd-388f-0803-c6e0-9bbbcfc5eafb",
+        "9bb553e7-c028-bd36-6f73-45820fd1534a",
+        "db9a7b28-8b8b-e6db-5f11-5908614b59f2",
+        "b17cf653-d687-5673-fd74-c14cf1b08e46",
+        "91e55fee-5ff8-af15-3d5c-1d289cfb3e77",
+        "66cb6fad-57a2-642f-0db2-d817e4a26efa",
+        "26ac3e44-6d41-4491-de3a-810f0d049826",
+        "35c30e91-b5be-4b15-0bac-1a850df90f17",
+        "d35f33a9-e624-7a62-0df8-e2ca2cec1c1a",
+        "32b899f2-8b30-57e0-00f7-f545a1dc249a",
+        "a445b120-0368-ab90-0cd5-e9d0e72c63cf",
+        "67fb699d-0e6b-4a8d-e1df-b141fa5946f9",
+        "ce53a33f-0a4a-03e6-025c-3285b5462a26",
+        "ac95eab3-ae27-9a33-7afc-f9024fc193fe",
+        "95f85c08-8f9e-fdb4-9d53-81e5df696fda",
+        "3868ce43-bdfe-cd83-62be-aefceb0e03fd",
+        "b7036b1b-bb95-b045-339b-a04c15ba9ed4",
+        "c0765d44-d43f-e563-27f1-797928685adc",
+        "2261980b-4b62-4914-ae72-2f4481e4d98a",
+        "085126e9-a195-2408-ef54-8d068f7b0b88",
+        "c799eee7-bda0-c843-302e-dc0fa99f4f01",
+        "72c28203-a479-7473-8fe4-917782ae2764",
+        "bdd13225-8c0c-35b8-370c-c8b3082fa10b"
+      ]
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372118460,
+      "itemIds": []
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372119542,
+      "itemIds": [
+        "d65255e5-ee49-d636-1bbc-dc7ac1eb7a8c"
+      ]
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372120066,
+      "itemIds": [
+        "1f82a3e3-fd9b-fd8a-9542-b41f828f93b3"
+      ]
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372120796,
+      "itemIds": [
+        "1f82a3e3-fd9b-fd8a-9542-b41f828f93b3",
+        "ec56c67d-35f1-c2e9-74a0-d6ca6281e8e3"
+      ]
+    }
+  },
+  {
+    "type": "items/paste",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372122606,
+      "json": "{\"visuals\":[{\"id\":\"ab31800f-e084-d0c7-fa47-3d4ef6b9051c\",\"renderer\":\"Button\",\"transform\":{\"position\":{\"x\":450,\"y\":123},\"size\":{\"x\":100,\"y\":30},\"rotation\":0},\"appearance\":{\"BACKGROUND_COLOR\":2434341,\"FOREGROUND_COLOR\":15790320,\"TEXT\":\"-\",\"TEXT_ALIGNMENT\":\"center\",\"FONT_SIZE\":16,\"STROKE_COLOR\":13224393,\"STROKE_THICKNESS\":1}},{\"id\":\"9b2b823c-e5ae-dd8e-60e9-009e3b075323\",\"renderer\":\"Button\",\"transform\":{\"position\":{\"x\":450,\"y\":63},\"size\":{\"x\":100,\"y\":30},\"rotation\":0},\"appearance\":{\"BACKGROUND_COLOR\":2434341,\"FOREGROUND_COLOR\":15790320,\"TEXT\":\"+\",\"TEXT_ALIGNMENT\":\"center\",\"FONT_SIZE\":16,\"STROKE_COLOR\":13224393,\"STROKE_THICKNESS\":1}}],\"groups\":[]}",
+      "offset": 50
+    }
+  },
+  {
+    "type": "items/transform",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372125198,
+      "oldBounds": {
+        "position": {
+          "x": 500,
+          "y": 143
+        },
+        "size": {
+          "x": 100,
+          "y": 90
+        },
+        "rotation": 0
+      },
+      "newBounds": {
+        "position": {
+          "x": 450,
+          "y": 183
+        },
+        "size": {
+          "x": 100,
+          "y": 90
+        },
+        "rotation": 0
+      },
+      "itemIds": [
+        "ab31800f-e084-d0c7-fa47-3d4ef6b9051c",
+        "9b2b823c-e5ae-dd8e-60e9-009e3b075323"
+      ]
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372125837,
+      "itemIds": []
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372126385,
+      "itemIds": [
+        "9b2b823c-e5ae-dd8e-60e9-009e3b075323"
+      ]
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372130341,
+      "itemIds": []
+    }
+  },
+  {
+    "type": "items/appearance",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372130349,
+      "appearance": {
+        "key": "TEXT",
+        "value": "^"
+      },
+      "force": false,
+      "itemIds": [
+        "9b2b823c-e5ae-dd8e-60e9-009e3b075323"
+      ]
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372131082,
+      "itemIds": [
+        "ab31800f-e084-d0c7-fa47-3d4ef6b9051c"
+      ]
+    }
+  },
+  {
+    "type": "items/appearance",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372133360,
+      "appearance": {
+        "key": "TEXT",
+        "value": "v"
+      },
+      "force": false,
+      "itemIds": [
+        "ab31800f-e084-d0c7-fa47-3d4ef6b9051c"
+      ]
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372134002,
+      "itemIds": []
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372134611,
+      "itemIds": [
+        "9b2b823c-e5ae-dd8e-60e9-009e3b075323"
+      ]
+    }
+  },
+  {
+    "type": "items/transform",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372137868,
+      "oldBounds": {
+        "position": {
+          "x": 450,
+          "y": 153
+        },
+        "size": {
+          "x": 100,
+          "y": 30
+        },
+        "rotation": 0
+      },
+      "newBounds": {
+        "position": {
+          "x": 450,
+          "y": 183
+        },
+        "size": {
+          "x": 100,
+          "y": 30
+        },
+        "rotation": 0
+      },
+      "itemIds": [
+        "9b2b823c-e5ae-dd8e-60e9-009e3b075323"
+      ]
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372138143,
+      "itemIds": []
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372139106,
+      "itemIds": [
+        "9b2b823c-e5ae-dd8e-60e9-009e3b075323"
+      ]
+    }
+  },
+  {
+    "type": "items/transform",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372140594,
+      "oldBounds": {
+        "position": {
+          "x": 450,
+          "y": 183
+        },
+        "size": {
+          "x": 100,
+          "y": 30
+        },
+        "rotation": 0
+      },
+      "newBounds": {
+        "position": {
+          "x": 665,
+          "y": 175
+        },
+        "size": {
+          "x": 100,
+          "y": 30
+        },
+        "rotation": 0
+      },
+      "itemIds": [
+        "9b2b823c-e5ae-dd8e-60e9-009e3b075323"
+      ]
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372141063,
+      "itemIds": [
+        "ab31800f-e084-d0c7-fa47-3d4ef6b9051c"
+      ]
+    }
+  },
+  {
+    "type": "items/transform",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372141379,
+      "oldBounds": {
+        "position": {
+          "x": 450,
+          "y": 213
+        },
+        "size": {
+          "x": 100,
+          "y": 30
+        },
+        "rotation": 0
+      },
+      "newBounds": {
+        "position": {
+          "x": 780,
+          "y": 295
+        },
+        "size": {
+          "x": 100,
+          "y": 30
+        },
+        "rotation": 0
+      },
+      "itemIds": [
+        "ab31800f-e084-d0c7-fa47-3d4ef6b9051c"
+      ]
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372141673,
+      "itemIds": []
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372142181,
+      "itemIds": [
+        "9b2b823c-e5ae-dd8e-60e9-009e3b075323"
+      ]
+    }
+  },
+  {
+    "type": "items/transform",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372148343,
+      "oldBounds": {
+        "position": {
+          "x": 665,
+          "y": 175
+        },
+        "size": {
+          "x": 100,
+          "y": 30
+        },
+        "rotation": 0
+      },
+      "newBounds": {
+        "position": {
+          "x": 450,
+          "y": 183
+        },
+        "size": {
+          "x": 100,
+          "y": 30
+        },
+        "rotation": 0
+      },
+      "itemIds": [
+        "9b2b823c-e5ae-dd8e-60e9-009e3b075323"
+      ]
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372148962,
+      "itemIds": [
+        "ab31800f-e084-d0c7-fa47-3d4ef6b9051c"
+      ]
+    }
+  },
+  {
+    "type": "items/transform",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372150765,
+      "oldBounds": {
+        "position": {
+          "x": 780,
+          "y": 295
+        },
+        "size": {
+          "x": 100,
+          "y": 30
+        },
+        "rotation": 0
+      },
+      "newBounds": {
+        "position": {
+          "x": 450,
+          "y": 213
+        },
+        "size": {
+          "x": 100,
+          "y": 30
+        },
+        "rotation": 0
+      },
+      "itemIds": [
+        "ab31800f-e084-d0c7-fa47-3d4ef6b9051c"
+      ]
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372151024,
+      "itemIds": []
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372155796,
+      "itemIds": [
+        "d8be1e8e-2c97-2752-28b1-845fec62c64e",
+        "eda181d0-41ac-8938-a874-7aa7d1bf392d",
+        "6dbec611-4b8e-09ac-281c-b9549070d9ca",
+        "0ad39bb9-a88e-d8fe-6659-d3def1086291",
+        "7a32579b-4b7a-f9b7-009f-e16353a5f885",
+        "246f8aa0-ed98-96d6-55f4-340bfb360441",
+        "6870739b-97a3-22f3-1e77-beac8600e8b8",
+        "873d8ea1-1740-3735-3bc6-08a858dab9ce",
+        "b0e5dde2-4057-c7d4-1dbd-f3c52fa3f771",
+        "db9a7b28-8b8b-e6db-5f11-5908614b59f2",
+        "b17cf653-d687-5673-fd74-c14cf1b08e46",
+        "91e55fee-5ff8-af15-3d5c-1d289cfb3e77",
+        "26ac3e44-6d41-4491-de3a-810f0d049826",
+        "35c30e91-b5be-4b15-0bac-1a850df90f17",
+        "d35f33a9-e624-7a62-0df8-e2ca2cec1c1a",
+        "32b899f2-8b30-57e0-00f7-f545a1dc249a",
+        "a445b120-0368-ab90-0cd5-e9d0e72c63cf",
+        "67fb699d-0e6b-4a8d-e1df-b141fa5946f9",
+        "ce53a33f-0a4a-03e6-025c-3285b5462a26",
+        "ac95eab3-ae27-9a33-7afc-f9024fc193fe",
+        "95f85c08-8f9e-fdb4-9d53-81e5df696fda",
+        "3868ce43-bdfe-cd83-62be-aefceb0e03fd",
+        "b7036b1b-bb95-b045-339b-a04c15ba9ed4",
+        "c0765d44-d43f-e563-27f1-797928685adc"
+      ]
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372156597,
+      "itemIds": [
+        "d8be1e8e-2c97-2752-28b1-845fec62c64e",
+        "eda181d0-41ac-8938-a874-7aa7d1bf392d",
+        "6dbec611-4b8e-09ac-281c-b9549070d9ca",
+        "0ad39bb9-a88e-d8fe-6659-d3def1086291",
+        "7a32579b-4b7a-f9b7-009f-e16353a5f885",
+        "246f8aa0-ed98-96d6-55f4-340bfb360441",
+        "6870739b-97a3-22f3-1e77-beac8600e8b8",
+        "873d8ea1-1740-3735-3bc6-08a858dab9ce",
+        "b0e5dde2-4057-c7d4-1dbd-f3c52fa3f771",
+        "db9a7b28-8b8b-e6db-5f11-5908614b59f2",
+        "b17cf653-d687-5673-fd74-c14cf1b08e46",
+        "91e55fee-5ff8-af15-3d5c-1d289cfb3e77",
+        "26ac3e44-6d41-4491-de3a-810f0d049826",
+        "35c30e91-b5be-4b15-0bac-1a850df90f17",
+        "d35f33a9-e624-7a62-0df8-e2ca2cec1c1a",
+        "32b899f2-8b30-57e0-00f7-f545a1dc249a",
+        "a445b120-0368-ab90-0cd5-e9d0e72c63cf",
+        "67fb699d-0e6b-4a8d-e1df-b141fa5946f9",
+        "ce53a33f-0a4a-03e6-025c-3285b5462a26",
+        "ac95eab3-ae27-9a33-7afc-f9024fc193fe",
+        "95f85c08-8f9e-fdb4-9d53-81e5df696fda",
+        "3868ce43-bdfe-cd83-62be-aefceb0e03fd",
+        "b7036b1b-bb95-b045-339b-a04c15ba9ed4",
+        "c0765d44-d43f-e563-27f1-797928685adc",
+        "bdd13225-8c0c-35b8-370c-c8b3082fa10b"
+      ]
+    }
+  },
+  {
+    "type": "items/transform",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372161512,
+      "oldBounds": {
+        "position": {
+          "x": 415,
+          "y": 475
+        },
+        "size": {
+          "x": 830,
+          "y": 314
+        },
+        "rotation": 0
+      },
+      "newBounds": {
+        "position": {
+          "x": 415,
+          "y": 385
+        },
+        "size": {
+          "x": 830,
+          "y": 314
+        },
+        "rotation": 0
+      },
+      "itemIds": [
+        "d8be1e8e-2c97-2752-28b1-845fec62c64e",
+        "eda181d0-41ac-8938-a874-7aa7d1bf392d",
+        "6dbec611-4b8e-09ac-281c-b9549070d9ca",
+        "0ad39bb9-a88e-d8fe-6659-d3def1086291",
+        "7a32579b-4b7a-f9b7-009f-e16353a5f885",
+        "246f8aa0-ed98-96d6-55f4-340bfb360441",
+        "6870739b-97a3-22f3-1e77-beac8600e8b8",
+        "873d8ea1-1740-3735-3bc6-08a858dab9ce",
+        "b0e5dde2-4057-c7d4-1dbd-f3c52fa3f771",
+        "db9a7b28-8b8b-e6db-5f11-5908614b59f2",
+        "b17cf653-d687-5673-fd74-c14cf1b08e46",
+        "91e55fee-5ff8-af15-3d5c-1d289cfb3e77",
+        "26ac3e44-6d41-4491-de3a-810f0d049826",
+        "35c30e91-b5be-4b15-0bac-1a850df90f17",
+        "d35f33a9-e624-7a62-0df8-e2ca2cec1c1a",
+        "32b899f2-8b30-57e0-00f7-f545a1dc249a",
+        "a445b120-0368-ab90-0cd5-e9d0e72c63cf",
+        "67fb699d-0e6b-4a8d-e1df-b141fa5946f9",
+        "ce53a33f-0a4a-03e6-025c-3285b5462a26",
+        "ac95eab3-ae27-9a33-7afc-f9024fc193fe",
+        "95f85c08-8f9e-fdb4-9d53-81e5df696fda",
+        "3868ce43-bdfe-cd83-62be-aefceb0e03fd",
+        "b7036b1b-bb95-b045-339b-a04c15ba9ed4",
+        "c0765d44-d43f-e563-27f1-797928685adc",
+        "bdd13225-8c0c-35b8-370c-c8b3082fa10b"
+      ]
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372161926,
+      "itemIds": []
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372163174,
+      "itemIds": [
+        "ab31800f-e084-d0c7-fa47-3d4ef6b9051c"
+      ]
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372165010,
+      "itemIds": [
+        "ab31800f-e084-d0c7-fa47-3d4ef6b9051c",
+        "9b2b823c-e5ae-dd8e-60e9-009e3b075323"
+      ]
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372166495,
+      "itemIds": [
+        "74cbf7fd-8075-9818-0149-fd98bdc2e2dc"
+      ]
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372174340,
+      "itemIds": []
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372175214,
+      "itemIds": [
+        "ab31800f-e084-d0c7-fa47-3d4ef6b9051c"
+      ]
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372176439,
+      "itemIds": [
+        "ab31800f-e084-d0c7-fa47-3d4ef6b9051c",
+        "9b2b823c-e5ae-dd8e-60e9-009e3b075323"
+      ]
+    }
+  },
+  {
+    "type": "items/transform",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372179500,
+      "oldBounds": {
+        "position": {
+          "x": 450,
+          "y": 198
+        },
+        "size": {
+          "x": 100,
+          "y": 60
+        },
+        "rotation": 0
+      },
+      "newBounds": {
+        "position": {
+          "x": 450,
+          "y": 168
+        },
+        "size": {
+          "x": 100,
+          "y": 60
+        },
+        "rotation": 0
+      },
+      "itemIds": [
+        "ab31800f-e084-d0c7-fa47-3d4ef6b9051c",
+        "9b2b823c-e5ae-dd8e-60e9-009e3b075323"
+      ]
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372179810,
+      "itemIds": []
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372183246,
+      "itemIds": [
+        "d8be1e8e-2c97-2752-28b1-845fec62c64e",
+        "eda181d0-41ac-8938-a874-7aa7d1bf392d",
+        "6dbec611-4b8e-09ac-281c-b9549070d9ca",
+        "0ad39bb9-a88e-d8fe-6659-d3def1086291",
+        "7a32579b-4b7a-f9b7-009f-e16353a5f885",
+        "246f8aa0-ed98-96d6-55f4-340bfb360441",
+        "6870739b-97a3-22f3-1e77-beac8600e8b8",
+        "873d8ea1-1740-3735-3bc6-08a858dab9ce",
+        "b0e5dde2-4057-c7d4-1dbd-f3c52fa3f771",
+        "db9a7b28-8b8b-e6db-5f11-5908614b59f2",
+        "b17cf653-d687-5673-fd74-c14cf1b08e46",
+        "91e55fee-5ff8-af15-3d5c-1d289cfb3e77",
+        "26ac3e44-6d41-4491-de3a-810f0d049826",
+        "35c30e91-b5be-4b15-0bac-1a850df90f17",
+        "d35f33a9-e624-7a62-0df8-e2ca2cec1c1a",
+        "32b899f2-8b30-57e0-00f7-f545a1dc249a",
+        "a445b120-0368-ab90-0cd5-e9d0e72c63cf",
+        "67fb699d-0e6b-4a8d-e1df-b141fa5946f9",
+        "ce53a33f-0a4a-03e6-025c-3285b5462a26",
+        "ac95eab3-ae27-9a33-7afc-f9024fc193fe",
+        "95f85c08-8f9e-fdb4-9d53-81e5df696fda",
+        "3868ce43-bdfe-cd83-62be-aefceb0e03fd",
+        "b7036b1b-bb95-b045-339b-a04c15ba9ed4",
+        "c0765d44-d43f-e563-27f1-797928685adc"
+      ]
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372183825,
+      "itemIds": [
+        "d8be1e8e-2c97-2752-28b1-845fec62c64e",
+        "eda181d0-41ac-8938-a874-7aa7d1bf392d",
+        "6dbec611-4b8e-09ac-281c-b9549070d9ca",
+        "0ad39bb9-a88e-d8fe-6659-d3def1086291",
+        "7a32579b-4b7a-f9b7-009f-e16353a5f885",
+        "246f8aa0-ed98-96d6-55f4-340bfb360441",
+        "6870739b-97a3-22f3-1e77-beac8600e8b8",
+        "873d8ea1-1740-3735-3bc6-08a858dab9ce",
+        "b0e5dde2-4057-c7d4-1dbd-f3c52fa3f771",
+        "db9a7b28-8b8b-e6db-5f11-5908614b59f2",
+        "b17cf653-d687-5673-fd74-c14cf1b08e46",
+        "91e55fee-5ff8-af15-3d5c-1d289cfb3e77",
+        "26ac3e44-6d41-4491-de3a-810f0d049826",
+        "35c30e91-b5be-4b15-0bac-1a850df90f17",
+        "d35f33a9-e624-7a62-0df8-e2ca2cec1c1a",
+        "32b899f2-8b30-57e0-00f7-f545a1dc249a",
+        "a445b120-0368-ab90-0cd5-e9d0e72c63cf",
+        "67fb699d-0e6b-4a8d-e1df-b141fa5946f9",
+        "ce53a33f-0a4a-03e6-025c-3285b5462a26",
+        "ac95eab3-ae27-9a33-7afc-f9024fc193fe",
+        "95f85c08-8f9e-fdb4-9d53-81e5df696fda",
+        "3868ce43-bdfe-cd83-62be-aefceb0e03fd",
+        "b7036b1b-bb95-b045-339b-a04c15ba9ed4",
+        "c0765d44-d43f-e563-27f1-797928685adc",
+        "bdd13225-8c0c-35b8-370c-c8b3082fa10b"
+      ]
+    }
+  },
+  {
+    "type": "items/transform",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372186371,
+      "oldBounds": {
+        "position": {
+          "x": 415,
+          "y": 385
+        },
+        "size": {
+          "x": 830,
+          "y": 314
+        },
+        "rotation": 0
+      },
+      "newBounds": {
+        "position": {
+          "x": 415,
+          "y": 355
+        },
+        "size": {
+          "x": 830,
+          "y": 314
+        },
+        "rotation": 0
+      },
+      "itemIds": [
+        "d8be1e8e-2c97-2752-28b1-845fec62c64e",
+        "eda181d0-41ac-8938-a874-7aa7d1bf392d",
+        "6dbec611-4b8e-09ac-281c-b9549070d9ca",
+        "0ad39bb9-a88e-d8fe-6659-d3def1086291",
+        "7a32579b-4b7a-f9b7-009f-e16353a5f885",
+        "246f8aa0-ed98-96d6-55f4-340bfb360441",
+        "6870739b-97a3-22f3-1e77-beac8600e8b8",
+        "873d8ea1-1740-3735-3bc6-08a858dab9ce",
+        "b0e5dde2-4057-c7d4-1dbd-f3c52fa3f771",
+        "db9a7b28-8b8b-e6db-5f11-5908614b59f2",
+        "b17cf653-d687-5673-fd74-c14cf1b08e46",
+        "91e55fee-5ff8-af15-3d5c-1d289cfb3e77",
+        "26ac3e44-6d41-4491-de3a-810f0d049826",
+        "35c30e91-b5be-4b15-0bac-1a850df90f17",
+        "d35f33a9-e624-7a62-0df8-e2ca2cec1c1a",
+        "32b899f2-8b30-57e0-00f7-f545a1dc249a",
+        "a445b120-0368-ab90-0cd5-e9d0e72c63cf",
+        "67fb699d-0e6b-4a8d-e1df-b141fa5946f9",
+        "ce53a33f-0a4a-03e6-025c-3285b5462a26",
+        "ac95eab3-ae27-9a33-7afc-f9024fc193fe",
+        "95f85c08-8f9e-fdb4-9d53-81e5df696fda",
+        "3868ce43-bdfe-cd83-62be-aefceb0e03fd",
+        "b7036b1b-bb95-b045-339b-a04c15ba9ed4",
+        "c0765d44-d43f-e563-27f1-797928685adc",
+        "bdd13225-8c0c-35b8-370c-c8b3082fa10b"
+      ]
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372186999,
+      "itemIds": []
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372188303,
+      "itemIds": [
+        "ab31800f-e084-d0c7-fa47-3d4ef6b9051c"
+      ]
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372188960,
+      "itemIds": [
+        "ab31800f-e084-d0c7-fa47-3d4ef6b9051c",
+        "9b2b823c-e5ae-dd8e-60e9-009e3b075323"
+      ]
+    }
+  },
+  {
+    "type": "items/paste",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372190153,
+      "json": "{\"visuals\":[{\"id\":\"8968ad3d-f5c6-d032-8fc8-963afc0823e3\",\"renderer\":\"Button\",\"transform\":{\"position\":{\"x\":450,\"y\":183},\"size\":{\"x\":100,\"y\":30},\"rotation\":0},\"appearance\":{\"BACKGROUND_COLOR\":2434341,\"FOREGROUND_COLOR\":15790320,\"TEXT\":\"v\",\"TEXT_ALIGNMENT\":\"center\",\"FONT_SIZE\":16,\"STROKE_COLOR\":13224393,\"STROKE_THICKNESS\":1}},{\"id\":\"f6c1ef67-a2c7-e7da-5906-63042d538428\",\"renderer\":\"Button\",\"transform\":{\"position\":{\"x\":450,\"y\":153},\"size\":{\"x\":100,\"y\":30},\"rotation\":0},\"appearance\":{\"BACKGROUND_COLOR\":2434341,\"FOREGROUND_COLOR\":15790320,\"TEXT\":\"^\",\"TEXT_ALIGNMENT\":\"center\",\"FONT_SIZE\":16,\"STROKE_COLOR\":13224393,\"STROKE_THICKNESS\":1}}],\"groups\":[]}",
+      "offset": 50
+    }
+  },
+  {
+    "type": "items/transform",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372194102,
+      "oldBounds": {
+        "position": {
+          "x": 500,
+          "y": 218
+        },
+        "size": {
+          "x": 100,
+          "y": 60
+        },
+        "rotation": 0
+      },
+      "newBounds": {
+        "position": {
+          "x": 450,
+          "y": 542
+        },
+        "size": {
+          "x": 100,
+          "y": 60
+        },
+        "rotation": 0
+      },
+      "itemIds": [
+        "8968ad3d-f5c6-d032-8fc8-963afc0823e3",
+        "f6c1ef67-a2c7-e7da-5906-63042d538428"
+      ]
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372195110,
+      "itemIds": []
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372197084,
+      "itemIds": [
+        "210698cb-01ad-6bef-df64-123a1d5a5db9",
+        "d4c22738-d6bf-2d2c-387b-e386fa448f0e",
+        "b5ac83aa-9cdf-f52f-60c6-70043a76b117",
+        "1d26a021-9439-fa23-f7e3-f3a85f27d307",
+        "f4b560f7-a0e5-f183-e0b5-97eab8ebc6e6",
+        "757fcbcd-388f-0803-c6e0-9bbbcfc5eafb",
+        "9bb553e7-c028-bd36-6f73-45820fd1534a",
+        "66cb6fad-57a2-642f-0db2-d817e4a26efa",
+        "2261980b-4b62-4914-ae72-2f4481e4d98a",
+        "085126e9-a195-2408-ef54-8d068f7b0b88",
+        "c799eee7-bda0-c843-302e-dc0fa99f4f01"
+      ]
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372197699,
+      "itemIds": [
+        "210698cb-01ad-6bef-df64-123a1d5a5db9",
+        "d4c22738-d6bf-2d2c-387b-e386fa448f0e",
+        "b5ac83aa-9cdf-f52f-60c6-70043a76b117",
+        "1d26a021-9439-fa23-f7e3-f3a85f27d307",
+        "f4b560f7-a0e5-f183-e0b5-97eab8ebc6e6",
+        "757fcbcd-388f-0803-c6e0-9bbbcfc5eafb",
+        "9bb553e7-c028-bd36-6f73-45820fd1534a",
+        "66cb6fad-57a2-642f-0db2-d817e4a26efa",
+        "2261980b-4b62-4914-ae72-2f4481e4d98a",
+        "085126e9-a195-2408-ef54-8d068f7b0b88",
+        "c799eee7-bda0-c843-302e-dc0fa99f4f01",
+        "72c28203-a479-7473-8fe4-917782ae2764"
+      ]
+    }
+  },
+  {
+    "type": "items/transform",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372200352,
+      "oldBounds": {
+        "position": {
+          "x": 415,
+          "y": 812
+        },
+        "size": {
+          "x": 830,
+          "y": 300
+        },
+        "rotation": 0
+      },
+      "newBounds": {
+        "position": {
+          "x": 415,
+          "y": 722
+        },
+        "size": {
+          "x": 830,
+          "y": 300
+        },
+        "rotation": 0
+      },
+      "itemIds": [
+        "210698cb-01ad-6bef-df64-123a1d5a5db9",
+        "d4c22738-d6bf-2d2c-387b-e386fa448f0e",
+        "b5ac83aa-9cdf-f52f-60c6-70043a76b117",
+        "1d26a021-9439-fa23-f7e3-f3a85f27d307",
+        "f4b560f7-a0e5-f183-e0b5-97eab8ebc6e6",
+        "757fcbcd-388f-0803-c6e0-9bbbcfc5eafb",
+        "9bb553e7-c028-bd36-6f73-45820fd1534a",
+        "66cb6fad-57a2-642f-0db2-d817e4a26efa",
+        "2261980b-4b62-4914-ae72-2f4481e4d98a",
+        "085126e9-a195-2408-ef54-8d068f7b0b88",
+        "c799eee7-bda0-c843-302e-dc0fa99f4f01",
+        "72c28203-a479-7473-8fe4-917782ae2764"
+      ]
+    }
+  },
+  {
+    "type": "items/select",
+    "payload": {
+      "diagramId": "3870a975-ceca-6e17-bc00-6d0ef28818ab",
+      "timestamp": 1669372201222,
+      "itemIds": []
+    }
   }
 ]
