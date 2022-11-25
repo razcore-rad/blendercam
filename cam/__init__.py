@@ -34,13 +34,13 @@ from . import (curvecamcreate, curvecamequation, curvecamtools, ops, ui,
                ui_panels, utils)
 
 bl_info = {
-    "name": "CAM - gcode generation tools",
+    "name": "CAM - CNC G Code Tools",
     "author": "Vilem Novak",
     "version": (0, 9, 3),
     "blender": (2, 80, 0),
-    "location": "Properties > render",
+    "location": "Properties > Render",
     "description": "Generate machining paths for CNC",
-    "warning": "there is no warranty for the produced gcode by now",
+    "warning": "There is no warranty for the produced G code",
     "wiki_url": "https://github.com/vilemduha/blendercam/wiki",
     "tracker_url": "",
     "category": "Scene",
