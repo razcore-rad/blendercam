@@ -1,4 +1,3 @@
-
 import bpy
 from bpy.types import UIList
 from cam.ui_panels.buttons_panel import CAMButtonsPanel
@@ -45,7 +44,7 @@ class CAM_CHAINS_Panel(CAMButtonsPanel, bpy.types.Panel):
         row = layout.row()
         scene = bpy.context.scene
 
-        row.template_list("CAM_UL_chains", '', scene, "cam_chains", scene, 'cam_active_chain')
+        row.template_list("CAM_UL_chains", 'CAM_UL_chains', scene, "cam_chains", scene, 'cam_active_chain')
         col = row.column(align=True)
         col.operator("scene.cam_chain_add", icon='ADD', text="")
         col.operator("scene.cam_chain_remove", icon='REMOVE', text="")
@@ -55,7 +54,7 @@ class CAM_CHAINS_Panel(CAMButtonsPanel, bpy.types.Panel):
             row = layout.row(align=True)
 
             if chain:
-                row.template_list("CAM_UL_operations", '', chain, "operations", chain, 'active_operation')
+                row.template_list("CAM_UL_operations", 'CAM_UL_chains_operations', chain, "operations", chain, 'active_operation')
                 col = row.column(align=True)
                 col.operator("scene.cam_chain_operation_add", icon='ADD', text="")
                 col.operator("scene.cam_chain_operation_remove", icon='REMOVE', text="")
