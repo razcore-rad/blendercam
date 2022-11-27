@@ -19,17 +19,13 @@
 #
 # ***** END GPL LICENCE BLOCK *****
 import bpy
-from bpy.types import Operator, UIList
-from bpy_extras.io_utils import ImportHelper
+from bpy.types import UIList
 
-from . import gcodeimportparser
 from .ui_panels.buttons_panel import CAMButtonsPanel
 
 
 class CAM_UL_orientations(UIList):
-    def draw_item(
-        self, context, layout, data, item, icon, active_data, active_propname, index
-    ):
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         if self.layout_type in {"DEFAULT", "COMPACT"}:
 
             layout.label(text=item.name, translate=False, icon_value=icon)
@@ -168,67 +164,3 @@ class VIEW3D_PT_tools_create(bpy.types.Panel):
         layout.operator("object.curve_hatch")
         layout.operator("object.curve_gear")
         layout.operator("object.curve_flat_cone")
-
-
-# Gcode import panel---------------------------------------------------------------
-# ------------------------------------------------------------------------
-#    Panel in Object Mode
-# ------------------------------------------------------------------------
-
-
-class CustomPanel(bpy.types.Panel):
-    bl_space_type = "VIEW_3D"
-    bl_region_type = "TOOLS"
-    bl_context = "objectmode"
-    bl_label = "Import Gcode"
-    bl_idname = "OBJECT_PT_importgcode"
-
-    bl_options = {"DEFAULT_CLOSED"}
-
-    @classmethod
-    def poll(cls, context):
-        return context.mode in {
-            "OBJECT",
-            "EDIT_MESH",
-        }  # with this poll addon is visibly even when no object is selected
-
-    def draw(self, context):
-        layout = self.layout
-        scene = context.scene
-        isettings = scene.cam_import_gcode
-        layout.prop(isettings, "output")
-        layout.prop(isettings, "split_layers")
-
-        layout.prop(isettings, "subdivide")
-        col = layout.column(align=True)
-        col = col.row(align=True)
-        col.split()
-        col.label(text="Segment length")
-
-        col.prop(isettings, "max_segment_size")
-        col.enabled = isettings.subdivide
-        col.separator()
-
-        col = layout.column()
-        col.scale_y = 2.0
-        col.operator("wm.gcode_import")
-
-
-class WM_OT_gcode_import(Operator, ImportHelper):
-    """Import Gcode, travel lines don't get drawn"""
-
-    bl_idname = "wm.gcode_import"  # important since its how bpy.ops.import_test.some_data is constructed
-    bl_label = "Import Gcode"
-
-    # ImportHelper mixin class uses this
-    filename_ext = ".txt"
-
-    filter_glob: bpy.props.StringProperty(
-        default="*.*",
-        options={"HIDDEN"},
-        maxlen=255,  # Max internal buffer length, longer would be clamped.
-    )
-
-    def execute(self, context):
-        print(self.filepath)
-        return gcodeimportparser.import_gcode(context, self.filepath)

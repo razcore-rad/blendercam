@@ -421,35 +421,6 @@ class SliceObjectsSettings(bpy.types.PropertyGroup):
     )
 
 
-class import_settings(bpy.types.PropertyGroup):
-    split_layers: bpy.props.BoolProperty(
-        name="Split Layers",
-        description="Save every layer as single Objects in Collection",
-        default=False,
-    )
-    subdivide: bpy.props.BoolProperty(
-        name="Subdivide",
-        description="Only Subdivide gcode segments that are bigger than 'Segment length' ",
-        default=False,
-    )
-    output: bpy.props.EnumProperty(
-        name="output type",
-        items=(
-            ("mesh", "Mesh", "Make a mesh output"),
-            ("curve", "Curve", "Make curve output"),
-        ),
-        default="curve",
-    )
-    max_segment_size: bpy.props.FloatProperty(
-        name="",
-        description="Only Segments bigger then this value get subdivided",
-        default=0.001,
-        min=0.0001,
-        max=1.0,
-        unit="LENGTH",
-    )
-
-
 def operationValid(self, context):
     o = self
     o.changed = True
@@ -2279,7 +2250,6 @@ classes = [
     camChain,
     machineSettings,
     CamAddonPreferences,
-    import_settings,
     ui_panels.CAM_CHAINS_Panel,
     ui_panels.CAM_OPERATIONS_Panel,
     ui_panels.CAM_INFO_Panel,
@@ -2296,8 +2266,6 @@ classes = [
     ui.CAM_SLICE_Panel,
     ui.VIEW3D_PT_tools_curvetools,
     ui.VIEW3D_PT_tools_create,
-    ui.CustomPanel,
-    ui.WM_OT_gcode_import,
     ops.PathsBackground,
     ops.KillPathsBackground,
     ops.CalculatePath,
@@ -2381,8 +2349,6 @@ def register():
     )
     s.cam_machine = bpy.props.PointerProperty(type=machineSettings)
 
-    s.cam_import_gcode = bpy.props.PointerProperty(type=import_settings)
-
     s.cam_text = bpy.props.StringProperty()
     bpy.app.handlers.frame_change_pre.append(ops.timer_update)
     bpy.app.handlers.load_post.append(check_operations_on_load)
@@ -2411,7 +2377,6 @@ def unregister():
     del s.cam_operations
     del s.cam_active_operation
     del s.cam_machine
-    del s.cam_import_gcode
     del s.cam_text
     del s.cam_pack
     del s.cam_slice
