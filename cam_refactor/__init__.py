@@ -33,55 +33,189 @@ bl_info = {
 }
 
 
-EXCLUDE_PROPNAMES = {"rna_type"}
+PRECISION = 5
 
 
-class CAM_PropertyGroup(bpy.types.PropertyGroup):
-    def copy_to(self, other: bpy.types.PropertyGroup) -> None:
-        for propname in get_propnames(other):
-            self_prop = getattr(self, propname)
-            if isinstance(self_prop, bpy.types.bpy_prop_collection):
-                other_collection = getattr(other, propname)
-                other_collection.clear()
-                for prop in self_prop.values():
-                    other_prop = other_collection.add()
-                    for propname in get_propnames(other_prop):
-                        setattr(other_prop, propname, getattr(prop, propname))
+def copy(from_prop: bpy.types.Property, to_prop: bpy.types.Property, depth=0) -> None:
+    if type(from_prop) != type(to_prop):
+        return
+
+    if isinstance(from_prop, bpy.types.PropertyGroup):
+        for propname in get_propnames(to_prop, use_exclude_propnames=False):
+            from_subprop = getattr(from_prop, propname)
+            if any(
+                [
+                    isinstance(from_subprop, bpy.types.PropertyGroup),
+                    isinstance(from_subprop, bpy.types.bpy_prop_collection),
+                ]
+            ):
+                copy(from_subprop, getattr(to_prop, propname), depth + 1)
             else:
-                setattr(other, propname, self_prop)
-                if propname == "name":
-                    other.name = f"{other.name}_copy"
+                setattr(to_prop, propname, from_subprop)
+                if propname == "name" and depth == 0:
+                    to_prop.name += "_copy"
+
+    elif isinstance(from_prop, bpy.types.bpy_prop_collection):
+        to_prop.clear()
+        for from_subprop in from_prop.values():
+            copy(from_subprop, to_prop.add(), depth + 1)
 
 
-def get_propnames(props: CAM_PropertyGroup):
-    return {
-        propname
-        for propname in props.rna_type.properties.keys()
-        if propname not in EXCLUDE_PROPNAMES
-    }
+def get_propnames(props: bpy.types.PropertyGroup, use_exclude_propnames=True):
+    exclude_propnames = ["rna_type"]
+    if use_exclude_propnames:
+        exclude_propnames += getattr(props, "exclude_propnames", [])
+
+    return sorted(
+        {
+            propname
+            for propname in props.rna_type.properties.keys()
+            if propname not in exclude_propnames
+        }
+    )
 
 
-class CAM_Jobs(CAM_PropertyGroup):
-    class Operation(CAM_PropertyGroup):
+class CAM_Job(bpy.types.PropertyGroup):
+    class Operation(bpy.types.PropertyGroup):
+        class DirectionMixin(bpy.types.PropertyGroup):
+            direction: bpy.props.EnumProperty(
+                items=[
+                    ("IN_OUT", "In Out", "In Out"),
+                    ("OUT_IN", "Out In", "Out In"),
+                ],
+                name="Direction",
+            )
+
+        class DistanceAlongPathsMixin(bpy.types.PropertyGroup):
+            distance_along_paths: bpy.props.FloatProperty(
+                name="Distance Along Paths",
+                default=2e-4,
+                min=1e-5,
+                max=32,
+                precision=PRECISION,
+                unit="LENGTH",
+            )
+
+        class DistanceBetweenPathsMixin(bpy.types.PropertyGroup):
+            distance_between_paths: bpy.props.FloatProperty(
+                name="Distance Between Paths",
+                default=1e-3,
+                min=1e-5,
+                max=32,
+                precision=PRECISION,
+                unit="LENGTH",
+            )
+
+        class PathsAngleMixin(bpy.types.PropertyGroup):
+            paths_angle: bpy.props.FloatProperty(
+                name="Paths Angle",
+                default=0,
+                min=-360,
+                max=360,
+                precision=0,
+                subtype="ANGLE",
+                unit="ROTATION",
+            )
+
+        class SourceMixin(bpy.types.PropertyGroup):
+            exclude_propnames = [
+                "name",
+                "source_type",
+                "mesh_source",
+                "collection_source",
+            ]
+
+            source_type: bpy.props.EnumProperty(
+                items=[
+                    ("MESH", "Mesh", "Object Data Source", "MESH_DATA", 0),
+                    (
+                        "COLLECTION",
+                        "Collection",
+                        "Collection Data Source",
+                        "OUTLINER_COLLECTION",
+                        1,
+                    ),
+                ],
+                name="Source Type",
+            )
+            mesh_source: bpy.props.PointerProperty(type=bpy.types.Mesh, name="Source")
+            collection_source: bpy.props.PointerProperty(
+                type=bpy.types.Collection, name="Source"
+            )
+
+        class BlockStrategy(
+            DirectionMixin,
+            DistanceAlongPathsMixin,
+            DistanceBetweenPathsMixin,
+            SourceMixin,
+        ):
+            pass
+
+        class CarveProjectStrategy(DistanceAlongPathsMixin, SourceMixin):
+            pass
+
+        class CirclesStrategy(
+            DirectionMixin,
+            DistanceAlongPathsMixin,
+            DistanceBetweenPathsMixin,
+            SourceMixin,
+        ):
+            pass
+
+        class CrossStrategy(
+            DistanceAlongPathsMixin,
+            DistanceBetweenPathsMixin,
+            PathsAngleMixin,
+            SourceMixin,
+        ):
+            pass
+
         name: bpy.props.StringProperty(default="Operation")
-        enabled: bpy.props.BoolProperty(default=True)
-        source_type: bpy.props.EnumProperty(
-            items=[
-                ("OBJECT", "Object", "Object Data Source", "OBJECT_DATA", 0),
-                (
-                    "COLLECTION",
-                    "Collection",
-                    "Collection Data Source",
-                    "OUTLINER_COLLECTION",
-                    1,
-                ),
-            ],
-            name="Source Type",
+        is_hidden: bpy.props.BoolProperty(default=False)
+        use_modifiers: bpy.props.BoolProperty(default=True)
+
+        strategy_type_items = [
+            ("BLOCK", "Block", "Block path"),
+            (
+                "CARVE_PROJECT",
+                "Carve Project",
+                "Project a curve object on a 3D surface",
+            ),
+            ("CIRCLES", "Circles", "Circles path"),
+            ("CROSS", "Cross", "Cross paths"),
+            ("CURVE_TO_PATH", "Curve to Path", "Convert a curve object to G-code path"),
+            ("DRILL", "Drill", "Drill"),
+            (
+                "MEDIAL_AXIS",
+                "Medial axis",
+                "Medial axis, must be used with V or ball cutter, for engraving various width shapes with a single stroke",
+            ),
+            (
+                "OUTLINE_FILL",
+                "Outline Fill",
+                "Detect outline and fill it with paths as pocket then sample these paths on the 3D surface",
+            ),
+            ("POCKET", "Pocket", "Pocket"),
+            ("PROFILE", "Profile", "Profile cutout"),
+            ("PARALLEL", "Parallel", "Parallel lines at any angle"),
+            ("SPIRAL", "Spiral", "Spiral path"),
+            (
+                "WATERLINE_ROUGHING",
+                "Waterline Roughing",
+                "Roughing below ZERO. Z is always below ZERO",
+            ),
+        ]
+        strategy_type: bpy.props.EnumProperty(
+            items=strategy_type_items, name="Strategy Type"
         )
-        source: bpy.props.StringProperty(name="Source")
+
+        block_strategy: bpy.props.PointerProperty(type=BlockStrategy)
+        carve_project_strategy: bpy.props.PointerProperty(type=CarveProjectStrategy)
+        circles_strategy: bpy.props.PointerProperty(type=CirclesStrategy)
+        cross_strategy: bpy.props.PointerProperty(type=CrossStrategy)
 
     name: bpy.props.StringProperty(name="Name", default="Job")
-    enabled: bpy.props.BoolProperty(default=True)
+    is_hidden: bpy.props.BoolProperty(default=False)
     do_simplify: bpy.props.BoolProperty(name="Simplify G-code", default=True)
     do_export: bpy.props.BoolProperty(name="Export on compute", default=False)
     count: bpy.props.IntVectorProperty(
@@ -132,7 +266,7 @@ class CAM_OT_Action(bpy.types.Operator):
         collection = getattr(dataptr, propname)
         collection.add()
         setattr(dataptr, active_propname, len(collection) - 1)
-        if propname.startswith("cam"):
+        if propname == "cam_jobs":
             return self.execute_add(
                 dataptr.cam_jobs[dataptr.cam_job_active_index],
                 "operations",
@@ -146,9 +280,7 @@ class CAM_OT_Action(bpy.types.Operator):
         if len(collection) == 0:
             return result
 
-        current_props = collection[getattr(dataptr, active_propname)]
-        props = collection.add()
-        current_props.copy_to(props)
+        copy(collection[getattr(dataptr, active_propname)], collection.add())
         setattr(dataptr, active_propname, len(collection) - 1)
         return result
 
@@ -183,22 +315,29 @@ class CAM_OT_Action(bpy.types.Operator):
 
 
 class CAM_UL_List(bpy.types.UIList):
-    BOOL_MAP = {True: "HLT", False: "DEHLT"}
+    ICON_MAP = {
+        "is_hidden": {True: "HIDE_ON", False: "HIDE_OFF"},
+        "use_modifiers": {True: "MODIFIER_ON", False: "MODIFIER_OFF"},
+    }
 
     def draw_item(
         self, _context, layout, _data, item, icon, _active_data, _active_propname
     ):
         if self.layout_type in {"DEFAULT", "COMPACT"}:
-            row = layout.row()
-            row.prop(item, "name", text="", emboss=False, icon_value=icon)
-            layout.row().prop(
-                item,
-                "enabled",
-                text="",
-                emboss=False,
-                icon=f"CHECKBOX_{self.BOOL_MAP[item.enabled]}",
-            )
-            row.enabled = item.enabled
+            row0 = layout.row()
+            row0.prop(item, "name", text="", emboss=False, icon_value=icon)
+
+            row1 = layout.row(align=True)
+            for propname in self.ICON_MAP:
+                if hasattr(item, propname):
+                    row1.prop(
+                        item,
+                        propname,
+                        text="",
+                        emboss=False,
+                        icon=f"{self.ICON_MAP[propname][getattr(item, propname)]}",
+                    )
+
         elif self.layout_type in {"GRID"}:
             layout.alignment = "CENTER"
             layout.label(text="", icon_value=icon)
@@ -304,23 +443,28 @@ class CAM_PT_PanelOperations(CAM_PT_Panel):
             operation = cam_job.operations[cam_job.operation_active_index]
 
             layout = self.layout
-            row = layout.row()
-            row.use_property_split = True
-            row.use_property_decorate = False
-            row.prop(operation, "source_type", expand=True)
+            layout.use_property_decorate = False
 
-            row = layout.row()
-            row.use_property_split = True
-            row.prop_search(
-                operation, "source", bpy.data, f"{operation.source_type}s".lower()
-            )
+            col = layout.column(align=True)
+            col.prop(operation, "strategy_type")
+            strategy_attr = f"{operation.strategy_type.lower()}_strategy"
+            if hasattr(operation, strategy_attr):
+                props = getattr(operation, strategy_attr)
+                col.row().prop(props, "source_type", expand=True)
+                col.prop(props, f"{props.source_type.lower()}_source")
+                for propname in get_propnames(props):
+                    col.prop(props, propname)
         except IndexError:
             pass
 
 
 classes = [
-    CAM_Jobs.Operation,
-    CAM_Jobs,
+    CAM_Job.Operation.BlockStrategy,
+    CAM_Job.Operation.CarveProjectStrategy,
+    CAM_Job.Operation.CirclesStrategy,
+    CAM_Job.Operation.CrossStrategy,
+    CAM_Job.Operation,
+    CAM_Job,
     CAM_OT_Action,
     CAM_UL_List,
     CAM_PT_PanelJobs,
@@ -331,7 +475,7 @@ classes = [
 def register():
     for c in classes:
         bpy.utils.register_class(c)
-    bpy.types.Scene.cam_jobs = bpy.props.CollectionProperty(type=CAM_Jobs)
+    bpy.types.Scene.cam_jobs = bpy.props.CollectionProperty(type=CAM_Job)
     bpy.types.Scene.cam_job_active_index = bpy.props.IntProperty(default=0, min=0)
 
 
