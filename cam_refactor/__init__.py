@@ -43,11 +43,8 @@ def copy(from_prop: bpy.types.Property, to_prop: bpy.types.Property, depth=0) ->
     if isinstance(from_prop, bpy.types.PropertyGroup):
         for propname in get_propnames(to_prop, use_exclude_propnames=False):
             from_subprop = getattr(from_prop, propname)
-            if any(
-                [
-                    isinstance(from_subprop, bpy.types.PropertyGroup),
-                    isinstance(from_subprop, bpy.types.bpy_prop_collection),
-                ]
+            if isinstance(from_subprop, bpy.types.PropertyGroup) or isinstance(
+                from_subprop, bpy.types.bpy_prop_collection
             ):
                 copy(from_subprop, getattr(to_prop, propname), depth + 1)
             else:
