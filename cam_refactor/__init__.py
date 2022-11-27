@@ -64,7 +64,8 @@ def get_propnames(props: CAM_PropertyGroup):
 class CAM_Jobs(CAM_PropertyGroup):
     class Operation(CAM_PropertyGroup):
         name: bpy.props.StringProperty(default="Operation")
-        data_source: bpy.props.EnumProperty(
+        enabled: bpy.props.BoolProperty(default=True)
+        source_type: bpy.props.EnumProperty(
             items=[
                 ("OBJECT", "Object", "Object Data Source", "OBJECT_DATA", 0),
                 (
@@ -75,10 +76,12 @@ class CAM_Jobs(CAM_PropertyGroup):
                     1,
                 ),
             ],
-            name="Data Source",
+            name="Source Type",
         )
+        source: bpy.props.StringProperty(name="Source")
 
     name: bpy.props.StringProperty(name="Name", default="Job")
+    enabled: bpy.props.BoolProperty(default=True)
     do_simplify: bpy.props.BoolProperty(name="Simplify G-code", default=True)
     do_export: bpy.props.BoolProperty(name="Export on compute", default=False)
     count: bpy.props.IntVectorProperty(
@@ -180,13 +183,22 @@ class CAM_OT_Action(bpy.types.Operator):
 
 
 class CAM_UL_List(bpy.types.UIList):
+    BOOL_MAP = {True: "HLT", False: "DEHLT"}
+
     def draw_item(
         self, _context, layout, _data, item, icon, _active_data, _active_propname
     ):
         if self.layout_type in {"DEFAULT", "COMPACT"}:
-            layout.prop(
-                item, "name", text="", emboss=False, translate=False, icon_value=icon
+            row = layout.row()
+            row.prop(item, "name", text="", emboss=False, icon_value=icon)
+            layout.row().prop(
+                item,
+                "enabled",
+                text="",
+                emboss=False,
+                icon=f"CHECKBOX_{self.BOOL_MAP[item.enabled]}",
             )
+            row.enabled = item.enabled
         elif self.layout_type in {"GRID"}:
             layout.alignment = "CENTER"
             layout.label(text="", icon_value=icon)
@@ -295,7 +307,13 @@ class CAM_PT_PanelOperations(CAM_PT_Panel):
             row = layout.row()
             row.use_property_split = True
             row.use_property_decorate = False
-            row.prop(operation, "data_source", expand=True)
+            row.prop(operation, "source_type", expand=True)
+
+            row = layout.row()
+            row.use_property_split = True
+            row.prop_search(
+                operation, "source", bpy.data, f"{operation.source_type}s".lower()
+            )
         except IndexError:
             pass
 
