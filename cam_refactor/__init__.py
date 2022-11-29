@@ -17,6 +17,8 @@
 #
 # ***** END GPL LICENCE BLOCK *****
 
+from functools import reduce
+
 import bpy
 
 bl_info = {
@@ -34,6 +36,10 @@ bl_info = {
 
 
 PRECISION = 5
+
+
+def get_enum_item_icon(items: list[tuple], item_type: str) -> str:
+    return reduce(lambda acc, item: item[-2] if item_type == item[0] and len(item) == 5 else acc, items, "NONE")
 
 
 def copy(from_prop: bpy.types.Property, to_prop: bpy.types.Property, depth=0) -> None:
@@ -63,26 +69,15 @@ def get_propnames(props: bpy.types.PropertyGroup, use_exclude_propnames=True):
     if use_exclude_propnames:
         exclude_propnames += getattr(props, "exclude_propnames", [])
 
-    return sorted(
-        {
-            propname
-            for propname in props.rna_type.properties.keys()
-            if propname not in exclude_propnames
-        }
-    )
+    return sorted({propname for propname in props.rna_type.properties.keys() if propname not in exclude_propnames})
+
+
+def poll_mesh_object_source(self, obj: bpy.types.Object) -> bool:
+    return obj.type == "MESH"
 
 
 class CAM_Job(bpy.types.PropertyGroup):
     class Operation(bpy.types.PropertyGroup):
-        class DirectionMixin(bpy.types.PropertyGroup):
-            direction: bpy.props.EnumProperty(
-                items=[
-                    ("IN_OUT", "In Out", "In Out"),
-                    ("OUT_IN", "Out In", "Out In"),
-                ],
-                name="Direction",
-            )
-
         class DistanceAlongPathsMixin(bpy.types.PropertyGroup):
             distance_along_paths: bpy.props.FloatProperty(
                 name="Distance Along Paths",
@@ -118,53 +113,30 @@ class CAM_Job(bpy.types.PropertyGroup):
             exclude_propnames = [
                 "name",
                 "source_type",
-                "mesh_source",
+                "mesh_object_source",
                 "collection_source",
             ]
 
-            source_type: bpy.props.EnumProperty(
-                items=[
-                    ("MESH", "Mesh", "Object Data Source", "MESH_DATA", 0),
-                    (
-                        "COLLECTION",
-                        "Collection",
-                        "Collection Data Source",
-                        "OUTLINER_COLLECTION",
-                        1,
-                    ),
-                ],
-                name="Source Type",
+            source_type_items = [
+                ("MESH_OBJECT", "Mesh Object", "Mesh object data source.", "OUTLINER_OB_MESH", 0),
+                ("COLLECTION", "Collection", "Collection data source", "OUTLINER_COLLECTION", 1),
+            ]
+            source_type: bpy.props.EnumProperty(items=source_type_items, name="Source Type")
+            mesh_object_source: bpy.props.PointerProperty(
+                type=bpy.types.Object, name="Source", poll=poll_mesh_object_source
             )
-            mesh_source: bpy.props.PointerProperty(type=bpy.types.Mesh, name="Source")
-            collection_source: bpy.props.PointerProperty(
-                type=bpy.types.Collection, name="Source"
-            )
+            collection_source: bpy.props.PointerProperty(type=bpy.types.Collection, name="Source")
 
-        class BlockStrategy(
-            DirectionMixin,
-            DistanceAlongPathsMixin,
-            DistanceBetweenPathsMixin,
-            SourceMixin,
-        ):
+        class BlockStrategy(DistanceAlongPathsMixin, DistanceBetweenPathsMixin, SourceMixin):
             pass
 
         class CarveProjectStrategy(DistanceAlongPathsMixin, SourceMixin):
             pass
 
-        class CirclesStrategy(
-            DirectionMixin,
-            DistanceAlongPathsMixin,
-            DistanceBetweenPathsMixin,
-            SourceMixin,
-        ):
+        class CirclesStrategy(DistanceAlongPathsMixin, DistanceBetweenPathsMixin, SourceMixin):
             pass
 
-        class CrossStrategy(
-            DistanceAlongPathsMixin,
-            DistanceBetweenPathsMixin,
-            PathsAngleMixin,
-            SourceMixin,
-        ):
+        class CrossStrategy(DistanceAlongPathsMixin, DistanceBetweenPathsMixin, PathsAngleMixin, SourceMixin):
             pass
 
         name: bpy.props.StringProperty(default="Operation")
@@ -185,7 +157,10 @@ class CAM_Job(bpy.types.PropertyGroup):
             (
                 "MEDIAL_AXIS",
                 "Medial axis",
-                "Medial axis, must be used with V or ball cutter, for engraving various width shapes with a single stroke",
+                (
+                    "Medial axis, must be used with V or ball cutter, for engraving various width"
+                    " shapes with a single stroke"
+                ),
             ),
             (
                 "OUTLINE_FILL",
@@ -202,9 +177,7 @@ class CAM_Job(bpy.types.PropertyGroup):
                 "Roughing below ZERO. Z is always below ZERO",
             ),
         ]
-        strategy_type: bpy.props.EnumProperty(
-            items=strategy_type_items, name="Strategy Type"
-        )
+        strategy_type: bpy.props.EnumProperty(items=strategy_type_items, name="Strategy Type")
 
         block_strategy: bpy.props.PointerProperty(type=BlockStrategy)
         carve_project_strategy: bpy.props.PointerProperty(type=CarveProjectStrategy)
@@ -215,12 +188,8 @@ class CAM_Job(bpy.types.PropertyGroup):
     is_hidden: bpy.props.BoolProperty(default=False)
     do_simplify: bpy.props.BoolProperty(name="Simplify G-code", default=True)
     do_export: bpy.props.BoolProperty(name="Export on compute", default=False)
-    count: bpy.props.IntVectorProperty(
-        name="Count", default=(1, 1), min=1, subtype="XYZ", size=2
-    )
-    gap: bpy.props.FloatVectorProperty(
-        name="Gap", default=(0, 0), min=0, subtype="XYZ_LENGTH", size=2
-    )
+    count: bpy.props.IntVectorProperty(name="Count", default=(1, 1), min=1, subtype="XYZ", size=2)
+    gap: bpy.props.FloatVectorProperty(name="Gap", default=(0, 0), min=0, subtype="XYZ_LENGTH", size=2)
     operations: bpy.props.CollectionProperty(type=Operation)
     operation_active_index: bpy.props.IntProperty(default=0, min=0)
 
@@ -242,13 +211,12 @@ class CAM_OT_Action(bpy.types.Operator):
         ("MOVE_OPERATION", "Move CAM operation", "Move CAM operation"),
     ]
     type: bpy.props.EnumProperty(items=type_items)
-    direction: bpy.props.IntProperty()
+    move_direction: bpy.props.IntProperty()
 
     def __init__(self):
         super().__init__()
         self.execute_funcs = {
-            id: getattr(self, f"execute_{id.split('_')[0].lower()}", self.execute_todo)
-            for id, *_ in self.type_items
+            id: getattr(self, f"execute_{id.split('_')[0].lower()}", self.execute_todo) for id, *_ in self.type_items
         }
 
     @classmethod
@@ -290,9 +258,7 @@ class CAM_OT_Action(bpy.types.Operator):
     def execute_move(self, dataptr, propname: str, active_propname: str) -> set:
         collection = getattr(dataptr, propname)
         active_index = getattr(dataptr, active_propname)
-        new_active_index = max(
-            0, min(active_index + self.direction, len(collection) - 1)
-        )
+        new_active_index = max(0, min(active_index + self.move_direction, len(collection) - 1))
         collection.move(active_index, new_active_index)
         setattr(dataptr, active_propname, new_active_index)
         return {"FINISHED"}
@@ -317,9 +283,7 @@ class CAM_UL_List(bpy.types.UIList):
         "use_modifiers": {True: "MODIFIER_ON", False: "MODIFIER_OFF"},
     }
 
-    def draw_item(
-        self, _context, layout, _data, item, icon, _active_data, _active_propname
-    ):
+    def draw_item(self, _context, layout, _data, item, icon, _active_data, _active_propname):
         if self.layout_type in {"DEFAULT", "COMPACT"}:
             row0 = layout.row()
             row0.prop(item, "name", text="", emboss=False, icon_value=icon)
@@ -332,7 +296,7 @@ class CAM_UL_List(bpy.types.UIList):
                         propname,
                         text="",
                         emboss=False,
-                        icon=f"{self.ICON_MAP[propname][getattr(item, propname)]}",
+                        icon=self.ICON_MAP[propname][getattr(item, propname)],
                     )
 
         elif self.layout_type in {"GRID"}:
@@ -345,9 +309,7 @@ class CAM_PT_Panel(bpy.types.Panel):
     bl_region_type = "UI"
     bl_space_type = "VIEW_3D"
 
-    def draw_list_row(
-        self, list_id: str, dataptr, propname: str, active_propname: str, suffix: str
-    ) -> None:
+    def draw_list_row(self, list_id: str, dataptr, propname: str, active_propname: str, suffix: str) -> None:
         list_is_sortable = len(getattr(dataptr, propname)) > 1
         rows = 5 if list_is_sortable else 3
 
@@ -377,11 +339,11 @@ class CAM_PT_Panel(bpy.types.Panel):
             col.separator()
             props = col.operator(CAM_OT_Action.bl_idname, icon="TRIA_UP", text="")
             props.type = f"MOVE_{suffix}"
-            props.direction = -1
+            props.move_direction = -1
 
             props = col.operator(CAM_OT_Action.bl_idname, icon="TRIA_DOWN", text="")
             props.type = f"MOVE_{suffix}"
-            props.direction = 1
+            props.move_direction = 1
 
 
 class CAM_PT_PanelJobs(CAM_PT_Panel):
@@ -389,9 +351,7 @@ class CAM_PT_PanelJobs(CAM_PT_Panel):
 
     def draw(self, context: bpy.types.Context) -> None:
         scene = context.scene
-        self.draw_list_row(
-            "CAM_UL_ListJobs", scene, "cam_jobs", "cam_job_active_index", "JOB"
-        )
+        self.draw_list_row("CAM_UL_ListJobs", scene, "cam_jobs", "cam_job_active_index", "JOB")
         try:
             cam_job = scene.cam_jobs[scene.cam_job_active_index]
 
@@ -419,6 +379,8 @@ class CAM_PT_PanelJobs(CAM_PT_Panel):
 
 
 class CAM_PT_PanelOperations(CAM_PT_Panel):
+    ICON_MAP = {"MESH_OBJECT": "OUTLINER_OB_MESH"}
+
     bl_label = "Operations"
     bl_parent_id = "CAM_PT_PanelJobs"
 
@@ -429,13 +391,7 @@ class CAM_PT_PanelOperations(CAM_PT_Panel):
     def draw(self, context: bpy.types.Context) -> None:
         scene = context.scene
         cam_job = scene.cam_jobs[scene.cam_job_active_index]
-        self.draw_list_row(
-            "CAM_UL_ListOperations",
-            cam_job,
-            "operations",
-            "operation_active_index",
-            "OPERATION",
-        )
+        self.draw_list_row("CAM_UL_ListOperations", cam_job, "operations", "operation_active_index", "OPERATION")
         try:
             operation = cam_job.operations[cam_job.operation_active_index]
 
@@ -448,7 +404,11 @@ class CAM_PT_PanelOperations(CAM_PT_Panel):
             if hasattr(operation, strategy_attr):
                 props = getattr(operation, strategy_attr)
                 col.row().prop(props, "source_type", expand=True)
-                col.prop(props, f"{props.source_type.lower()}_source")
+                col.prop(
+                    props,
+                    f"{props.source_type.lower()}_source",
+                    icon=get_enum_item_icon(props.source_type_items, props.source_type),
+                )
                 for propname in get_propnames(props):
                     col.prop(props, propname)
         except IndexError:
