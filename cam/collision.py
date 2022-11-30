@@ -306,7 +306,6 @@ def prepareBulletCollision(o):
             snap=False,
             snap_target="CLOSEST",
             snap_point=(0, 0, 0),
-            snap_normal=(0, 0, 0),
             texture_space=False,
             release_confirm=False,
         )
@@ -332,7 +331,6 @@ def prepareBulletCollision(o):
                 snap=False,
                 snap_target="CLOSEST",
                 snap_point=(0, 0, 0),
-                snap_normal=(0, 0, 0),
                 texture_space=False,
                 release_confirm=False,
             )
@@ -369,7 +367,6 @@ def cleanupBulletCollision(o):
                 snap=False,
                 snap_target="CLOSEST",
                 snap_point=(0, 0, 0),
-                snap_normal=(0, 0, 0),
                 texture_space=False,
                 release_confirm=False,
             )
