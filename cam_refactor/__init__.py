@@ -17,9 +17,15 @@
 #
 # ***** END GPL LICENCE BLOCK *****
 
+import importlib
+
 import bpy
 
-from . import ops, props, ui
+modules = ["ops", "props", "ui"]
+
+globals().update(
+    {modname: importlib.reload(importlib.import_module(f".{modname}", __package__)) for modname in modules}
+)
 
 bl_info = {
     "name": "CNC G-Code Tools",
@@ -51,6 +57,7 @@ classes = [
     props.CAMJob.Operation.SpiralStrategy,
     props.CAMJob.Operation.WaterlineRoughingStrategy,
     props.CAMJob.Operation,
+    props.CAMJob.Stock,
     props.CAMJob.PostProcessor,
     props.CAMJob,
     ops.CAM_OT_Action,
@@ -59,7 +66,7 @@ classes = [
     ui.CAM_PT_PanelJobsOperations,
     ui.CAM_PT_PanelJobsOperationWorkArea,
     ui.CAM_PT_PanelJobStock,
-    ui.CAM_PT_PanelJobMovement,
+    ui.CAM_PT_PanelJobPostProcessor,
 ]
 
 

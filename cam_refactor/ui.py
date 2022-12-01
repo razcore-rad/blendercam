@@ -202,16 +202,19 @@ class CAM_PT_PanelJobStock(CAM_PT_PanelBase):
 
     def draw(self, context: bpy.types.Context) -> None:
         scene = context.scene
-        cam_job = scene.cam_jobs[scene.cam_job_active_index]
+        stock = scene.cam_jobs[scene.cam_job_active_index].stock
 
         layout = self.layout
-        row = layout.box().row(align=True)
-        row.use_property_split = True
-        row.prop(cam_job, "stock_size")
+        col = layout.column(align=True)
+        col.use_property_split = True
+        col.prop(stock, "type", expand=True)
+        row = layout.row(align=True)
+        for propname in (pn for pn in get_propnames(stock) if pn.startswith(stock.type.lower())):
+            row.column().prop(stock, propname)
 
 
-class CAM_PT_PanelJobMovement(CAM_PT_PanelBase):
-    bl_label = "Movement"
+class CAM_PT_PanelJobPostProcessor(CAM_PT_PanelBase):
+    bl_label = "Post Processor"
     bl_parent_id = "CAM_PT_PanelJobs"
 
     @classmethod

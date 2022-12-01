@@ -1,6 +1,5 @@
 import bpy
 
-
 PRECISION = 5
 
 
@@ -270,6 +269,20 @@ class CAMJob(bpy.types.PropertyGroup):
         def strategy(self) -> bpy.types.PropertyGroup:
             return getattr(self, f"{self.strategy_type.lower()}_strategy", None)
 
+    class Stock(bpy.types.PropertyGroup):
+        exclude_propnames = {"name"}
+
+        type: bpy.props.EnumProperty(
+            name="Type", items=[("ESTIMATE", "Estimate from Job", ""), ("CUSTOM", "Custom", "")]
+        )
+        estimate_offset: bpy.props.FloatVectorProperty(
+            name="Estimate Offset", min=0, default=(1e-3, 1e-3, 1e-3), subtype="XYZ_LENGTH"
+        )
+        custom_location: bpy.props.FloatVectorProperty(name="Location", min=0, default=(0, 0, 0), subtype="XYZ_LENGTH")
+        custom_size: bpy.props.FloatVectorProperty(
+            name="Size", min=1e-3, default=(5e-1, 5e-1, 1e-1), subtype="XYZ_LENGTH"
+        )
+
     class PostProcessor(bpy.types.PropertyGroup):
         exclude_propnames = {"name"}
 
@@ -298,5 +311,5 @@ class CAMJob(bpy.types.PropertyGroup):
     gap: bpy.props.FloatVectorProperty(name="Gap", default=(0, 0), min=0, subtype="XYZ_LENGTH", size=2)
     operations: bpy.props.CollectionProperty(type=Operation)
     operation_active_index: bpy.props.IntProperty(default=0, min=0)
-    stock_size: bpy.props.FloatVectorProperty(name="Size", min=1e-3, default=(5e-1, 5e-1, 1e-1), subtype="XYZ_LENGTH")
+    stock: bpy.props.PointerProperty(type=Stock)
     post_processor: bpy.props.PointerProperty(type=PostProcessor)
