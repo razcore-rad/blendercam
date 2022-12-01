@@ -81,8 +81,7 @@ def poll_object_source(strategy: bpy.types.Property, obj: bpy.types.Object) -> b
 
 
 def poll_curve_object_source(strategy: bpy.types.Property, obj: bpy.types.Object) -> bool:
-    source = getattr(strategy, f"{strategy.source_type.lower()}_source", None)
-    return obj.users != 0 and obj.type == "CURVE" and obj is not source
+    return obj.users != 0 and obj.type == "CURVE" and obj is not strategy.source
 
 
 def poll_curve_limit(work_area: bpy.types.Property, obj: bpy.types.Object) -> bool:
@@ -91,7 +90,7 @@ def poll_curve_limit(work_area: bpy.types.Property, obj: bpy.types.Object) -> bo
     try:
         cam_job = scene.cam_jobs[scene.cam_job_active_index]
         operation = cam_job.operations[cam_job.operation_active_index]
-        strategy = getattr(operation, f"{operation.strategy_type.lower()}_strategy")
+        strategy = operation.strategy
         curve = getattr(strategy, "curve", None)
         result = poll_curve_object_source(strategy, obj) and obj is not curve
     except IndexError:
@@ -99,7 +98,7 @@ def poll_curve_limit(work_area: bpy.types.Property, obj: bpy.types.Object) -> bo
     return result
 
 
-class CAM_Job(bpy.types.PropertyGroup):
+class CAMJob(bpy.types.PropertyGroup):
     class Operation(bpy.types.PropertyGroup):
         class WorkArea(bpy.types.PropertyGroup):
             exclude_propnames = {"name"}
@@ -122,7 +121,7 @@ class CAM_Job(bpy.types.PropertyGroup):
                 name="Layer Size", default=0, min=1e-4, max=1e-1, precision=PRECISION, unit="LENGTH"
             )
             ambient: bpy.props.EnumProperty(
-                name="Ambient", items=[("ALL", "All", ""), ("AROUND", "Around", ""), ("OFF", "Off", "")]
+                name="Ambient", items=[("OFF", "Off", ""), ("ALL", "All", ""), ("AROUND", "Around", "")]
             )
             curve_limit: bpy.props.PointerProperty(name="Curve Limit", type=bpy.types.Object, poll=poll_curve_limit)
 
@@ -173,6 +172,14 @@ class CAM_Job(bpy.types.PropertyGroup):
             object_source: bpy.props.PointerProperty(type=bpy.types.Object, name="Source", poll=poll_object_source)
             collection_source: bpy.props.PointerProperty(type=bpy.types.Collection, name="Source")
 
+            @property
+            def source(self) -> bpy.types.PropertyGroup:
+                return getattr(self, f"{self.source_type.lower()}_source", None)
+
+            @property
+            def is_source_valid(self) -> bool:
+                return self.source is not None
+
         class BlockStrategy(DistanceAlongPathsMixin, DistanceBetweenPathsMixin, SourceMixin):
             pass
 
@@ -180,7 +187,11 @@ class CAM_Job(bpy.types.PropertyGroup):
             ICON_MAP = {"curve": "OUTLINER_OB_CURVE"}
 
             curve: bpy.props.PointerProperty(name="Curve", type=bpy.types.Object, poll=poll_curve_object_source)
-            depth: bpy.props.FloatProperty(name="Depth", default=1e-3, unit="LENGTH")
+            depth: bpy.props.FloatProperty(name="Depth", default=1e-3, unit="LENGTH", precision=PRECISION)
+
+            @property
+            def is_source_valid(self) -> bool:
+                return super().is_source_valid and self.curve is not None
 
         class CirclesStrategy(DistanceAlongPathsMixin, DistanceBetweenPathsMixin, SourceMixin):
             pass
@@ -222,8 +233,8 @@ class CAM_Job(bpy.types.PropertyGroup):
             )
 
         class MedialAxisStrategy(SourceMixin):
-            threshold: bpy.props.FloatProperty(name="Threshold", default=1e-3, unit="LENGTH")
-            subdivision: bpy.props.FloatProperty(name="Subdivision", default=2e-4, unit="LENGTH")
+            threshold: bpy.props.FloatProperty(name="Threshold", default=1e-3, unit="LENGTH", precision=PRECISION)
+            subdivision: bpy.props.FloatProperty(name="Subdivision", default=2e-4, unit="LENGTH", precision=PRECISION)
             do_clean_finish: bpy.props.BoolProperty(name="Clean Finish", default=True)
             do_generate_mesh: bpy.props.BoolProperty(name="Generate Mesh", default=True)
 
@@ -326,12 +337,40 @@ class CAM_Job(bpy.types.PropertyGroup):
 
         work_area: bpy.props.PointerProperty(type=WorkArea)
 
+        @property
+        def strategy(self) -> bpy.types.PropertyGroup:
+            return getattr(self, f"{self.strategy_type.lower()}_strategy", None)
+
+    class PostProcessor(bpy.types.PropertyGroup):
+        exclude_propnames = {"name"}
+
+        movement_type: bpy.props.EnumProperty(
+            name="Movement Type",
+            items=[
+                ("CLIMB", "Climb", ""),
+                ("CONVENTIONAL", "Conventional", ""),
+                ("MEANDER", "Meander", ""),
+            ],
+        )
+        spinle_direction: bpy.props.EnumProperty(
+            name="Spindle Direction",
+            items=[
+                ("CLOCKWISE", "Clockwise", ""),
+                ("COUNTER_CLOCKWISE", "Couner Clocwie", ""),
+            ],
+        )
+        free_movement_height: bpy.props.FloatProperty(
+            name="Free Movement Height", min=1e-5, default=5e-3, precision=PRECISION, unit="LENGTH"
+        )
+
     name: bpy.props.StringProperty(name="Name", default="Job")
     is_hidden: bpy.props.BoolProperty(default=False)
     count: bpy.props.IntVectorProperty(name="Count", default=(1, 1), min=1, subtype="XYZ", size=2)
     gap: bpy.props.FloatVectorProperty(name="Gap", default=(0, 0), min=0, subtype="XYZ_LENGTH", size=2)
     operations: bpy.props.CollectionProperty(type=Operation)
     operation_active_index: bpy.props.IntProperty(default=0, min=0)
+    stock_size: bpy.props.FloatVectorProperty(name="Size", min=1e-3, default=(5e-1, 5e-1, 1e-1), subtype="XYZ_LENGTH")
+    post_processor: bpy.props.PointerProperty(type=PostProcessor)
 
 
 class CAM_OT_Action(bpy.types.Operator):
@@ -450,6 +489,10 @@ class CAM_PT_PanelBase(bpy.types.Panel):
     bl_region_type = "UI"
     bl_space_type = "VIEW_3D"
 
+    def __init__(self):
+        super().__init__()
+        self.layout.use_property_decorate = False
+
 
 class CAM_PT_Panel(CAM_PT_PanelBase):
     def draw_list_row(self, list_id: str, dataptr, propname: str, active_propname: str, suffix: str) -> None:
@@ -522,7 +565,7 @@ class CAM_PT_PanelJobs(CAM_PT_Panel):
             pass
 
 
-class CAM_PT_PanelOperations(CAM_PT_Panel):
+class CAM_PT_PanelJobsOperations(CAM_PT_Panel):
     bl_label = "Operations"
     bl_parent_id = "CAM_PT_PanelJobs"
 
@@ -538,8 +581,6 @@ class CAM_PT_PanelOperations(CAM_PT_Panel):
             operation = cam_job.operations[cam_job.operation_active_index]
 
             layout = self.layout
-            layout.use_property_decorate = False
-
             col = layout.box().column(align=True)
             col.prop(operation, "strategy_type")
             strategy_propname = f"{operation.strategy_type.lower()}_strategy"
@@ -557,9 +598,9 @@ class CAM_PT_PanelOperations(CAM_PT_Panel):
             pass
 
 
-class CAM_PT_PanelOperationWorkArea(CAM_PT_PanelBase):
+class CAM_PT_PanelJobsOperationWorkArea(CAM_PT_PanelBase):
     bl_label = "Work Area"
-    bl_parent_id = "CAM_PT_PanelOperations"
+    bl_parent_id = "CAM_PT_PanelJobsOperations"
 
     @classmethod
     def poll(cls, context: bpy.types.Context) -> bool:
@@ -568,72 +609,104 @@ class CAM_PT_PanelOperationWorkArea(CAM_PT_PanelBase):
             scene = context.scene
             cam_job = scene.cam_jobs[scene.cam_job_active_index]
             operation = cam_job.operations[cam_job.operation_active_index]
-            strategy = getattr(operation, f"{operation.strategy_type.lower()}_strategy")
-            source_is_valid = getattr(strategy, f"{strategy.source_type.lower()}_source") is not None
-            if operation.strategy_type == "CARVE_PROJECT":
-                source_is_valid = source_is_valid and strategy.curve is not None
-            result = len(cam_job.operations) > 0 and source_is_valid
+            result = len(cam_job.operations) > 0 and operation.strategy.is_source_valid
         except IndexError:
             pass
         return result
 
     def draw(self, context: bpy.types.Context) -> None:
-        try:
-            scene = context.scene
-            cam_job = context.scene.cam_jobs[scene.cam_job_active_index]
-            operation_work_area = cam_job.operations[cam_job.operation_active_index].work_area
+        scene = context.scene
+        cam_job = context.scene.cam_jobs[scene.cam_job_active_index]
+        operation_work_area = cam_job.operations[cam_job.operation_active_index].work_area
 
-            layout = self.layout
-            layout.use_property_decorate = False
+        layout = self.layout
+        col = layout.box().column(align=True)
+        row = col.row(align=True)
+        row.prop(operation_work_area, "depth_start")
+        if operation_work_area.depth_end_type == "CUSTOM":
+            row.prop(operation_work_area, "depth_end")
 
-            col = layout.box().column(align=True)
-            row = col.row(align=True)
-            row.prop(operation_work_area, "depth_start")
-            if operation_work_area.depth_end_type == "CUSTOM":
-                row.prop(operation_work_area, "depth_end")
+        row = col.row()
+        row.use_property_split = True
+        row.prop(operation_work_area, "depth_end_type", expand=True)
 
-            row = col.row()
-            row.use_property_split = True
-            row.prop(operation_work_area, "depth_end_type", expand=True)
+        col = layout.column(align=True)
+        col.use_property_split = True
+        col.prop(operation_work_area, "layer_size")
+        col.row(align=True).prop(operation_work_area, "ambient", expand=True)
+        col.prop(operation_work_area, "curve_limit", icon="OUTLINER_OB_CURVE")
 
-            col = layout.column(align=True)
-            col.use_property_split = True
-            col.prop(operation_work_area, "layer_size")
-            col.prop(operation_work_area, "ambient", expand=True)
-            col.prop(operation_work_area, "curve_limit", icon="OUTLINER_OB_CURVE")
-        except IndexError:
-            pass
+
+class CAM_PT_PanelJobStock(CAM_PT_PanelBase):
+    bl_label = "Stock"
+    bl_parent_id = "CAM_PT_PanelJobs"
+
+    @classmethod
+    def poll(cls, context: bpy.types.Context) -> bool:
+        return len(context.scene.cam_jobs) > 0
+
+    def draw(self, context: bpy.types.Context) -> None:
+        scene = context.scene
+        cam_job = scene.cam_jobs[scene.cam_job_active_index]
+
+        layout = self.layout
+        row = layout.box().row(align=True)
+        row.use_property_split = True
+        row.prop(cam_job, "stock_size")
+
+
+class CAM_PT_PanelJobMovement(CAM_PT_PanelBase):
+    bl_label = "Movement"
+    bl_parent_id = "CAM_PT_PanelJobs"
+
+    @classmethod
+    def poll(cls, context: bpy.types.Context) -> bool:
+        return len(context.scene.cam_jobs) > 0
+
+    def draw(self, context: bpy.types.Context) -> None:
+        scene = context.scene
+        cam_job = scene.cam_jobs[scene.cam_job_active_index]
+        post_processor = cam_job.post_processor
+
+        layout = self.layout
+        col = layout.box().column(align=True)
+        col.use_property_split = True
+        for propname in get_propnames(post_processor):
+            col.prop(post_processor, propname, expand=True)
 
 
 classes = [
-    CAM_Job.Operation.WorkArea,
-    CAM_Job.Operation.BlockStrategy,
-    CAM_Job.Operation.CarveProjectStrategy,
-    CAM_Job.Operation.CirclesStrategy,
-    CAM_Job.Operation.CrossStrategy,
-    CAM_Job.Operation.CurveToPathStrategy,
-    CAM_Job.Operation.DrillStrategy,
-    CAM_Job.Operation.MedialAxisStrategy,
-    CAM_Job.Operation.OutlineFillStrategy,
-    CAM_Job.Operation.PocketStrategy,
-    CAM_Job.Operation.ProfileStrategy,
-    CAM_Job.Operation.ParallelStrategy,
-    CAM_Job.Operation.SpiralStrategy,
-    CAM_Job.Operation.WaterlineRoughingStrategy,
-    CAM_Job.Operation,
-    CAM_Job,
+    CAMJob.Operation.WorkArea,
+    CAMJob.Operation.BlockStrategy,
+    CAMJob.Operation.CarveProjectStrategy,
+    CAMJob.Operation.CirclesStrategy,
+    CAMJob.Operation.CrossStrategy,
+    CAMJob.Operation.CurveToPathStrategy,
+    CAMJob.Operation.DrillStrategy,
+    CAMJob.Operation.MedialAxisStrategy,
+    CAMJob.Operation.OutlineFillStrategy,
+    CAMJob.Operation.PocketStrategy,
+    CAMJob.Operation.ProfileStrategy,
+    CAMJob.Operation.ParallelStrategy,
+    CAMJob.Operation.SpiralStrategy,
+    CAMJob.Operation.WaterlineRoughingStrategy,
+    CAMJob.Operation,
+    CAMJob.PostProcessor,
+    CAMJob,
     CAM_OT_Action,
     CAM_UL_List,
     CAM_PT_PanelJobs,
-    CAM_PT_PanelOperations,
-    CAM_PT_PanelOperationWorkArea,
+    CAM_PT_PanelJobsOperations,
+    CAM_PT_PanelJobsOperationWorkArea,
+    CAM_PT_PanelJobStock,
+    CAM_PT_PanelJobMovement,
 ]
 
 
 def register():
     for c in classes:
         bpy.utils.register_class(c)
-    bpy.types.Scene.cam_jobs = bpy.props.CollectionProperty(type=CAM_Job)
+    bpy.types.Scene.cam_jobs = bpy.props.CollectionProperty(type=CAMJob)
     bpy.types.Scene.cam_job_active_index = bpy.props.IntProperty(default=0, min=0)
 
 
