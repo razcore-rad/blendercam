@@ -19,12 +19,10 @@
 
 import importlib
 
-import bpy
-
-modules = ["ops", "props", "ui"]
+modnames = ["handlers", "ops", "props", "ui"]
 
 globals().update(
-    {modname: importlib.reload(importlib.import_module(f".{modname}", __package__)) for modname in modules}
+    {modname: importlib.reload(importlib.import_module(f".{modname}", __package__)) for modname in modnames}
 )
 
 bl_info = {
@@ -41,44 +39,11 @@ bl_info = {
 }
 
 
-classes = [
-    props.CAMJob.Operation.WorkArea,
-    props.CAMJob.Operation.BlockStrategy,
-    props.CAMJob.Operation.CarveProjectStrategy,
-    props.CAMJob.Operation.CirclesStrategy,
-    props.CAMJob.Operation.CrossStrategy,
-    props.CAMJob.Operation.CurveToPathStrategy,
-    props.CAMJob.Operation.DrillStrategy,
-    props.CAMJob.Operation.MedialAxisStrategy,
-    props.CAMJob.Operation.OutlineFillStrategy,
-    props.CAMJob.Operation.PocketStrategy,
-    props.CAMJob.Operation.ProfileStrategy,
-    props.CAMJob.Operation.ParallelStrategy,
-    props.CAMJob.Operation.SpiralStrategy,
-    props.CAMJob.Operation.WaterlineRoughingStrategy,
-    props.CAMJob.Operation,
-    props.CAMJob.Stock,
-    props.CAMJob.PostProcessor,
-    props.CAMJob,
-    ops.CAM_OT_Action,
-    ui.CAM_UL_List,
-    ui.CAM_PT_PanelJobs,
-    ui.CAM_PT_PanelJobsOperations,
-    ui.CAM_PT_PanelJobsOperationWorkArea,
-    ui.CAM_PT_PanelJobStock,
-    ui.CAM_PT_PanelJobPostProcessor,
-]
+def register() -> None:
+    for modname in modnames:
+        globals()[modname].register()
 
 
-def register():
-    for c in classes:
-        bpy.utils.register_class(c)
-    bpy.types.Scene.cam_jobs = bpy.props.CollectionProperty(type=props.CAMJob)
-    bpy.types.Scene.cam_job_active_index = bpy.props.IntProperty(default=0, min=0)
-
-
-def unregister():
-    del bpy.types.Scene.cam_jobs
-    del bpy.types.Scene.cam_job_active_index
-    for c in classes:
-        bpy.utils.unregister_class(c)
+def unregister() -> None:
+    for modname in modnames:
+        globals()[modname].unregister()

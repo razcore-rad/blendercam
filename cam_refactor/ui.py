@@ -2,18 +2,11 @@ from functools import reduce
 
 import bpy
 
-from . import ops
+from . import ops, props
 
 
-def get_propnames(props: bpy.types.PropertyGroup, use_exclude_propnames=True):
-    exclude_propnames = ["rna_type"]
-    if use_exclude_propnames:
-        exclude_propnames += getattr(props, "exclude_propnames", [])
-    return sorted({propname for propname in props.rna_type.properties.keys() if propname not in exclude_propnames})
-
-
-def get_icon(props: bpy.types.Property, propname: str) -> str:
-    return getattr(props, "ICON_MAP", {}).get(propname, "NONE")
+def get_icon(p: bpy.types.Property, propname: str) -> str:
+    return getattr(p, "ICON_MAP", {}).get(propname, "NONE")
 
 
 def get_enum_item_icon(items: list[tuple], item_type: str) -> str:
@@ -47,14 +40,50 @@ class CAM_UL_List(bpy.types.UIList):
             layout.label(text="", icon_value=icon)
 
 
+class PresetPanel:
+    bl_label = "Presets"
+    path_menu = bpy.types.Menu.path_menu
+
+    @classmethod
+    def draw_panel_header(cls, layout: bpy.types.UILayout) -> None:
+        layout.emboss = "NONE"
+        layout.popover(panel=cls.__name__, icon="PRESET", text="")
+
+    @classmethod
+    def draw_menu(cls, layout, text=None) -> None:
+        text = text or cls.bl_label
+        layout.popover(panel=cls.__name__, icon="PRESET", text=text)
+
+    def draw(self, context: bpy.types.Context) -> None:
+        layout = self.layout
+        layout.emboss = "PULLDOWN_MENU"
+        layout.operator_context = "EXEC_DEFAULT"
+        bpy.types.Menu.draw_preset(self, context)
+
+
 class CAM_PT_PanelBase(bpy.types.Panel):
-    bl_category = "CAM"
-    bl_region_type = "UI"
     bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_category = "CAM"
 
     def __init__(self):
         super().__init__()
         self.layout.use_property_decorate = False
+
+    def draw_property_group(self, pg: bpy.types.PropertyGroup, layout: bpy.types.UILayout = None) -> None:
+        layout = self.layout.box().column(align=True) if layout is None else layout
+        layout.use_property_split = True
+        for propname in props.get_propnames(pg):
+            if isinstance(getattr(pg, propname), bpy.types.PropertyGroup):
+                continue
+            layout.row().prop(pg, propname, icon=get_icon(pg, propname), expand=propname.endswith("type"))
+
+
+class CAM_PT_MachinePresets(PresetPanel, CAM_PT_PanelBase):
+    bl_label = "Machine Presets"
+    preset_subdir = "cam/machines"
+    preset_operator = "script.execute_preset"
+    preset_add_operator = "cam.preset_add_machine"
 
 
 class CAM_PT_Panel(CAM_PT_PanelBase):
@@ -67,24 +96,24 @@ class CAM_PT_Panel(CAM_PT_PanelBase):
         row.template_list("CAM_UL_List", list_id, dataptr, propname, dataptr, active_propname, rows=rows)
 
         col = row.column(align=True)
-        props = col.operator(ops.CAM_OT_Action.bl_idname, icon="ADD", text="")
-        props.type = f"ADD_{suffix}"
+        pg = col.operator(ops.CAM_OT_Action.bl_idname, icon="ADD", text="")
+        pg.type = f"ADD_{suffix}"
 
-        props = col.operator(ops.CAM_OT_Action.bl_idname, icon="DUPLICATE", text="")
-        props.type = f"DUPLICATE_{suffix}"
+        pg = col.operator(ops.CAM_OT_Action.bl_idname, icon="DUPLICATE", text="")
+        pg.type = f"DUPLICATE_{suffix}"
 
-        props = col.operator(ops.CAM_OT_Action.bl_idname, icon="REMOVE", text="")
-        props.type = f"REMOVE_{suffix}"
+        pg = col.operator(ops.CAM_OT_Action.bl_idname, icon="REMOVE", text="")
+        pg.type = f"REMOVE_{suffix}"
 
         if list_is_sortable:
             col.separator()
-            props = col.operator(ops.CAM_OT_Action.bl_idname, icon="TRIA_UP", text="")
-            props.type = f"MOVE_{suffix}"
-            props.move_direction = -1
+            pg = col.operator(ops.CAM_OT_Action.bl_idname, icon="TRIA_UP", text="")
+            pg.type = f"MOVE_{suffix}"
+            pg.move_direction = -1
 
-            props = col.operator(ops.CAM_OT_Action.bl_idname, icon="TRIA_DOWN", text="")
-            props.type = f"MOVE_{suffix}"
-            props.move_direction = 1
+            pg = col.operator(ops.CAM_OT_Action.bl_idname, icon="TRIA_DOWN", text="")
+            pg.type = f"MOVE_{suffix}"
+            pg.move_direction = 1
 
 
 class CAM_PT_PanelJobs(CAM_PT_Panel):
@@ -111,11 +140,11 @@ class CAM_PT_PanelJobs(CAM_PT_Panel):
                 col.prop(cam_job, "gap")
 
             row = layout.row(align=True)
-            props = row.operator(ops.CAM_OT_Action.bl_idname, text="Compute", icon="PLAY")
-            props.type = "COMPUTE_JOB"
+            pg = row.operator(ops.CAM_OT_Action.bl_idname, text="Compute", icon="PLAY")
+            pg.type = "COMPUTE_JOB"
 
-            props = row.operator(ops.CAM_OT_Action.bl_idname, text="Export", icon="EXPORT")
-            props.type = "EXPORT_JOB"
+            pg = row.operator(ops.CAM_OT_Action.bl_idname, text="Export", icon="EXPORT")
+            pg.type = "EXPORT_JOB"
         except IndexError:
             pass
 
@@ -134,21 +163,22 @@ class CAM_PT_PanelJobsOperations(CAM_PT_Panel):
         self.draw_list_row("CAM_UL_ListOperations", cam_job, "operations", "operation_active_index", "OPERATION")
         try:
             operation = cam_job.operations[cam_job.operation_active_index]
+            strategy = operation.strategy
 
             layout = self.layout
             col = layout.box().column(align=True)
             col.prop(operation, "strategy_type")
-            strategy_propname = f"{operation.strategy_type.lower()}_strategy"
-            if hasattr(operation, strategy_propname):
-                props = getattr(operation, strategy_propname)
-                col.row().prop(props, "source_type", expand=True)
-                col.prop(
-                    props,
-                    f"{props.source_type.lower()}_source",
-                    icon=get_enum_item_icon(props.source_type_items, props.source_type),
-                )
-                for propname in get_propnames(props):
-                    col.prop(props, propname, icon=get_icon(props, propname))
+            col.row().prop(strategy, "source_type", expand=True)
+
+            row = col.row()
+            row.use_property_split = True
+            row.prop(
+                strategy,
+                f"{strategy.source_type.lower()}_source",
+                icon=get_enum_item_icon(strategy.source_type_items, strategy.source_type),
+            )
+            self.draw_property_group(strategy, col)
+            self.draw_property_group(operation.movement)
         except IndexError:
             pass
 
@@ -184,15 +214,10 @@ class CAM_PT_PanelJobsOperationWorkArea(CAM_PT_PanelBase):
         row = col.row()
         row.use_property_split = True
         row.prop(operation_work_area, "depth_end_type", expand=True)
-
-        col = layout.column(align=True)
-        col.use_property_split = True
-        col.prop(operation_work_area, "layer_size")
-        col.row(align=True).prop(operation_work_area, "ambient", expand=True)
-        col.prop(operation_work_area, "curve_limit", icon="OUTLINER_OB_CURVE")
+        self.draw_property_group(operation_work_area)
 
 
-class CAM_PT_PanelJobStock(CAM_PT_PanelBase):
+class CAM_PT_PanelJobsStock(CAM_PT_PanelBase):
     bl_label = "Stock"
     bl_parent_id = "CAM_PT_PanelJobs"
 
@@ -205,29 +230,49 @@ class CAM_PT_PanelJobStock(CAM_PT_PanelBase):
         stock = scene.cam_jobs[scene.cam_job_active_index].stock
 
         layout = self.layout
-        col = layout.column(align=True)
-        col.use_property_split = True
-        col.prop(stock, "type", expand=True)
+        layout.row().prop(stock, "type", expand=True)
         row = layout.row(align=True)
-        for propname in (pn for pn in get_propnames(stock) if pn.startswith(stock.type.lower())):
+        for propname in (pn for pn in props.get_propnames(stock) if pn.startswith(stock.type.lower())):
             row.column().prop(stock, propname)
 
 
-class CAM_PT_PanelJobPostProcessor(CAM_PT_PanelBase):
-    bl_label = "Post Processor"
+class CAM_PT_PanelJobsMachine(CAM_PT_PanelBase):
+    bl_label = "Machine"
     bl_parent_id = "CAM_PT_PanelJobs"
 
     @classmethod
     def poll(cls, context: bpy.types.Context) -> bool:
         return len(context.scene.cam_jobs) > 0
 
+    def draw_header_preset(self, _context: bpy.types.Context) -> None:
+        CAM_PT_MachinePresets.draw_panel_header(self.layout)
+
     def draw(self, context: bpy.types.Context) -> None:
         scene = context.scene
-        cam_job = scene.cam_jobs[scene.cam_job_active_index]
-        post_processor = cam_job.post_processor
+        cam_job_machine = scene.cam_jobs[scene.cam_job_active_index].machine
 
-        layout = self.layout
-        col = layout.box().column(align=True)
+        self.draw_property_group(cam_job_machine)
+        col = self.layout.box().column(align=True)
         col.use_property_split = True
-        for propname in get_propnames(post_processor):
-            col.prop(post_processor, propname, expand=True)
+        col.prop(cam_job_machine, "post_processor")
+
+
+CLASSES = [
+    CAM_UL_List,
+    CAM_PT_MachinePresets,
+    CAM_PT_PanelJobs,
+    CAM_PT_PanelJobsOperations,
+    CAM_PT_PanelJobsOperationWorkArea,
+    CAM_PT_PanelJobsStock,
+    CAM_PT_PanelJobsMachine,
+]
+
+
+def register() -> None:
+    for cls in CLASSES:
+        bpy.utils.register_class(cls)
+
+
+def unregister() -> None:
+    for cls in CLASSES:
+        bpy.utils.unregister_class(cls)

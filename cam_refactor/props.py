@@ -1,6 +1,37 @@
+import math
+
 import bpy
 
 PRECISION = 5
+
+
+def copy(from_prop: bpy.types.Property, to_prop: bpy.types.Property, depth=0) -> None:
+    if type(from_prop) != type(to_prop):
+        return
+
+    if isinstance(from_prop, bpy.types.PropertyGroup):
+        for propname in props.get_propnames(to_prop, use_exclude_propnames=False):
+            from_subprop = getattr(from_prop, propname)
+            if isinstance(from_subprop, bpy.types.PropertyGroup) or isinstance(
+                from_subprop, bpy.types.bpy_prop_collection
+            ):
+                copy(from_subprop, getattr(to_prop, propname), depth + 1)
+            else:
+                setattr(to_prop, propname, from_subprop)
+                if propname == "name" and depth == 0:
+                    to_prop.name += "_copy"
+
+    elif isinstance(from_prop, bpy.types.bpy_prop_collection):
+        to_prop.clear()
+        for from_subprop in from_prop.values():
+            copy(from_subprop, to_prop.add(), depth + 1)
+
+
+def get_propnames(pg: bpy.types.PropertyGroup, use_exclude_propnames=True):
+    exclude_propnames = ["rna_type"]
+    if use_exclude_propnames:
+        exclude_propnames += getattr(pg, "exclude_propnames", [])
+    return sorted({propname for propname in pg.rna_type.properties.keys() if propname not in exclude_propnames})
 
 
 def poll_object_source(strategy: bpy.types.Property, obj: bpy.types.Object) -> bool:
@@ -12,7 +43,7 @@ def poll_curve_object_source(strategy: bpy.types.Property, obj: bpy.types.Object
     return obj.users != 0 and obj.type == "CURVE" and obj is not strategy.source
 
 
-def poll_curve_limit(work_area: bpy.types.Property, obj: bpy.types.Object) -> bool:
+def poll_curve_limit(_work_area: bpy.types.Property, obj: bpy.types.Object) -> bool:
     result = False
     scene = bpy.context.scene
     try:
@@ -28,14 +59,50 @@ def poll_curve_limit(work_area: bpy.types.Property, obj: bpy.types.Object) -> bo
 
 class CAMJob(bpy.types.PropertyGroup):
     class Operation(bpy.types.PropertyGroup):
-        class WorkArea(bpy.types.PropertyGroup):
+        class Movement(bpy.types.PropertyGroup):
             exclude_propnames = {"name"}
+
+            free_height: bpy.props.FloatProperty(
+                name="Free Movement Height", min=1e-5, default=5e-3, precision=PRECISION, unit="LENGTH"
+            )
+            type: bpy.props.EnumProperty(
+                name="Movement Type",
+                items=[
+                    ("CLIMB", "Climb", "Cutter rotates with the direction of the feed"),
+                    ("CONVENTIONAL", "Conventional", "Cutter rotates against the direction of the feed"),
+                    ("MEANDER", "Meander", "Cutting is done both with and against the rotation of the spindle"),
+                ],
+            )
+
+            spindle_direction_type: bpy.props.EnumProperty(
+                name="Spindle Direction",
+                items=[
+                    ("CLOCKWISE", "Clockwise", "", "LOOP_FORWARDS", 0),
+                    ("COUNTER_CLOCKWISE", "Counter-Clockwise", "", "LOOP_BACK", 1),
+                ],
+            )
+
+            vertical_angle: bpy.props.FloatProperty(
+                name="Vertical Angle",
+                description="Convert path above this angle to a vertical path for cutter protection",
+                default=math.radians(4),
+                min=0,
+                max=math.pi / 2,
+                precision=0,
+                subtype="ANGLE",
+                unit="ROTATION",
+            )
+
+        class WorkArea(bpy.types.PropertyGroup):
+            ICON_MAP = {"curve_limit": "OUTLINER_OB_CURVE"}
+
+            exclude_propnames = {"name", "depth_start", "depth_end_type", "depth_end"}
 
             depth_start: bpy.props.FloatProperty(
                 name="Depth Start", default=0, min=0, max=1, precision=PRECISION, unit="LENGTH"
             )
             depth_end_type: bpy.props.EnumProperty(
-                name="Depth End Type",
+                name="Depth End",
                 items=[
                     ("CUSTOM", "Custom", ""),
                     ("OBJECT", "Object", ""),
@@ -48,7 +115,7 @@ class CAMJob(bpy.types.PropertyGroup):
             layer_size: bpy.props.FloatProperty(
                 name="Layer Size", default=0, min=1e-4, max=1e-1, precision=PRECISION, unit="LENGTH"
             )
-            ambient: bpy.props.EnumProperty(
+            ambient_type: bpy.props.EnumProperty(
                 name="Ambient", items=[("OFF", "Off", ""), ("ALL", "All", ""), ("AROUND", "Around", "")]
             )
             curve_limit: bpy.props.PointerProperty(name="Curve Limit", type=bpy.types.Object, poll=poll_curve_limit)
@@ -77,8 +144,8 @@ class CAMJob(bpy.types.PropertyGroup):
             paths_angle: bpy.props.FloatProperty(
                 name="Paths Angle",
                 default=0,
-                min=-360,
-                max=360,
+                min=-math.tau,
+                max=math.tau,
                 precision=0,
                 subtype="ANGLE",
                 unit="ROTATION",
@@ -146,7 +213,7 @@ class CAMJob(bpy.types.PropertyGroup):
             )
 
         class DrillStrategy(SourceMixin):
-            method: bpy.props.EnumProperty(
+            method_type: bpy.props.EnumProperty(
                 name="Method",
                 items=[
                     ("POINTS", "Points", "Drill at every point", "SNAP_VERTEX", 0),
@@ -263,6 +330,7 @@ class CAMJob(bpy.types.PropertyGroup):
         spiral_strategy: bpy.props.PointerProperty(type=SpiralStrategy)
         waterline_roughing_strategy: bpy.props.PointerProperty(type=WaterlineRoughingStrategy)
 
+        movement: bpy.props.PointerProperty(type=Movement)
         work_area: bpy.props.PointerProperty(type=WorkArea)
 
         @property
@@ -283,26 +351,51 @@ class CAMJob(bpy.types.PropertyGroup):
             name="Size", min=1e-3, default=(5e-1, 5e-1, 1e-1), subtype="XYZ_LENGTH"
         )
 
-    class PostProcessor(bpy.types.PropertyGroup):
-        exclude_propnames = {"name"}
+    class Machine(bpy.types.PropertyGroup):
+        exclude_propnames = {"name", "post_processor"}
 
-        movement_type: bpy.props.EnumProperty(
-            name="Movement Type",
-            items=[
-                ("CLIMB", "Climb", ""),
-                ("CONVENTIONAL", "Conventional", ""),
-                ("MEANDER", "Meander", ""),
-            ],
+        class Feedrate(bpy.types.PropertyGroup):
+            exclude_propnames = {"name"}
+
+            default: bpy.props.FloatProperty(name="Default", default=1.5)
+            min: bpy.props.FloatProperty(name="Min", default=1e-3)
+            max: bpy.props.FloatProperty(name="Max", default=2)
+
+        class Spindle(bpy.types.PropertyGroup):
+            exclude_propnames = {"name"}
+
+            default: bpy.props.FloatProperty(name="Default", default=5e3)
+            min: bpy.props.FloatProperty(name="Min", default=2.5e3)
+            max: bpy.props.FloatProperty(name="Max", default=2e4)
+
+        work_area: bpy.props.FloatVectorProperty(
+            name="Work Area", default=(8e-1, 5.6e-1, 9e-2), min=0, subtype="XYZ_LENGTH"
         )
-        spinle_direction: bpy.props.EnumProperty(
-            name="Spindle Direction",
+        feedrate: bpy.props.PointerProperty(type=Feedrate)
+        spindle: bpy.props.PointerProperty(type=Spindle)
+        axes: bpy.props.IntProperty(name="Axes", default=3, min=3, max=5)
+        collet_size: bpy.props.FloatProperty(name="Collet Size", default=0.0, min=0, max=1)
+        post_processor: bpy.props.EnumProperty(
+            name="Post Processor",
+            default="GRBL",
             items=[
-                ("CLOCKWISE", "Clockwise", ""),
-                ("COUNTER_CLOCKWISE", "Couner Clocwie", ""),
+                ("ANILAM", "Anilam Crusader M", "Post processor for Anilam Crusader M"),
+                ("CENTROID", "Centroid M40", "Post processor for Centroid M40"),
+                ("EMC", "LinuxCNC", "Post processor for Linux based CNC control software"),
+                ("FADAL", "Fadal", "Post processor for Fadal VMC"),
+                ("GRAVOS", "Gravos", "Post processor for Gravos"),
+                ("GRBL", "grbl", "Post processor for grbl firmware on Arduino with CNC shield"),
+                ("ISO", "Iso", "Standardized G-code ISO 6983 (RS-274)"),
+                ("HAFCO_HM_50", "Hafco HM-50", "Post processor for Hafco HM-50"),
+                ("HEIDENHAIN", "Heidenhain", "Post processor for Heidenhain"),
+                ("HEIDENHAIN_530", "Heidenhain 530", "Post processor for Heidenhain 530"),
+                ("HEIDENHAIN_TNC151", "Heidenhain TNC151", "Post processor for Heidenhain TNC151"),
+                ("LYNX_OTTER_O", "Lynx Otter O", "Post processor for Lynx Otter O"),
+                ("MACH3", "Mach3", "Post processor for Mach3"),
+                ("SHOPBOT_MTC", "ShopBot MTC", "Post processor for ShopBot MTC"),
+                ("SIEGKX1", "Sieg KX1", "Post processor for Sieg KX1"),
+                ("WIN_PC", "WinPC-NC", "Post processor for CNC by Burkhard Lewetz"),
             ],
-        )
-        free_movement_height: bpy.props.FloatProperty(
-            name="Free Movement Height", min=1e-5, default=5e-3, precision=PRECISION, unit="LENGTH"
         )
 
     name: bpy.props.StringProperty(name="Name", default="Job")
@@ -312,4 +405,43 @@ class CAMJob(bpy.types.PropertyGroup):
     operations: bpy.props.CollectionProperty(type=Operation)
     operation_active_index: bpy.props.IntProperty(default=0, min=0)
     stock: bpy.props.PointerProperty(type=Stock)
-    post_processor: bpy.props.PointerProperty(type=PostProcessor)
+    machine: bpy.props.PointerProperty(type=Machine)
+
+
+CLASSES = [
+    CAMJob.Operation.Movement,
+    CAMJob.Operation.WorkArea,
+    CAMJob.Operation.BlockStrategy,
+    CAMJob.Operation.CarveProjectStrategy,
+    CAMJob.Operation.CirclesStrategy,
+    CAMJob.Operation.CrossStrategy,
+    CAMJob.Operation.CurveToPathStrategy,
+    CAMJob.Operation.DrillStrategy,
+    CAMJob.Operation.MedialAxisStrategy,
+    CAMJob.Operation.OutlineFillStrategy,
+    CAMJob.Operation.PocketStrategy,
+    CAMJob.Operation.ProfileStrategy,
+    CAMJob.Operation.ParallelStrategy,
+    CAMJob.Operation.SpiralStrategy,
+    CAMJob.Operation.WaterlineRoughingStrategy,
+    CAMJob.Operation,
+    CAMJob.Stock,
+    CAMJob.Machine.Feedrate,
+    CAMJob.Machine.Spindle,
+    CAMJob.Machine,
+    CAMJob,
+]
+
+
+def register() -> None:
+    for cls in CLASSES:
+        bpy.utils.register_class(cls)
+    bpy.types.Scene.cam_jobs = bpy.props.CollectionProperty(type=CAMJob)
+    bpy.types.Scene.cam_job_active_index = bpy.props.IntProperty(default=0, min=0)
+
+
+def unregister() -> None:
+    del bpy.types.Scene.cam_jobs
+    del bpy.types.Scene.cam_job_active_index
+    for cls in CLASSES:
+        bpy.utils.unregister_class(cls)

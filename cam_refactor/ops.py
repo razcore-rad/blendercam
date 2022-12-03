@@ -1,30 +1,41 @@
+import bl_operators
 import bpy
 
+from . import props
 
-def copy(from_prop: bpy.types.Property, to_prop: bpy.types.Property, depth=0) -> None:
-    if type(from_prop) != type(to_prop):
-        return
 
-    if isinstance(from_prop, bpy.types.PropertyGroup):
-        for propname in get_propnames(to_prop, use_exclude_propnames=False):
-            from_subprop = getattr(from_prop, propname)
-            if isinstance(from_subprop, bpy.types.PropertyGroup) or isinstance(
-                from_subprop, bpy.types.bpy_prop_collection
-            ):
-                copy(from_subprop, getattr(to_prop, propname), depth + 1)
-            else:
-                setattr(to_prop, propname, from_subprop)
-                if propname == "name" and depth == 0:
-                    to_prop.name += "_copy"
+class CAM_OT_AddPresetMachine(bl_operators.presets.AddPresetBase, bpy.types.Operator):
+    """Add or remove a CAM Machine Preset"""
 
-    elif isinstance(from_prop, bpy.types.bpy_prop_collection):
-        to_prop.clear()
-        for from_subprop in from_prop.values():
-            copy(from_subprop, to_prop.add(), depth + 1)
+    bl_idname = "cam.preset_add_machine"
+    bl_label = "Add Machine Preset"
+    preset_menu = "CAM_PT_MachinePresets"
+
+    preset_defines = [
+        "scene = bpy.context.scene",
+        "unit_settings = scene.unit_settings",
+        "cam_job = scene.cam_jobs[scene.cam_job_active_index]",
+    ]
+
+    preset_values = [
+        "unit_settings.system",
+        "cam_job.machine.post_processor",
+        "cam_job.machine.working_area",
+        "cam_job.machine.feedrate.default",
+        "cam_job.machine.feedrate.min",
+        "cam_job.machine.feedrate.max",
+        "cam_job.machine.spindle.default",
+        "cam_job.machine.spindle.min",
+        "cam_job.machine.spindle.max",
+        "cam_job.machine.axes",
+        "cam_job.machine.collet_size",
+    ]
+
+    preset_subdir = "cam/machines"
 
 
 class CAM_OT_Action(bpy.types.Operator):
-    bl_idname = "scene.cam_action"
+    bl_idname = "cam.action"
     bl_label = "CAM Action"
     bl_options = {"UNDO"}
 
@@ -75,7 +86,7 @@ class CAM_OT_Action(bpy.types.Operator):
         if len(collection) == 0:
             return result
 
-        copy(collection[getattr(dataptr, active_propname)], collection.add())
+        props.copy(collection[getattr(dataptr, active_propname)], collection.add())
         setattr(dataptr, active_propname, len(collection) - 1)
         return result
 
@@ -105,3 +116,16 @@ class CAM_OT_Action(bpy.types.Operator):
         }
         _, suffix = self.type.split("_")
         return self.execute_funcs[self.type](*args[suffix])
+
+
+CLASSES = [CAM_OT_AddPresetMachine, CAM_OT_Action]
+
+
+def register() -> None:
+    for cls in CLASSES:
+        bpy.utils.register_class(cls)
+
+
+def unregister() -> None:
+    for cls in CLASSES:
+        bpy.utils.unregister_class(cls)
