@@ -5,18 +5,23 @@ import bpy
 PRECISION = 5
 
 
-def copy(from_prop: bpy.types.Property, to_prop: bpy.types.Property, depth=0) -> None:
-    if type(from_prop) != type(to_prop):
-        return
+def get_propnames(pg: bpy.types.PropertyGroup, use_exclude_propnames=True):
+    exclude_propnames = ["rna_type"]
+    if use_exclude_propnames:
+        exclude_propnames += getattr(pg, "exclude_propnames", [])
+    return sorted({propname for propname in pg.rna_type.properties.keys() if propname not in exclude_propnames})
 
+
+def copy(from_prop: bpy.types.Property, to_prop: bpy.types.Property, depth=0) -> None:
     if isinstance(from_prop, bpy.types.PropertyGroup):
-        for propname in props.get_propnames(to_prop, use_exclude_propnames=False):
+        for propname in get_propnames(to_prop, use_exclude_propnames=False):
+            if not hasattr(from_prop, propname):
+                continue
+
             from_subprop = getattr(from_prop, propname)
-            if isinstance(from_subprop, bpy.types.PropertyGroup) or isinstance(
-                from_subprop, bpy.types.bpy_prop_collection
-            ):
+            if any(isinstance(from_subprop, p) for p in [bpy.types.PropertyGroup, bpy.types.bpy_prop_collection]):
                 copy(from_subprop, getattr(to_prop, propname), depth + 1)
-            else:
+            elif hasattr(to_prop, propname):
                 setattr(to_prop, propname, from_subprop)
                 if propname == "name" and depth == 0:
                     to_prop.name += "_copy"
@@ -25,13 +30,6 @@ def copy(from_prop: bpy.types.Property, to_prop: bpy.types.Property, depth=0) ->
         to_prop.clear()
         for from_subprop in from_prop.values():
             copy(from_subprop, to_prop.add(), depth + 1)
-
-
-def get_propnames(pg: bpy.types.PropertyGroup, use_exclude_propnames=True):
-    exclude_propnames = ["rna_type"]
-    if use_exclude_propnames:
-        exclude_propnames += getattr(pg, "exclude_propnames", [])
-    return sorted({propname for propname in pg.rna_type.properties.keys() if propname not in exclude_propnames})
 
 
 def poll_object_source(strategy: bpy.types.Property, obj: bpy.types.Object) -> bool:
@@ -74,7 +72,21 @@ class CAMJob(bpy.types.PropertyGroup):
                 ],
             )
 
-            spindle_direction_type: bpy.props.EnumProperty(
+            vertical_angle: bpy.props.FloatProperty(
+                name="Vertical Angle",
+                description="Convert path above this angle to a vertical path for cutter protection",
+                default=math.pi / 45,
+                min=0,
+                max=math.pi / 2,
+                precision=0,
+                subtype="ANGLE",
+                unit="ROTATION",
+            )
+
+        class Spindle(bpy.types.PropertyGroup):
+            exclude_propnames = {"name"}
+
+            direction_type: bpy.props.EnumProperty(
                 name="Spindle Direction",
                 items=[
                     ("CLOCKWISE", "Clockwise", "", "LOOP_FORWARDS", 0),
@@ -82,15 +94,17 @@ class CAMJob(bpy.types.PropertyGroup):
                 ],
             )
 
-            vertical_angle: bpy.props.FloatProperty(
-                name="Vertical Angle",
-                description="Convert path above this angle to a vertical path for cutter protection",
-                default=math.radians(4),
-                min=0,
-                max=math.pi / 2,
-                precision=0,
-                subtype="ANGLE",
-                unit="ROTATION",
+            rpm: bpy.props.IntProperty(name="Spindle RPM", default=12000)
+
+        class Feed(bpy.types.PropertyGroup):
+            exclude_propnames = {"name", "rate"}
+
+            rate: bpy.props.FloatProperty(name="Feed Rate", default=1, min=1e-1, unit="LENGTH")
+            plunge_speed: bpy.props.FloatProperty(
+                name="Plunge Speed", default=5e-1, min=5e-2, max=1, subtype="PERCENTAGE"
+            )
+            plunge_angle: bpy.props.FloatProperty(
+                name="Plunge Angle", default=math.pi / 6, min=0, max=math.pi / 2, subtype="ANGLE", unit="ROTATION"
             )
 
         class WorkArea(bpy.types.PropertyGroup):
@@ -251,7 +265,7 @@ class CAMJob(bpy.types.PropertyGroup):
             do_merge: bpy.props.BoolProperty(name="Merge Outlines", default=True)
             outlines_count: bpy.props.IntProperty(name="Outlines Count", default=0)
             offset: bpy.props.IntProperty(name="Offset", default=0)
-            style: bpy.props.EnumProperty(
+            style_type: bpy.props.EnumProperty(
                 name="Style",
                 items=[
                     ("CONVENTIONAL", "Conventional", "Conventional rounded"),
@@ -304,9 +318,9 @@ class CAMJob(bpy.types.PropertyGroup):
                 "Outline Fill",
                 "Detect outline and fill it with paths as pocket then sample these paths on the 3D surface",
             ),
+            ("PARALLEL", "Parallel", "Parallel lines at any angle"),
             ("POCKET", "Pocket", "Pocket"),
             ("PROFILE", "Profile", "Profile cutout"),
-            ("PARALLEL", "Parallel", "Parallel lines at any angle"),
             ("SPIRAL", "Spiral", "Spiral path"),
             (
                 "WATERLINE_ROUGHING",
@@ -330,7 +344,9 @@ class CAMJob(bpy.types.PropertyGroup):
         spiral_strategy: bpy.props.PointerProperty(type=SpiralStrategy)
         waterline_roughing_strategy: bpy.props.PointerProperty(type=WaterlineRoughingStrategy)
 
+        feed: bpy.props.PointerProperty(type=Feed)
         movement: bpy.props.PointerProperty(type=Movement)
+        spindle: bpy.props.PointerProperty(type=Spindle)
         work_area: bpy.props.PointerProperty(type=WorkArea)
 
         @property
@@ -354,34 +370,43 @@ class CAMJob(bpy.types.PropertyGroup):
     class Machine(bpy.types.PropertyGroup):
         exclude_propnames = {"name", "post_processor"}
 
-        class Feedrate(bpy.types.PropertyGroup):
+        class CustomLocations(bpy.types.PropertyGroup):
             exclude_propnames = {"name"}
 
-            default: bpy.props.FloatProperty(name="Default", default=1.5)
-            min: bpy.props.FloatProperty(name="Min", default=1e-3)
-            max: bpy.props.FloatProperty(name="Max", default=2)
+            end: bpy.props.FloatVectorProperty(name="End", default=(0, 0, 0), min=0, subtype="XYZ_LENGTH")
+            start: bpy.props.FloatVectorProperty(name="Start", default=(0, 0, 0), min=0, subtype="XYZ_LENGTH")
+            tool_change: bpy.props.FloatVectorProperty(
+                name="Tool Change", default=(0, 0, 0), min=0, subtype="XYZ_LENGTH"
+            )
 
-        class Spindle(bpy.types.PropertyGroup):
+        class FeedRate(bpy.types.PropertyGroup):
             exclude_propnames = {"name"}
 
-            default: bpy.props.FloatProperty(name="Default", default=5e3)
-            min: bpy.props.FloatProperty(name="Min", default=2.5e3)
-            max: bpy.props.FloatProperty(name="Max", default=2e4)
+            default: bpy.props.FloatProperty(name="Feed Rate Default", default=1.5, min=1e-3, max=2, unit="LENGTH")
+            max: bpy.props.FloatProperty(name="Feed Rate Max", default=2, min=1e-3, max=2, unit="LENGTH")
+            min: bpy.props.FloatProperty(name="Feed Rate Min", default=1e-3, min=1e-3, max=2, unit="LENGTH")
 
-        work_area: bpy.props.FloatVectorProperty(
-            name="Work Area", default=(8e-1, 5.6e-1, 9e-2), min=0, subtype="XYZ_LENGTH"
+        class SpindleRPM(bpy.types.PropertyGroup):
+            exclude_propnames = {"name"}
+
+            default: bpy.props.FloatProperty(name="Spindle RPM Default", default=5e3)
+            max: bpy.props.FloatProperty(name="Spindle RPM Max", default=2e4)
+            min: bpy.props.FloatProperty(name="Spindle RPM Min", default=2.5e3)
+
+        work_space: bpy.props.FloatVectorProperty(
+            name="Work Space", default=(8e-1, 5.6e-1, 9e-2), min=0, subtype="XYZ_LENGTH"
         )
-        feedrate: bpy.props.PointerProperty(type=Feedrate)
-        spindle: bpy.props.PointerProperty(type=Spindle)
+        use_custom_locations: bpy.props.BoolProperty(name="Use Custom Locations", default=False)
+        custom_locations: bpy.props.PointerProperty(type=CustomLocations)
+        feed_rate: bpy.props.PointerProperty(type=FeedRate)
+        spindle: bpy.props.PointerProperty(type=SpindleRPM)
         axes: bpy.props.IntProperty(name="Axes", default=3, min=3, max=5)
-        collet_size: bpy.props.FloatProperty(name="Collet Size", default=0.0, min=0, max=1)
         post_processor: bpy.props.EnumProperty(
             name="Post Processor",
             default="GRBL",
             items=[
                 ("ANILAM", "Anilam Crusader M", "Post processor for Anilam Crusader M"),
                 ("CENTROID", "Centroid M40", "Post processor for Centroid M40"),
-                ("EMC", "LinuxCNC", "Post processor for Linux based CNC control software"),
                 ("FADAL", "Fadal", "Post processor for Fadal VMC"),
                 ("GRAVOS", "Gravos", "Post processor for Gravos"),
                 ("GRBL", "grbl", "Post processor for grbl firmware on Arduino with CNC shield"),
@@ -390,6 +415,7 @@ class CAMJob(bpy.types.PropertyGroup):
                 ("HEIDENHAIN", "Heidenhain", "Post processor for Heidenhain"),
                 ("HEIDENHAIN_530", "Heidenhain 530", "Post processor for Heidenhain 530"),
                 ("HEIDENHAIN_TNC151", "Heidenhain TNC151", "Post processor for Heidenhain TNC151"),
+                ("LINUX_CNC", "LinuxCNC", "Post processor for Linux based CNC control software"),
                 ("LYNX_OTTER_O", "Lynx Otter O", "Post processor for Lynx Otter O"),
                 ("MACH3", "Mach3", "Post processor for Mach3"),
                 ("SHOPBOT_MTC", "ShopBot MTC", "Post processor for ShopBot MTC"),
@@ -410,6 +436,8 @@ class CAMJob(bpy.types.PropertyGroup):
 
 CLASSES = [
     CAMJob.Operation.Movement,
+    CAMJob.Operation.Feed,
+    CAMJob.Operation.Spindle,
     CAMJob.Operation.WorkArea,
     CAMJob.Operation.BlockStrategy,
     CAMJob.Operation.CarveProjectStrategy,
@@ -426,8 +454,9 @@ CLASSES = [
     CAMJob.Operation.WaterlineRoughingStrategy,
     CAMJob.Operation,
     CAMJob.Stock,
-    CAMJob.Machine.Feedrate,
-    CAMJob.Machine.Spindle,
+    CAMJob.Machine.CustomLocations,
+    CAMJob.Machine.FeedRate,
+    CAMJob.Machine.SpindleRPM,
     CAMJob.Machine,
     CAMJob,
 ]

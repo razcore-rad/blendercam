@@ -5,6 +5,11 @@ import bpy
 from . import ops, props
 
 
+UNITS = {
+    "MIN": "/ min"
+}
+
+
 def get_icon(p: bpy.types.Property, propname: str) -> str:
     return getattr(p, "ICON_MAP", {}).get(propname, "NONE")
 
@@ -70,13 +75,42 @@ class CAM_PT_PanelBase(bpy.types.Panel):
         super().__init__()
         self.layout.use_property_decorate = False
 
-    def draw_property_group(self, pg: bpy.types.PropertyGroup, layout: bpy.types.UILayout = None) -> None:
-        layout = self.layout.box().column(align=True) if layout is None else layout
-        layout.use_property_split = True
+    def draw_property_group(
+        self, pg: bpy.types.PropertyGroup, *, layout: bpy.types.UILayout = None, label_text=None
+    ) -> None:
+        if layout is None:
+            layout = self.layout.box().column(align=True)
+            layout.use_property_split = True
+
         for propname in props.get_propnames(pg):
             if isinstance(getattr(pg, propname), bpy.types.PropertyGroup):
                 continue
-            layout.row().prop(pg, propname, icon=get_icon(pg, propname), expand=propname.endswith("type"))
+
+            row = layout.row(align=True)
+            if label_text is not None:
+                split = layout.split(factor=0.85, align=True)
+                row = split.row(align=True)
+            row.prop(pg, propname, icon=get_icon(pg, propname), expand=propname.endswith("type"))
+            if label_text is not None:
+                row = split.row(align=True)
+                row.alignment = "RIGHT"
+                row.label(text=label_text)
+
+
+class CAM_PT_PanelJobsOperationSubPanel(CAM_PT_PanelBase):
+    bl_options = set()
+
+    @classmethod
+    def poll(cls, context: bpy.types.Context) -> bool:
+        result = False
+        try:
+            scene = context.scene
+            cam_job = scene.cam_jobs[scene.cam_job_active_index]
+            operation = cam_job.operations[cam_job.operation_active_index]
+            result = len(cam_job.operations) > 0 and operation.strategy.is_source_valid
+        except IndexError:
+            pass
+        return result
 
 
 class CAM_PT_MachinePresets(PresetPanel, CAM_PT_PanelBase):
@@ -163,41 +197,27 @@ class CAM_PT_PanelJobsOperations(CAM_PT_Panel):
         self.draw_list_row("CAM_UL_ListOperations", cam_job, "operations", "operation_active_index", "OPERATION")
         try:
             operation = cam_job.operations[cam_job.operation_active_index]
-            strategy = operation.strategy
 
             layout = self.layout
             col = layout.box().column(align=True)
             col.prop(operation, "strategy_type")
-            col.row().prop(strategy, "source_type", expand=True)
+            col.row().prop(operation.strategy, "source_type", expand=True)
 
             row = col.row()
             row.use_property_split = True
             row.prop(
-                strategy,
-                f"{strategy.source_type.lower()}_source",
-                icon=get_enum_item_icon(strategy.source_type_items, strategy.source_type),
+                operation.strategy,
+                f"{operation.strategy.source_type.lower()}_source",
+                icon=get_enum_item_icon(operation.strategy.source_type_items, operation.strategy.source_type),
             )
-            self.draw_property_group(strategy, col)
-            self.draw_property_group(operation.movement)
+            self.draw_property_group(operation.strategy, layout=col)
         except IndexError:
             pass
 
 
-class CAM_PT_PanelJobsOperationWorkArea(CAM_PT_PanelBase):
+class CAM_PT_PanelJobsOperationWorkArea(CAM_PT_PanelJobsOperationSubPanel):
     bl_label = "Work Area"
     bl_parent_id = "CAM_PT_PanelJobsOperations"
-
-    @classmethod
-    def poll(cls, context: bpy.types.Context) -> bool:
-        result = False
-        try:
-            scene = context.scene
-            cam_job = scene.cam_jobs[scene.cam_job_active_index]
-            operation = cam_job.operations[cam_job.operation_active_index]
-            result = len(cam_job.operations) > 0 and operation.strategy.is_source_valid
-        except IndexError:
-            pass
-        return result
 
     def draw(self, context: bpy.types.Context) -> None:
         scene = context.scene
@@ -215,6 +235,26 @@ class CAM_PT_PanelJobsOperationWorkArea(CAM_PT_PanelBase):
         row.use_property_split = True
         row.prop(operation_work_area, "depth_end_type", expand=True)
         self.draw_property_group(operation_work_area)
+
+
+class CAM_PT_PanelJobsOperationFeedMovementSpindle(CAM_PT_PanelJobsOperationSubPanel):
+    bl_label = "Feed, Movement & Spindle"
+    bl_parent_id = "CAM_PT_PanelJobsOperations"
+
+    def draw(self, context: bpy.types.Context) -> None:
+        scene = context.scene
+        cam_job = context.scene.cam_jobs[scene.cam_job_active_index]
+        operation = cam_job.operations[cam_job.operation_active_index]
+        self.draw_property_group(operation.movement)
+        self.draw_property_group(operation.spindle)
+
+        col = self.layout.box().column(align=True)
+        split = col.split(factor=0.85, align=True)
+        split.row().prop(operation.feed, "rate")
+        row = split.row()
+        row.alignment = "RIGHT"
+        row.label(text=UNITS["MIN"])
+        self.draw_property_group(operation.feed, layout=col)
 
 
 class CAM_PT_PanelJobsStock(CAM_PT_PanelBase):
@@ -251,10 +291,25 @@ class CAM_PT_PanelJobsMachine(CAM_PT_PanelBase):
         scene = context.scene
         cam_job_machine = scene.cam_jobs[scene.cam_job_active_index].machine
 
-        self.draw_property_group(cam_job_machine)
-        col = self.layout.box().column(align=True)
-        col.use_property_split = True
-        col.prop(cam_job_machine, "post_processor")
+        layout = self.layout
+        box = layout.box()
+        box.prop(cam_job_machine, "post_processor")
+        box.use_property_split = False
+        box.prop(cam_job_machine, "use_custom_locations")
+        col = box.column(align=True)
+        if cam_job_machine.use_custom_locations:
+            self.draw_property_group(cam_job_machine.custom_locations, layout=col)
+
+        box = layout.box()
+        box.prop(cam_job_machine, "axes")
+        box.use_property_split = True
+        box.prop(cam_job_machine, "work_space")
+
+        col = layout.box().column(align=True)
+        self.draw_property_group(cam_job_machine.feed_rate, layout=col, label_text=UNITS["MIN"])
+
+        col = layout.box().column(align=True)
+        self.draw_property_group(cam_job_machine.spindle, layout=col)
 
 
 CLASSES = [
@@ -263,6 +318,7 @@ CLASSES = [
     CAM_PT_PanelJobs,
     CAM_PT_PanelJobsOperations,
     CAM_PT_PanelJobsOperationWorkArea,
+    CAM_PT_PanelJobsOperationFeedMovementSpindle,
     CAM_PT_PanelJobsStock,
     CAM_PT_PanelJobsMachine,
 ]

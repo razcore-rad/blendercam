@@ -13,12 +13,10 @@ class CAM_OT_AddPresetMachine(bl_operators.presets.AddPresetBase, bpy.types.Oper
 
     preset_defines = [
         "scene = bpy.context.scene",
-        "unit_settings = scene.unit_settings",
         "cam_job = scene.cam_jobs[scene.cam_job_active_index]",
     ]
 
     preset_values = [
-        "unit_settings.system",
         "cam_job.machine.post_processor",
         "cam_job.machine.working_area",
         "cam_job.machine.feedrate.default",
@@ -28,7 +26,6 @@ class CAM_OT_AddPresetMachine(bl_operators.presets.AddPresetBase, bpy.types.Oper
         "cam_job.machine.spindle.min",
         "cam_job.machine.spindle.max",
         "cam_job.machine.axes",
-        "cam_job.machine.collet_size",
     ]
 
     preset_subdir = "cam/machines"
