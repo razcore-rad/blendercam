@@ -1,13 +1,15 @@
+import importlib
 from functools import reduce
 
 import bpy
 
-from . import ops, props
+modnames = ["ops", "props"]
 
+globals().update(
+    {modname: importlib.reload(importlib.import_module(f".{modname}", __package__)) for modname in modnames}
+)
 
-UNITS = {
-    "MIN": "/ min"
-}
+UNITS = {"MIN": "/ min"}
 
 
 def get_icon(p: bpy.types.Property, propname: str) -> str:
@@ -82,7 +84,7 @@ class CAM_PT_PanelBase(bpy.types.Panel):
             layout = self.layout.box().column(align=True)
             layout.use_property_split = True
 
-        for propname in props.get_propnames(pg):
+        for propname in props.utils.get_propnames(pg):
             if isinstance(getattr(pg, propname), bpy.types.PropertyGroup):
                 continue
 
@@ -106,18 +108,29 @@ class CAM_PT_PanelJobsOperationSubPanel(CAM_PT_PanelBase):
         try:
             scene = context.scene
             cam_job = scene.cam_jobs[scene.cam_job_active_index]
-            operation = cam_job.operations[cam_job.operation_active_index]
-            result = len(cam_job.operations) > 0 and operation.strategy.is_source_valid
+            strategy = cam_job.operation.strategy
+            result = strategy.source is not None and getattr(strategy, "curve", True)
         except IndexError:
             pass
         return result
 
 
-class CAM_PT_MachinePresets(PresetPanel, CAM_PT_PanelBase):
+class CAM_PT_MachinePresets(PresetPanel, bpy.types.Panel):
+    bl_space_type = CAM_PT_PanelBase.bl_space_type
+    bl_region_type = CAM_PT_PanelBase.bl_region_type
     bl_label = "Machine Presets"
     preset_subdir = "cam/machines"
     preset_operator = "script.execute_preset"
     preset_add_operator = "cam.preset_add_machine"
+
+
+class CAM_PT_CutterPresets(PresetPanel, bpy.types.Panel):
+    bl_space_type = CAM_PT_PanelBase.bl_space_type
+    bl_region_type = CAM_PT_PanelBase.bl_region_type
+    bl_label = "Cutter Presets"
+    preset_subdir = "cam/cutters"
+    preset_operator = "script.execute_preset"
+    preset_add_operator = "cam.preset_add_cutter"
 
 
 class CAM_PT_Panel(CAM_PT_PanelBase):
@@ -196,23 +209,39 @@ class CAM_PT_PanelJobsOperations(CAM_PT_Panel):
         cam_job = scene.cam_jobs[scene.cam_job_active_index]
         self.draw_list_row("CAM_UL_ListOperations", cam_job, "operations", "operation_active_index", "OPERATION")
         try:
-            operation = cam_job.operations[cam_job.operation_active_index]
+            operation = cam_job.operation
+            strategy = operation.strategy
 
             layout = self.layout
             col = layout.box().column(align=True)
             col.prop(operation, "strategy_type")
-            col.row().prop(operation.strategy, "source_type", expand=True)
+            col.row().prop(strategy, "source_type", expand=True)
 
-            row = col.row()
-            row.use_property_split = True
-            row.prop(
-                operation.strategy,
-                f"{operation.strategy.source_type.lower()}_source",
-                icon=get_enum_item_icon(operation.strategy.source_type_items, operation.strategy.source_type),
+            col.row().prop(
+                strategy,
+                strategy.source_propname,
+                icon=get_enum_item_icon(strategy.source_type_items, strategy.source_type),
             )
-            self.draw_property_group(operation.strategy, layout=col)
+            self.draw_property_group(strategy, layout=col)
         except IndexError:
             pass
+
+
+class CAM_PT_PanelJobsOperationCutter(CAM_PT_PanelJobsOperationSubPanel):
+    bl_label = "Cutter"
+    bl_parent_id = "CAM_PT_PanelJobsOperations"
+
+    def draw_header_preset(self, _context: bpy.types.Context) -> None:
+        CAM_PT_CutterPresets.draw_panel_header(self.layout)
+
+    def draw(self, context: bpy.types.Context) -> None:
+        scene = context.scene
+        operation = scene.cam_jobs[scene.cam_job_active_index].operation
+        cutter = operation.cutter
+        col = self.layout.box().column(align=True)
+        col.prop(operation, "cutter_type")
+        col.prop(cutter, "id")
+        self.draw_property_group(cutter, layout=col)
 
 
 class CAM_PT_PanelJobsOperationWorkArea(CAM_PT_PanelJobsOperationSubPanel):
@@ -222,19 +251,19 @@ class CAM_PT_PanelJobsOperationWorkArea(CAM_PT_PanelJobsOperationSubPanel):
     def draw(self, context: bpy.types.Context) -> None:
         scene = context.scene
         cam_job = context.scene.cam_jobs[scene.cam_job_active_index]
-        operation_work_area = cam_job.operations[cam_job.operation_active_index].work_area
+        work_area = cam_job.operation.work_area
 
         layout = self.layout
         col = layout.box().column(align=True)
         row = col.row(align=True)
-        row.prop(operation_work_area, "depth_start")
-        if operation_work_area.depth_end_type == "CUSTOM":
-            row.prop(operation_work_area, "depth_end")
+        row.prop(work_area, "depth_start")
+        if work_area.depth_end_type == "CUSTOM":
+            row.prop(work_area, "depth_end")
 
         row = col.row()
         row.use_property_split = True
-        row.prop(operation_work_area, "depth_end_type", expand=True)
-        self.draw_property_group(operation_work_area)
+        row.prop(work_area, "depth_end_type", expand=True)
+        self.draw_property_group(work_area)
 
 
 class CAM_PT_PanelJobsOperationFeedMovementSpindle(CAM_PT_PanelJobsOperationSubPanel):
@@ -244,7 +273,7 @@ class CAM_PT_PanelJobsOperationFeedMovementSpindle(CAM_PT_PanelJobsOperationSubP
     def draw(self, context: bpy.types.Context) -> None:
         scene = context.scene
         cam_job = context.scene.cam_jobs[scene.cam_job_active_index]
-        operation = cam_job.operations[cam_job.operation_active_index]
+        operation = cam_job.operation
         self.draw_property_group(operation.movement)
         self.draw_property_group(operation.spindle)
 
@@ -272,7 +301,7 @@ class CAM_PT_PanelJobsStock(CAM_PT_PanelBase):
         layout = self.layout
         layout.row().prop(stock, "type", expand=True)
         row = layout.row(align=True)
-        for propname in (pn for pn in props.get_propnames(stock) if pn.startswith(stock.type.lower())):
+        for propname in (pn for pn in props.utils.get_propnames(stock) if pn.startswith(stock.type.lower())):
             row.column().prop(stock, propname)
 
 
@@ -289,34 +318,32 @@ class CAM_PT_PanelJobsMachine(CAM_PT_PanelBase):
 
     def draw(self, context: bpy.types.Context) -> None:
         scene = context.scene
-        cam_job_machine = scene.cam_jobs[scene.cam_job_active_index].machine
+        machine = scene.cam_jobs[scene.cam_job_active_index].machine
+        post_processor = machine.post_processor
 
         layout = self.layout
         box = layout.box()
-        box.prop(cam_job_machine, "post_processor")
-        box.use_property_split = False
-        box.prop(cam_job_machine, "use_custom_locations")
-        col = box.column(align=True)
-        if cam_job_machine.use_custom_locations:
-            self.draw_property_group(cam_job_machine.custom_locations, layout=col)
+        box.prop(machine, "post_processor_enum")
+        box.prop(post_processor, "use_custom_locations")
+        if post_processor.use_custom_locations:
+            self.draw_property_group(post_processor.custom_locations, layout=box.column(align=True))
+        self.draw_property_group(post_processor, layout=box.column(align=True))
 
         box = layout.box()
-        box.prop(cam_job_machine, "axes")
-        box.use_property_split = True
-        box.prop(cam_job_machine, "work_space")
+        box.prop(machine, "axes")
+        box.prop(machine, "work_space")
 
-        col = layout.box().column(align=True)
-        self.draw_property_group(cam_job_machine.feed_rate, layout=col, label_text=UNITS["MIN"])
-
-        col = layout.box().column(align=True)
-        self.draw_property_group(cam_job_machine.spindle, layout=col)
+        self.draw_property_group(machine.feed_rate, layout=layout.box().column(align=True), label_text=UNITS["MIN"])
+        self.draw_property_group(machine.spindle_rpm, layout=layout.box().column(align=True))
 
 
 CLASSES = [
     CAM_UL_List,
+    CAM_PT_CutterPresets,
     CAM_PT_MachinePresets,
     CAM_PT_PanelJobs,
     CAM_PT_PanelJobsOperations,
+    CAM_PT_PanelJobsOperationCutter,
     CAM_PT_PanelJobsOperationWorkArea,
     CAM_PT_PanelJobsOperationFeedMovementSpindle,
     CAM_PT_PanelJobsStock,

@@ -1,7 +1,13 @@
+import importlib
+
 import bl_operators
 import bpy
 
-from . import props
+modnames = ["props"]
+
+globals().update(
+    {modname: importlib.reload(importlib.import_module(f".{modname}", __package__)) for modname in modnames}
+)
 
 
 class CAM_OT_AddPresetMachine(bl_operators.presets.AddPresetBase, bpy.types.Operator):
@@ -10,6 +16,7 @@ class CAM_OT_AddPresetMachine(bl_operators.presets.AddPresetBase, bpy.types.Oper
     bl_idname = "cam.preset_add_machine"
     bl_label = "Add Machine Preset"
     preset_menu = "CAM_PT_MachinePresets"
+    preset_subdir = "cam/machines"
 
     preset_defines = [
         "scene = bpy.context.scene",
@@ -28,7 +35,45 @@ class CAM_OT_AddPresetMachine(bl_operators.presets.AddPresetBase, bpy.types.Oper
         "cam_job.machine.axes",
     ]
 
-    preset_subdir = "cam/machines"
+
+class CAM_OT_AddPresetCutter(bl_operators.presets.AddPresetBase, bpy.types.Operator):
+    """Add or remove a CAM Cutter Preset"""
+
+    bl_idname = "cam.preset_add_cutter"
+    bl_label = "Add Cutter Preset"
+    preset_menu = "CAM_PT_CutterPresets"
+    preset_subdir = "cam/cutters"
+
+    preset_defines = [
+        "scene = bpy.context.scene",
+        "cam_job = scene.cam_jobs[scene.cam_job_active_index]",
+    ]
+
+    @property
+    def preset_values(self) -> list[str]:
+        result = []
+
+        scene = bpy.context.scene
+        cam_job = scene.cam_jobs[scene.cam_job_active_index]
+        operation = cam_job.operations[cam_job.operation_active_index]
+
+        result.extend(
+            [
+                "cam_job.operation.cutter_type",
+                "cam_job.operation.cutter.id",
+                "cam_job.operation.cutter.description",
+                "cam_job.operation.cutter.diameter",
+            ]
+        )
+
+        if isinstance(operation.cutter, props.camjob.operation.cutter.Mill):
+            result.extend(
+                [
+                    "cam_job.operation.cutter.flutes",
+                    "cam_job.operation.cutter.length",
+                ]
+            )
+        return result
 
 
 class CAM_OT_Action(bpy.types.Operator):
@@ -83,7 +128,7 @@ class CAM_OT_Action(bpy.types.Operator):
         if len(collection) == 0:
             return result
 
-        props.copy(collection[getattr(dataptr, active_propname)], collection.add())
+        props.utils.copy(collection[getattr(dataptr, active_propname)], collection.add())
         setattr(dataptr, active_propname, len(collection) - 1)
         return result
 
@@ -115,7 +160,7 @@ class CAM_OT_Action(bpy.types.Operator):
         return self.execute_funcs[self.type](*args[suffix])
 
 
-CLASSES = [CAM_OT_AddPresetMachine, CAM_OT_Action]
+CLASSES = [CAM_OT_AddPresetCutter, CAM_OT_AddPresetMachine, CAM_OT_Action]
 
 
 def register() -> None:
