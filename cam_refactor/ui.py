@@ -239,9 +239,32 @@ class CAM_PT_PanelJobsOperationCutter(CAM_PT_PanelJobsOperationSubPanel):
         operation = scene.cam_jobs[scene.cam_job_active_index].operation
         cutter = operation.cutter
         col = self.layout.box().column(align=True)
+        col.use_property_split = True
         col.prop(operation, "cutter_type")
         col.prop(cutter, "id")
+        col.prop(cutter, "description")
+        col.use_property_split = False
         self.draw_property_group(cutter, layout=col)
+
+
+class CAM_PT_PanelJobsOperationFeedMovementSpindle(CAM_PT_PanelJobsOperationSubPanel):
+    bl_label = "Feed, Movement & Spindle"
+    bl_parent_id = "CAM_PT_PanelJobsOperations"
+
+    def draw(self, context: bpy.types.Context) -> None:
+        scene = context.scene
+        cam_job = context.scene.cam_jobs[scene.cam_job_active_index]
+        operation = cam_job.operation
+        self.draw_property_group(operation.movement)
+        self.draw_property_group(operation.spindle)
+
+        col = self.layout.box().column(align=True)
+        split = col.split(factor=0.85, align=True)
+        split.row().prop(operation.feed, "rate")
+        row = split.row()
+        row.alignment = "RIGHT"
+        row.label(text=UNITS["MIN"])
+        self.draw_property_group(operation.feed, layout=col)
 
 
 class CAM_PT_PanelJobsOperationWorkArea(CAM_PT_PanelJobsOperationSubPanel):
@@ -264,26 +287,6 @@ class CAM_PT_PanelJobsOperationWorkArea(CAM_PT_PanelJobsOperationSubPanel):
         row.use_property_split = True
         row.prop(work_area, "depth_end_type", expand=True)
         self.draw_property_group(work_area)
-
-
-class CAM_PT_PanelJobsOperationFeedMovementSpindle(CAM_PT_PanelJobsOperationSubPanel):
-    bl_label = "Feed, Movement & Spindle"
-    bl_parent_id = "CAM_PT_PanelJobsOperations"
-
-    def draw(self, context: bpy.types.Context) -> None:
-        scene = context.scene
-        cam_job = context.scene.cam_jobs[scene.cam_job_active_index]
-        operation = cam_job.operation
-        self.draw_property_group(operation.movement)
-        self.draw_property_group(operation.spindle)
-
-        col = self.layout.box().column(align=True)
-        split = col.split(factor=0.85, align=True)
-        split.row().prop(operation.feed, "rate")
-        row = split.row()
-        row.alignment = "RIGHT"
-        row.label(text=UNITS["MIN"])
-        self.draw_property_group(operation.feed, layout=col)
 
 
 class CAM_PT_PanelJobsStock(CAM_PT_PanelBase):
@@ -344,8 +347,8 @@ CLASSES = [
     CAM_PT_PanelJobs,
     CAM_PT_PanelJobsOperations,
     CAM_PT_PanelJobsOperationCutter,
-    CAM_PT_PanelJobsOperationWorkArea,
     CAM_PT_PanelJobsOperationFeedMovementSpindle,
+    CAM_PT_PanelJobsOperationWorkArea,
     CAM_PT_PanelJobsStock,
     CAM_PT_PanelJobsMachine,
 ]

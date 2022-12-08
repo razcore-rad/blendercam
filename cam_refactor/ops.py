@@ -51,26 +51,31 @@ class CAM_OT_AddPresetCutter(bl_operators.presets.AddPresetBase, bpy.types.Opera
 
     @property
     def preset_values(self) -> list[str]:
-        result = []
+        result = [
+            "cam_job.operation.cutter_type",
+            "cam_job.operation.cutter.id",
+            "cam_job.operation.cutter.description",
+            "cam_job.operation.cutter.diameter",
+        ]
 
         scene = bpy.context.scene
         cam_job = scene.cam_jobs[scene.cam_job_active_index]
         operation = cam_job.operations[cam_job.operation_active_index]
-
-        result.extend(
-            [
-                "cam_job.operation.cutter_type",
-                "cam_job.operation.cutter.id",
-                "cam_job.operation.cutter.description",
-                "cam_job.operation.cutter.diameter",
-            ]
-        )
 
         if isinstance(operation.cutter, props.camjob.operation.cutter.Mill):
             result.extend(
                 [
                     "cam_job.operation.cutter.flutes",
                     "cam_job.operation.cutter.length",
+                ]
+            )
+        elif isinstance(operation.cutter, props.camjob.operation.cutter.Drill):
+            result.extend(["cam_job.operation.cutter.length"])
+        elif isinstance(operation.cutter, props.camjob.operation.cutter.ConeMill):
+            result.extend(
+                [
+                    "cam_job.operation.cutter.length",
+                    "cam_job.operation.cutter.angle",
                 ]
             )
         return result

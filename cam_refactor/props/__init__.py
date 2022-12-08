@@ -2,14 +2,16 @@ import importlib
 
 import bpy
 
-modnames = ["camjob"]
+modnames = ["camjob", "utils"]
 
 globals().update(
     {modname: importlib.reload(importlib.import_module(f".{modname}", __package__)) for modname in modnames}
 )
 
 CLASSES = [
+    camjob.operation.cutter.ConeMill,
     camjob.operation.cutter.Mill,
+    camjob.operation.cutter.Drill,
     camjob.operation.cutter.Simple,
     camjob.operation.feedmovementspindle.Feed,
     camjob.operation.feedmovementspindle.Movement,

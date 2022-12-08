@@ -9,32 +9,55 @@ globals().update(
 )
 
 
+def get_cutter_types(operation: bpy.types.PropertyGroup, _context: bpy.types.Context) -> list[tuple[str, str, str]]:
+    result = []
+    try:
+        result.extend(
+            [
+                ("BALL", "Ball", "Ball nose end mill"),
+                ("BALL_CONE", "Ball Cone", "Ball cone nose end mill"),
+                ("BULL", "Bull", "Bull nose end mill"),
+                ("BULL_CONE", "Bull Cone", "Bull cone nose end mill"),
+                ("CONE", "Cone", "Cone end mill"),
+                ("CYLINDER", "Cylinder", "Cylinder end mill"),
+                ("CYLINDER_CONE", "Cylinder Cone", "Cylinder cone end mill"),
+            ]
+        )
+
+        if operation.strategy_type in {"MEDIAL_AXIS", "PROFILE"}:
+            result.extend(
+                [
+                    None,
+                    ("V_CARVE", "V-Carve", "V-Carve end mill"),
+                    None,
+                    ("LASER", "Laser", "Laser cutter"),
+                    ("PLASMA", "Plasma", "Plasma cutter"),
+                ]
+            )
+        elif operation.strategy_type in {"DRILL"}:
+            result.extend([None, ("DRILL", "Drill", "Drill mill")])
+    except IndexError:
+        pass
+    return result
+
+
 class Operation(bpy.types.PropertyGroup):
     name: bpy.props.StringProperty(default="Operation")
     is_hidden: bpy.props.BoolProperty(default=False)
     use_modifiers: bpy.props.BoolProperty(default=True)
 
-    cutter_type: bpy.props.EnumProperty(
-        items=[
-            ("END", "End", "End Mill"),
-            ("BALL_CONE", "Ball Cone", "Ball Cone Mill for Parallel"),
-            ("BALL_NOSE", "Ball Nose", "Ball Nose Mill"),
-            ("BULL_NOSE", "Bull Nose", "Bull Nose Mill"),
-            ("CYLINDER_CONE", "Cylinder Cone", "Cylinder Cone Mill for Parallel"),
-            ("LASER", "Laser", "Laser Cutter"),
-            ("PLASMA", "Plasma", "Plasma Cutter"),
-            ("V_CARVE", "V-Carve", "V-Carve Mill"),
-        ],
-        name="Type",
-    )
-    end_cutter: bpy.props.PointerProperty(type=cutter.Mill)
-    ball_cone_cutter: bpy.props.PointerProperty(type=cutter.Mill)
-    ball_nose_cutter: bpy.props.PointerProperty(type=cutter.Mill)
-    bull_nose_cutter: bpy.props.PointerProperty(type=cutter.Mill)
-    cylinder_cone_cutter: bpy.props.PointerProperty(type=cutter.Mill)
+    cutter_type: bpy.props.EnumProperty(name="Type", items=get_cutter_types, default=5)
+    ball_cutter: bpy.props.PointerProperty(type=cutter.Mill)
+    ball_cone_cutter: bpy.props.PointerProperty(type=cutter.ConeMill)
+    bull_cutter: bpy.props.PointerProperty(type=cutter.Mill)
+    bull_cone_cutter: bpy.props.PointerProperty(type=cutter.ConeMill)
+    cone_cutter: bpy.props.PointerProperty(type=cutter.ConeMill)
+    cylinder_cutter: bpy.props.PointerProperty(type=cutter.Mill)
+    cylinder_cone_cutter: bpy.props.PointerProperty(type=cutter.ConeMill)
+    drill_cutter: bpy.props.PointerProperty(type=cutter.Drill)
     laser_cutter: bpy.props.PointerProperty(type=cutter.Simple)
     plasma_cutter: bpy.props.PointerProperty(type=cutter.Simple)
-    v_carve_cutter: bpy.props.PointerProperty(type=cutter.Mill)
+    v_carve_cutter: bpy.props.PointerProperty(type=cutter.ConeMill)
 
     strategy_type_items = [
         ("BLOCK", "Block", "Block path"),
@@ -70,7 +93,7 @@ class Operation(bpy.types.PropertyGroup):
             "Roughing below ZERO. Z is always below ZERO",
         ),
     ]
-    strategy_type: bpy.props.EnumProperty(items=strategy_type_items, name="Strategy")
+    strategy_type: bpy.props.EnumProperty(name="Strategy", items=strategy_type_items, default=9)
 
     block_strategy: bpy.props.PointerProperty(type=strategy.BlockStrategy)
     carve_project_strategy: bpy.props.PointerProperty(type=strategy.CarveProjectStrategy)
