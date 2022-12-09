@@ -22,19 +22,17 @@ def get_enum_item_icon(items: list[tuple], item_type: str) -> str:
 
 class CAM_UL_List(bpy.types.UIList):
     ICON_MAP = {
-        "is_hidden": {True: "HIDE_ON", False: "HIDE_OFF"},
         "use_modifiers": {True: "MODIFIER_ON", False: "MODIFIER_OFF"},
     }
 
     def draw_item(self, _context, layout, _data, item, icon, _active_data, _active_propname):
         if self.layout_type in {"DEFAULT", "COMPACT"}:
-            row0 = layout.row()
-            row0.prop(item, "name", text="", emboss=False, icon_value=icon)
+            layout.row().prop(item.data, "name", text="", emboss=False, icon_value=icon)
+            layout.row(align=True).prop(item.data, "hide_viewport", text="", emboss=False)
 
-            row1 = layout.row(align=True)
             for propname in self.ICON_MAP:
                 if hasattr(item, propname):
-                    row1.prop(
+                    layout.row(align=True).prop(
                         item,
                         propname,
                         text="",
@@ -106,9 +104,7 @@ class CAM_PT_PanelJobsOperationSubPanel(CAM_PT_PanelBase):
     def poll(cls, context: bpy.types.Context) -> bool:
         result = False
         try:
-            scene = context.scene
-            cam_job = scene.cam_jobs[scene.cam_job_active_index]
-            strategy = cam_job.operation.strategy
+            strategy = context.scene.cam_job.operation.strategy
             result = strategy.source is not None and getattr(strategy, "curve", True)
         except IndexError:
             pass
@@ -170,7 +166,7 @@ class CAM_PT_PanelJobs(CAM_PT_Panel):
         scene = context.scene
         self.draw_list_row("CAM_UL_ListJobs", scene, "cam_jobs", "cam_job_active_index", "JOB")
         try:
-            cam_job = scene.cam_jobs[scene.cam_job_active_index]
+            cam_job = scene.cam_job
 
             layout = self.layout
             row = layout.row()
@@ -206,7 +202,7 @@ class CAM_PT_PanelJobsOperations(CAM_PT_Panel):
 
     def draw(self, context: bpy.types.Context) -> None:
         scene = context.scene
-        cam_job = scene.cam_jobs[scene.cam_job_active_index]
+        cam_job = scene.cam_job
         self.draw_list_row("CAM_UL_ListOperations", cam_job, "operations", "operation_active_index", "OPERATION")
         try:
             operation = cam_job.operation
@@ -235,8 +231,7 @@ class CAM_PT_PanelJobsOperationCutter(CAM_PT_PanelJobsOperationSubPanel):
         CAM_PT_CutterPresets.draw_panel_header(self.layout)
 
     def draw(self, context: bpy.types.Context) -> None:
-        scene = context.scene
-        operation = scene.cam_jobs[scene.cam_job_active_index].operation
+        operation = context.scene.cam_job.operation
         cutter = operation.cutter
         col = self.layout.box().column(align=True)
         col.use_property_split = True
@@ -252,9 +247,7 @@ class CAM_PT_PanelJobsOperationFeedMovementSpindle(CAM_PT_PanelJobsOperationSubP
     bl_parent_id = "CAM_PT_PanelJobsOperations"
 
     def draw(self, context: bpy.types.Context) -> None:
-        scene = context.scene
-        cam_job = context.scene.cam_jobs[scene.cam_job_active_index]
-        operation = cam_job.operation
+        operation = context.scene.cam_job.operation
         self.draw_property_group(operation.movement)
         self.draw_property_group(operation.spindle)
 
@@ -272,9 +265,7 @@ class CAM_PT_PanelJobsOperationWorkArea(CAM_PT_PanelJobsOperationSubPanel):
     bl_parent_id = "CAM_PT_PanelJobsOperations"
 
     def draw(self, context: bpy.types.Context) -> None:
-        scene = context.scene
-        cam_job = context.scene.cam_jobs[scene.cam_job_active_index]
-        work_area = cam_job.operation.work_area
+        work_area = context.scene.cam_job.work_area
 
         layout = self.layout
         col = layout.box().column(align=True)
@@ -298,8 +289,7 @@ class CAM_PT_PanelJobsStock(CAM_PT_PanelBase):
         return len(context.scene.cam_jobs) > 0
 
     def draw(self, context: bpy.types.Context) -> None:
-        scene = context.scene
-        stock = scene.cam_jobs[scene.cam_job_active_index].stock
+        stock = context.scene.cam_job.stock
 
         layout = self.layout
         layout.row().prop(stock, "type", expand=True)
@@ -320,8 +310,7 @@ class CAM_PT_PanelJobsMachine(CAM_PT_PanelBase):
         CAM_PT_MachinePresets.draw_panel_header(self.layout)
 
     def draw(self, context: bpy.types.Context) -> None:
-        scene = context.scene
-        machine = scene.cam_jobs[scene.cam_job_active_index].machine
+        machine = context.scene.cam_job.machine
         post_processor = machine.post_processor
 
         layout = self.layout

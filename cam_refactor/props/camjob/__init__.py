@@ -15,8 +15,9 @@ globals().update(
 
 
 class CAMJob(bpy.types.PropertyGroup):
-    name: bpy.props.StringProperty(name="Name", default="Job")
-    is_hidden: bpy.props.BoolProperty(default=False)
+    NAME = "CAMJob"
+
+    data: bpy.props.PointerProperty(type=bpy.types.Collection)
     count: bpy.props.IntVectorProperty(name="Count", default=(1, 1), min=1, subtype="XYZ", size=2)
     gap: bpy.props.FloatVectorProperty(name="Gap", default=(0, 0), min=0, subtype="XYZ_LENGTH", size=2)
     operations: bpy.props.CollectionProperty(type=operation.Operation)
@@ -27,3 +28,14 @@ class CAMJob(bpy.types.PropertyGroup):
     @property
     def operation(self) -> operation.Operation:
         return self.operations[self.operation_active_index]
+
+    def add_data(self) -> None:
+        self.data = bpy.data.collections.new(self.NAME)
+        operation = self.operations.add()
+        operation.add_data()
+        self.data.objects.link(operation.data)
+
+    def remove_data(self) -> None:
+        for operation in self.operations:
+            operation.remove_data()
+        bpy.data.collections.remove(self.data)

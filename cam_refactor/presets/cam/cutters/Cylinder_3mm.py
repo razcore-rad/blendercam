@@ -1,11 +1,10 @@
 import bpy
 
-scene = bpy.context.scene
-cam_job = scene.cam_jobs[scene.cam_job_active_index]
+operation = bpy.context.scene.cam_job.operation
 
-cam_job.operation.cutter_type = "CYLINDER"
-cam_job.operation.cutter.id = 1
-cam_job.operation.cutter.description = "Default cylinder end mill"
-cam_job.operation.cutter.diameter = 3e-3
-cam_job.operation.cutter.flutes = 2
-cam_job.operation.cutter.length = 2.5e-1
+operation.cutter_type = "CYLINDER"
+operation.cutter.id = 1
+operation.cutter.description = "Default cylinder end mill"
+operation.cutter.diameter = 3e-3
+operation.cutter.flutes = 2
+operation.cutter.length = 2.5e-1

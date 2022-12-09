@@ -42,8 +42,9 @@ def get_cutter_types(operation: bpy.types.PropertyGroup, _context: bpy.types.Con
 
 
 class Operation(bpy.types.PropertyGroup):
-    name: bpy.props.StringProperty(default="Operation")
-    is_hidden: bpy.props.BoolProperty(default=False)
+    NAME = "CAMOperation"
+
+    data: bpy.props.PointerProperty(type=bpy.types.Object)
     use_modifiers: bpy.props.BoolProperty(default=True)
 
     cutter_type: bpy.props.EnumProperty(name="Type", items=get_cutter_types, default=5)
@@ -133,3 +134,9 @@ class Operation(bpy.types.PropertyGroup):
     @property
     def is_strategy_valid(self) -> bool:
         return self.strategy is not None
+
+    def add_data(self) -> None:
+        self.data = bpy.data.objects.new(self.NAME, bpy.data.meshes.new(self.NAME))
+
+    def remove_data(self) -> None:
+        bpy.data.meshes.remove(self.data.data)
