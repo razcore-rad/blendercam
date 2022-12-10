@@ -265,7 +265,7 @@ class CAM_PT_PanelJobsOperationWorkArea(CAM_PT_PanelJobsOperationSubPanel):
     bl_parent_id = "CAM_PT_PanelJobsOperations"
 
     def draw(self, context: bpy.types.Context) -> None:
-        work_area = context.scene.cam_job.work_area
+        work_area = context.scene.cam_job.operation.work_area
 
         layout = self.layout
         col = layout.box().column(align=True)

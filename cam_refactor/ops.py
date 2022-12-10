@@ -116,26 +116,26 @@ class CAM_OT_Action(bpy.types.Operator):
         item = propscol.add()
         item.add_data()
         setattr(dataptr, active_propname, len(propscol) - 1)
-        linker = context.collection.children if isinstance(item, props.camjob.CAMJob) else dataptr.data.objects
-        linker.link(item.data)
         return {"FINISHED"}
 
-    # def execute_duplicate(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> set[str]:
-    #     result = {"FINISHED"}
-    #     propscol = getattr(dataptr, propname)
-    #     if len(propscol) == 0:
-    #         return result
+    def execute_duplicate(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> set[str]:
+        result = {"FINISHED"}
+        propscol = getattr(dataptr, propname)
+        if len(propscol) == 0:
+            return result
 
-    #     props.utils.copy(propscol[getattr(dataptr, active_propname)], propscol.add())
-    #     setattr(dataptr, active_propname, len(propscol) - 1)
-    #     return result
+        props.utils.copy(propscol[getattr(dataptr, active_propname)], propscol.add())
+        return result
 
     def execute_remove(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> set[str]:
-        propscol = getattr(dataptr, propname)
-        item = propscol[getattr(dataptr, active_propname)]
-        item.remove_data()
-        propscol.remove(getattr(dataptr, active_propname))
-        setattr(dataptr, active_propname, getattr(dataptr, active_propname) - 1)
+        try:
+            propscol = getattr(dataptr, propname)
+            item = propscol[getattr(dataptr, active_propname)]
+            item.remove_data()
+            propscol.remove(getattr(dataptr, active_propname))
+            setattr(dataptr, active_propname, getattr(dataptr, active_propname) - 1)
+        except IndexError:
+            pass
         return {"FINISHED"}
 
     # def execute_move(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> set[str]:

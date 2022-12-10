@@ -31,9 +31,9 @@ class CAMJob(bpy.types.PropertyGroup):
 
     def add_data(self) -> None:
         self.data = bpy.data.collections.new(self.NAME)
+        bpy.context.collection.children.link(self.data)
         operation = self.operations.add()
         operation.add_data()
-        self.data.objects.link(operation.data)
 
     def remove_data(self) -> None:
         for operation in self.operations:
