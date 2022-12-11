@@ -3,11 +3,9 @@ import importlib
 import bl_operators
 import bpy
 
-modnames = ["props"]
+mods = {".props"}
 
-globals().update(
-    {modname: importlib.reload(importlib.import_module(f".{modname}", __package__)) for modname in modnames}
-)
+globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod, __package__)) for mod in mods})
 
 
 class CAM_OT_AddPresetMachine(bl_operators.presets.AddPresetBase, bpy.types.Operator):
@@ -43,9 +41,7 @@ class CAM_OT_AddPresetCutter(bl_operators.presets.AddPresetBase, bpy.types.Opera
     preset_menu = "CAM_PT_CutterPresets"
     preset_subdir = "cam/cutters"
 
-    preset_defines = [
-        "operation = bpy.context.scene.cam_job.operation"
-    ]
+    preset_defines = ["operation = bpy.context.scene.cam_job.operation"]
 
     @property
     def preset_values(self) -> list[str]:
@@ -114,7 +110,7 @@ class CAM_OT_Action(bpy.types.Operator):
     def execute_add(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> set[str]:
         propscol = getattr(dataptr, propname)
         item = propscol.add()
-        item.add_data()
+        item.add_data(context)
         setattr(dataptr, active_propname, len(propscol) - 1)
         return {"FINISHED"}
 
@@ -123,8 +119,9 @@ class CAM_OT_Action(bpy.types.Operator):
         propscol = getattr(dataptr, propname)
         if len(propscol) == 0:
             return result
-
-        props.utils.copy(propscol[getattr(dataptr, active_propname)], propscol.add())
+        active_index = getattr(dataptr, active_propname)
+        props.utils.copy(context, propscol[active_index], propscol.add())
+        setattr(dataptr, active_propname, active_index + 1)
         return result
 
     def execute_remove(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> set[str]:

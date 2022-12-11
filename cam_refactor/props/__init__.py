@@ -2,11 +2,9 @@ import importlib
 
 import bpy
 
-modnames = ["camjob", "utils"]
+mods = {".camjob", ".utils"}
 
-globals().update(
-    {modname: importlib.reload(importlib.import_module(f".{modname}", __package__)) for modname in modnames}
-)
+globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod, __package__)) for mod in mods})
 
 CLASSES = [
     camjob.operation.cutter.ConeMill,
@@ -17,25 +15,25 @@ CLASSES = [
     camjob.operation.feedmovementspindle.Movement,
     camjob.operation.feedmovementspindle.Spindle,
     camjob.operation.workarea.WorkArea,
-    camjob.operation.strategy.BlockStrategy,
-    camjob.operation.strategy.CarveProjectStrategy,
-    camjob.operation.strategy.CirclesStrategy,
-    camjob.operation.strategy.CrossStrategy,
-    camjob.operation.strategy.CurveToPathStrategy,
-    camjob.operation.strategy.DrillStrategy,
-    camjob.operation.strategy.MedialAxisStrategy,
-    camjob.operation.strategy.OutlineFillStrategy,
-    camjob.operation.strategy.PocketStrategy,
-    camjob.operation.strategy.ProfileStrategy,
-    camjob.operation.strategy.ParallelStrategy,
-    camjob.operation.strategy.SpiralStrategy,
-    camjob.operation.strategy.WaterlineRoughingStrategy,
+    camjob.operation.strategy.Block,
+    camjob.operation.strategy.CarveProject,
+    camjob.operation.strategy.Circles,
+    camjob.operation.strategy.Cross,
+    camjob.operation.strategy.CurveToPath,
+    camjob.operation.strategy.Drill,
+    camjob.operation.strategy.MedialAxis,
+    camjob.operation.strategy.OutlineFill,
+    camjob.operation.strategy.Pocket,
+    camjob.operation.strategy.Profile,
+    camjob.operation.strategy.Parallel,
+    camjob.operation.strategy.Spiral,
+    camjob.operation.strategy.WaterlineRoughing,
     camjob.operation.Operation,
     camjob.machine.feedrate.FeedRate,
     camjob.machine.spindlerpm.SpindleRPM,
     camjob.machine.postprocessor.customlocations.CustomLocations,
-    camjob.machine.postprocessor.PostProcessor,
-    camjob.machine.postprocessor.LinuxCNCPostProcessor,
+    camjob.machine.postprocessor.Base,
+    camjob.machine.postprocessor.LinuxCNC,
     camjob.machine.Machine,
     camjob.stock.Stock,
     camjob.CAMJob,

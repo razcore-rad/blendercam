@@ -19,11 +19,9 @@
 
 import importlib
 
-modnames = ["handlers", "ops", "props", "ui"]
+mods = {".handlers", ".ops", ".props", ".ui"}
 
-globals().update(
-    {modname: importlib.reload(importlib.import_module(f".{modname}", __package__)) for modname in modnames}
-)
+globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod, __package__)) for mod in mods})
 
 bl_info = {
     "name": "CNC G-Code Tools",
@@ -40,10 +38,10 @@ bl_info = {
 
 
 def register() -> None:
-    for modname in modnames:
-        globals()[modname].register()
+    for mod in mods:
+        globals()[mod.lstrip(".")].register()
 
 
 def unregister() -> None:
-    for modname in modnames:
-        globals()[modname].unregister()
+    for mod in mods:
+        globals()[mod.lstrip(".")].unregister()

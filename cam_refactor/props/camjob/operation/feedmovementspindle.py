@@ -3,11 +3,9 @@ import math
 
 import bpy
 
-modnames = ["utils"]
+mods = {"...utils"}
 
-globals().update(
-    {modname: importlib.reload(importlib.import_module(f"...{modname}", __package__)) for modname in modnames}
-)
+globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod, __package__)) for mod in mods})
 
 
 class Feed(bpy.types.PropertyGroup):

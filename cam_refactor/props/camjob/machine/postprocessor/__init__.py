@@ -2,11 +2,9 @@ import importlib
 
 import bpy
 
-modnames = ["customlocations"]
+mods = {".customlocations"}
 
-globals().update(
-    {modname: importlib.reload(importlib.import_module(f".{modname}", __package__)) for modname in modnames}
-)
+globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod, __package__)) for mod in mods})
 
 
 class PostProcessorMixin(bpy.types.PropertyGroup):
@@ -20,9 +18,9 @@ class PostProcessorMixin(bpy.types.PropertyGroup):
     use_tool_length_offset: bpy.props.BoolProperty(name="Tool Length Offset", default=False)
 
 
-class PostProcessor(PostProcessorMixin, bpy.types.PropertyGroup):
+class Base(PostProcessorMixin, bpy.types.PropertyGroup):
     pass
 
 
-class LinuxCNCPostProcessor(PostProcessorMixin, bpy.types.PropertyGroup):
+class LinuxCNC(PostProcessorMixin, bpy.types.PropertyGroup):
     use_path_blending: bpy.props.BoolProperty(name="Path Blending", default=True)

@@ -2,11 +2,9 @@ import importlib
 
 import bpy
 
-modnames = ["cutter", "feedmovementspindle", "strategy", "workarea"]
+mods = {".cutter", ".feedmovementspindle", ".strategy", ".workarea", "...utils"}
 
-globals().update(
-    {modname: importlib.reload(importlib.import_module(f".{modname}", __package__)) for modname in modnames}
-)
+globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod, __package__)) for mod in mods})
 
 
 def get_cutter_types(operation: bpy.types.PropertyGroup, _context: bpy.types.Context) -> list[tuple[str, str, str]]:
@@ -41,24 +39,45 @@ def get_cutter_types(operation: bpy.types.PropertyGroup, _context: bpy.types.Con
     return result
 
 
+def update_cutter(operation: bpy.types.PropertyGroup, context: bpy.types.Context) -> None:
+    cutter_dict = {
+        "BALL": cutter.Mill,
+        "BALL_CONE": cutter.ConeMill,
+        "BULL": cutter.Mill,
+        "BULL_CONE": cutter.ConeMill,
+        "CONE": cutter.ConeMill,
+        "CYLINDER": cutter.Mill,
+        "CYLINDER_CONE": cutter.ConeMill,
+        "DRILL": cutter.Drill,
+        "V_CARVE": cutter.ConeMill,
+        "LASER": cutter.Simple,
+        "PLASMA": cutter.Simple,
+    }
+    previous_cutter = operation.cutter
+    Operation.cutter = bpy.props.PointerProperty(type=cutter_dict.get(operation.cutter_type, cutter.Mill))
+    utils.copy(context, previous_cutter, operation.cutter)
+
+
+def update_strategy(operation: bpy.types.PropertyGroup, context: bpy.types.Context) -> None:
+    previous_strategy = operation.strategy
+    Operation.strategy = bpy.props.PointerProperty(
+        type=getattr(
+            strategy, "".join(f"{st[:1].upper()}{st[1:].lower()}" for st in operation.strategy_type.split("_"))
+        )
+    )
+    utils.copy(context, previous_strategy, operation.strategy)
+    if operation.cutter_type == "":
+        operation.cutter_type = "CYLINDER"
+
+
 class Operation(bpy.types.PropertyGroup):
     NAME = "CAMOperation"
 
     data: bpy.props.PointerProperty(type=bpy.types.Object)
     use_modifiers: bpy.props.BoolProperty(default=True)
 
-    cutter_type: bpy.props.EnumProperty(name="Type", items=get_cutter_types, default=5)
-    ball_cutter: bpy.props.PointerProperty(type=cutter.Mill)
-    ball_cone_cutter: bpy.props.PointerProperty(type=cutter.ConeMill)
-    bull_cutter: bpy.props.PointerProperty(type=cutter.Mill)
-    bull_cone_cutter: bpy.props.PointerProperty(type=cutter.ConeMill)
-    cone_cutter: bpy.props.PointerProperty(type=cutter.ConeMill)
-    cylinder_cutter: bpy.props.PointerProperty(type=cutter.Mill)
-    cylinder_cone_cutter: bpy.props.PointerProperty(type=cutter.ConeMill)
-    drill_cutter: bpy.props.PointerProperty(type=cutter.Drill)
-    laser_cutter: bpy.props.PointerProperty(type=cutter.Simple)
-    plasma_cutter: bpy.props.PointerProperty(type=cutter.Simple)
-    v_carve_cutter: bpy.props.PointerProperty(type=cutter.ConeMill)
+    cutter_type: bpy.props.EnumProperty(name="Type", items=get_cutter_types, default=5, update=update_cutter)
+    cutter: bpy.props.PointerProperty(type=cutter.Mill)
 
     strategy_type_items = [
         ("BLOCK", "Block", "Block path"),
@@ -94,50 +113,19 @@ class Operation(bpy.types.PropertyGroup):
             "Roughing below ZERO. Z is always below ZERO",
         ),
     ]
-    strategy_type: bpy.props.EnumProperty(name="Strategy", items=strategy_type_items, default=9)
-
-    block_strategy: bpy.props.PointerProperty(type=strategy.BlockStrategy)
-    carve_project_strategy: bpy.props.PointerProperty(type=strategy.CarveProjectStrategy)
-    circles_strategy: bpy.props.PointerProperty(type=strategy.CirclesStrategy)
-    cross_strategy: bpy.props.PointerProperty(type=strategy.CrossStrategy)
-    curve_to_path_strategy: bpy.props.PointerProperty(type=strategy.CurveToPathStrategy)
-    drill_strategy: bpy.props.PointerProperty(type=strategy.DrillStrategy)
-    medial_axis_strategy: bpy.props.PointerProperty(type=strategy.MedialAxisStrategy)
-    outline_fill_strategy: bpy.props.PointerProperty(type=strategy.OutlineFillStrategy)
-    parallel_strategy: bpy.props.PointerProperty(type=strategy.ParallelStrategy)
-    pocket_strategy: bpy.props.PointerProperty(type=strategy.PocketStrategy)
-    profile_strategy: bpy.props.PointerProperty(type=strategy.ProfileStrategy)
-    spiral_strategy: bpy.props.PointerProperty(type=strategy.SpiralStrategy)
-    waterline_roughing_strategy: bpy.props.PointerProperty(type=strategy.WaterlineRoughingStrategy)
+    strategy_type: bpy.props.EnumProperty(
+        name="Strategy", items=strategy_type_items, default=10, update=update_strategy
+    )
+    strategy: bpy.props.PointerProperty(type=strategy.Profile)
 
     feed: bpy.props.PointerProperty(type=feedmovementspindle.Feed)
     movement: bpy.props.PointerProperty(type=feedmovementspindle.Movement)
     spindle: bpy.props.PointerProperty(type=feedmovementspindle.Spindle)
     work_area: bpy.props.PointerProperty(type=workarea.WorkArea)
 
-    @property
-    def cutter_propname(self) -> str:
-        return f"{self.cutter_type.lower()}_cutter"
-
-    @property
-    def cutter(self) -> bpy.types.PropertyGroup:
-        return getattr(self, self.cutter_propname, None)
-
-    @property
-    def strategy_propname(self) -> str:
-        return f"{self.strategy_type.lower()}_strategy"
-
-    @property
-    def strategy(self) -> bpy.types.PropertyGroup:
-        return getattr(self, self.strategy_propname, None)
-
-    @property
-    def is_strategy_valid(self) -> bool:
-        return self.strategy is not None
-
-    def add_data(self) -> None:
+    def add_data(self, context: bpy.types.Context) -> None:
         self.data = bpy.data.objects.new(self.NAME, bpy.data.meshes.new(self.NAME))
-        bpy.context.scene.cam_job.data.objects.link(self.data)
+        context.scene.cam_job.data.objects.link(self.data)
 
     def remove_data(self) -> None:
         bpy.data.meshes.remove(self.data.data)

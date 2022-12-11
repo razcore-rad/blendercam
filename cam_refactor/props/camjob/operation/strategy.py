@@ -3,11 +3,9 @@ import math
 
 import bpy
 
-modnames = ["utils"]
+mods = {"...utils"}
 
-globals().update(
-    {modname: importlib.reload(importlib.import_module(f"...{modname}", __package__)) for modname in modnames}
-)
+globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod, __package__)) for mod in mods})
 
 
 class DistanceAlongPathsMixin:
@@ -47,33 +45,27 @@ class SourceMixin:
     def source(self) -> bpy.types.PropertyGroup:
         return getattr(self, self.source_propname, None)
 
-    @property
-    def is_source_valid(self) -> bool:
-        return self.source is not None
 
-
-class BlockStrategy(DistanceAlongPathsMixin, DistanceBetweenPathsMixin, SourceMixin, bpy.types.PropertyGroup):
+class Block(DistanceAlongPathsMixin, DistanceBetweenPathsMixin, SourceMixin, bpy.types.PropertyGroup):
     pass
 
 
-class CarveProjectStrategy(DistanceAlongPathsMixin, SourceMixin, bpy.types.PropertyGroup):
+class CarveProject(DistanceAlongPathsMixin, SourceMixin, bpy.types.PropertyGroup):
     ICON_MAP = {"curve": "OUTLINER_OB_CURVE"}
 
     curve: bpy.props.PointerProperty(name="Curve", type=bpy.types.Object, poll=utils.poll_curve_object_source)
     depth: bpy.props.FloatProperty(name="Depth", default=1e-3, unit="LENGTH", precision=utils.PRECISION)
 
 
-class CirclesStrategy(DistanceAlongPathsMixin, DistanceBetweenPathsMixin, SourceMixin, bpy.types.PropertyGroup):
+class Circles(DistanceAlongPathsMixin, DistanceBetweenPathsMixin, SourceMixin, bpy.types.PropertyGroup):
     pass
 
 
-class CrossStrategy(
-    DistanceAlongPathsMixin, DistanceBetweenPathsMixin, PathsAngleMixin, SourceMixin, bpy.types.PropertyGroup
-):
+class Cross(DistanceAlongPathsMixin, DistanceBetweenPathsMixin, PathsAngleMixin, SourceMixin, bpy.types.PropertyGroup):
     pass
 
 
-class CurveToPathStrategy(SourceMixin, bpy.types.PropertyGroup):
+class CurveToPath(SourceMixin, bpy.types.PropertyGroup):
     EXCLUDE_PROPNAMES = {
         "name",
         "source_type",
@@ -92,7 +84,7 @@ class CurveToPathStrategy(SourceMixin, bpy.types.PropertyGroup):
     )
 
 
-class DrillStrategy(SourceMixin, bpy.types.PropertyGroup):
+class Drill(SourceMixin, bpy.types.PropertyGroup):
     method_type: bpy.props.EnumProperty(
         name="Method",
         items=[
@@ -108,22 +100,22 @@ class DrillStrategy(SourceMixin, bpy.types.PropertyGroup):
     )
 
 
-class MedialAxisStrategy(SourceMixin, bpy.types.PropertyGroup):
+class MedialAxis(SourceMixin, bpy.types.PropertyGroup):
     threshold: bpy.props.FloatProperty(name="Threshold", default=1e-3, unit="LENGTH", precision=utils.PRECISION)
     subdivision: bpy.props.FloatProperty(name="Subdivision", default=2e-4, unit="LENGTH", precision=utils.PRECISION)
     do_clean_finish: bpy.props.BoolProperty(name="Clean Finish", default=True)
     do_generate_mesh: bpy.props.BoolProperty(name="Generate Mesh", default=True)
 
 
-class OutlineFillStrategy(DistanceAlongPathsMixin, DistanceBetweenPathsMixin, SourceMixin, bpy.types.PropertyGroup):
+class OutlineFill(DistanceAlongPathsMixin, DistanceBetweenPathsMixin, SourceMixin, bpy.types.PropertyGroup):
     pass
 
 
-class PocketStrategy(DistanceBetweenPathsMixin, SourceMixin, bpy.types.PropertyGroup):
+class Pocket(DistanceBetweenPathsMixin, SourceMixin, bpy.types.PropertyGroup):
     pass
 
 
-class ProfileStrategy(SourceMixin, bpy.types.PropertyGroup):
+class Profile(SourceMixin, bpy.types.PropertyGroup):
     cut_type: bpy.props.EnumProperty(
         name="Cut",
         items=[
@@ -144,17 +136,17 @@ class ProfileStrategy(SourceMixin, bpy.types.PropertyGroup):
     )
 
 
-class ParallelStrategy(
+class Parallel(
     DistanceAlongPathsMixin, DistanceBetweenPathsMixin, PathsAngleMixin, SourceMixin, bpy.types.PropertyGroup
 ):
     pass
 
 
-class SpiralStrategy(DistanceAlongPathsMixin, DistanceBetweenPathsMixin, SourceMixin, bpy.types.PropertyGroup):
+class Spiral(DistanceAlongPathsMixin, DistanceBetweenPathsMixin, SourceMixin, bpy.types.PropertyGroup):
     pass
 
 
-class WaterlineRoughingStrategy(DistanceBetweenPathsMixin, SourceMixin, bpy.types.PropertyGroup):
+class WaterlineRoughing(DistanceBetweenPathsMixin, SourceMixin, bpy.types.PropertyGroup):
     distance_between_slices: bpy.props.FloatProperty(
         name="Distance Between Slices", default=1e-3, min=1e-5, max=32, precision=utils.PRECISION, unit="LENGTH"
     )

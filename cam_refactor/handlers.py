@@ -7,14 +7,14 @@ HandlerItem = namedtuple("HandlerItem", ("handler", "args", "region_type", "draw
 
 
 @bpy.app.handlers.persistent
-def update_cam_job_stock_estimate() -> None:
+def update_cam_job() -> None:
     # TODO: update cam job stock estimate based on job sources
-    print("TEST")
+    print("CAMJOB")
 
 
 HANDLERS_ADD = {
     # "types.SpaceView3D.draw_handler_{}": [
-    #     HandlerItem(update_cam_job_stock_estimate, (), "WINDOW", "POST_VIEW"),
+    #     HandlerItem(update_cam_job, (), "UI", "POST_PIXEL"),
     # ],
 }
 

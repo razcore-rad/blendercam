@@ -7,11 +7,9 @@ import importlib
 
 import bpy
 
-modnames = ["machine", "operation", "stock"]
+mods = {".machine", ".operation", ".stock"}
 
-globals().update(
-    {modname: importlib.reload(importlib.import_module(f".{modname}", __package__)) for modname in modnames}
-)
+globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod, __package__)) for mod in mods})
 
 
 class CAMJob(bpy.types.PropertyGroup):
@@ -29,11 +27,11 @@ class CAMJob(bpy.types.PropertyGroup):
     def operation(self) -> operation.Operation:
         return self.operations[self.operation_active_index]
 
-    def add_data(self) -> None:
+    def add_data(self, context: bpy.types.Context) -> None:
         self.data = bpy.data.collections.new(self.NAME)
         bpy.context.collection.children.link(self.data)
         operation = self.operations.add()
-        operation.add_data()
+        operation.add_data(context)
 
     def remove_data(self) -> None:
         for operation in self.operations:

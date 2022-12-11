@@ -2,11 +2,33 @@ import importlib
 
 import bpy
 
-modnames = ["feedrate", "postprocessor", "spindlerpm"]
+mods = {".feedrate", ".postprocessor", ".spindlerpm"}
 
-globals().update(
-    {modname: importlib.reload(importlib.import_module(f".{modname}", __package__)) for modname in modnames}
-)
+globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod, __package__)) for mod in mods})
+
+
+def update_post_processor(machine: bpy.types.PropertyGroup, context: bpy.types.Context) -> None:
+    post_processor_dict = {
+        "ANILAM": postprocessor.Base,
+        "CENTROID": postprocessor.Base,
+        "FADAL": postprocessor.Base,
+        "GRAVOS": postprocessor.Base,
+        "GRBL": postprocessor.Base,
+        "ISO": postprocessor.Base,
+        "HAFCO_HM_50": postprocessor.Base,
+        "HEIDENHAIN": postprocessor.Base,
+        "HEIDENHAIN_530": postprocessor.Base,
+        "HEIDENHAIN_TNC151": postprocessor.Base,
+        "LINUX_CNC": postprocessor.LinuxCNC,
+        "LYNX_OTTER_O": postprocessor.Base,
+        "MACH3": postprocessor.Base,
+        "SHOPBOT_MTC": postprocessor.Base,
+        "SIEGKX1": postprocessor.Base,
+        "WIN_PC": postprocessor.Base,
+    }
+    previous_post_processor = machine.post_processor
+    Machine.post_processor = bpy.props.PointerProperty(type=post_processor_dict[machine.post_processor_enum])
+    utils.copy(context, previous_post_processor, machine.post_processor)
 
 
 class Machine(bpy.types.PropertyGroup):
@@ -39,28 +61,6 @@ class Machine(bpy.types.PropertyGroup):
             ("SIEGKX1", "Sieg KX1", "Post processor for Sieg KX1"),
             ("WIN_PC", "WinPC-NC", "Post processor for CNC by Burkhard Lewetz"),
         ],
+        update=update_post_processor,
     )
-    anilam_post_processor: bpy.props.PointerProperty(type=postprocessor.PostProcessor)
-    centroid_post_processor: bpy.props.PointerProperty(type=postprocessor.PostProcessor)
-    fadal_post_processor: bpy.props.PointerProperty(type=postprocessor.PostProcessor)
-    gravos_post_processor: bpy.props.PointerProperty(type=postprocessor.PostProcessor)
-    grbl_post_processor: bpy.props.PointerProperty(type=postprocessor.PostProcessor)
-    iso_post_processor: bpy.props.PointerProperty(type=postprocessor.PostProcessor)
-    hafco_hm_50_post_processor: bpy.props.PointerProperty(type=postprocessor.PostProcessor)
-    heidenhain_post_processor: bpy.props.PointerProperty(type=postprocessor.PostProcessor)
-    heidenhain_530_post_processor: bpy.props.PointerProperty(type=postprocessor.PostProcessor)
-    heidenhain_tnc151_post_processor: bpy.props.PointerProperty(type=postprocessor.PostProcessor)
-    linux_cnc_post_processor: bpy.props.PointerProperty(type=postprocessor.LinuxCNCPostProcessor)
-    lynx_otter_o_post_processor: bpy.props.PointerProperty(type=postprocessor.PostProcessor)
-    mach3_post_processor: bpy.props.PointerProperty(type=postprocessor.PostProcessor)
-    shopbot_mtc_post_processor: bpy.props.PointerProperty(type=postprocessor.PostProcessor)
-    siegkx1_post_processor: bpy.props.PointerProperty(type=postprocessor.PostProcessor)
-    win_pc_post_processor: bpy.props.PointerProperty(type=postprocessor.PostProcessor)
-
-    @property
-    def post_processor_proname(self) -> str:
-        return f"{self.post_processor_enum.lower()}_post_processor"
-
-    @property
-    def post_processor(self) -> bpy.types.PropertyGroup:
-        return getattr(self, self.post_processor_proname, None)
+    post_processor: bpy.props.PointerProperty(type=postprocessor.Base)

@@ -3,11 +3,9 @@ from functools import reduce
 
 import bpy
 
-modnames = ["ops", "props"]
+mods = {".ops", ".props"}
 
-globals().update(
-    {modname: importlib.reload(importlib.import_module(f".{modname}", __package__)) for modname in modnames}
-)
+globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod, __package__)) for mod in mods})
 
 UNITS = {"MIN": "/ min"}
 
