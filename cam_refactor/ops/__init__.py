@@ -3,7 +3,7 @@ import importlib
 import bl_operators
 import bpy
 
-mods = {".props"}
+mods = {"..props", ".strategy"}
 
 globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod, __package__)) for mod in mods})
 

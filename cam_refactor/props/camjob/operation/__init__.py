@@ -126,6 +126,7 @@ class Operation(bpy.types.PropertyGroup):
     def add_data(self, context: bpy.types.Context) -> None:
         self.data = bpy.data.objects.new(self.NAME, bpy.data.meshes.new(self.NAME))
         context.scene.cam_job.data.objects.link(self.data)
+        workarea.update_depth_end_type(self.work_area, context)
 
     def remove_data(self) -> None:
         bpy.data.meshes.remove(self.data.data)

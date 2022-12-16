@@ -271,7 +271,6 @@ class CAM_PT_PanelJobsOperationWorkArea(CAM_PT_PanelJobsOperationSubPanel):
         row.prop(work_area, "depth_start")
         if work_area.depth_end_type == "CUSTOM":
             row.prop(work_area, "depth_end")
-
         row = col.row()
         row.use_property_split = True
         row.prop(work_area, "depth_end_type", expand=True)

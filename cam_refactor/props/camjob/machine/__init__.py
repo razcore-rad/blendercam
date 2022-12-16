@@ -6,6 +6,8 @@ mods = {".feedrate", ".postprocessor", ".spindlerpm"}
 
 globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod, __package__)) for mod in mods})
 
+# TODO: update `operation.work_area.depth_start` and `operation.work_area.depth_end` based on `work_space`
+
 
 def update_post_processor(machine: bpy.types.PropertyGroup, context: bpy.types.Context) -> None:
     post_processor_dict = {
