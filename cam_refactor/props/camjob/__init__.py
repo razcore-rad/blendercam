@@ -4,9 +4,10 @@
 # - add missing G-code options
 # - add cutters
 import importlib
+import math
+from functools import reduce
 from operator import add, sub
 
-import bmesh
 import bpy
 from mathutils import Vector
 
@@ -32,30 +33,31 @@ class CAMJob(bpy.types.PropertyGroup):
 
     @property
     def stock_bound_box(self) -> tuple[Vector]:
-        # TODO: cover CURVE type. At the moment it works only with MESH
-        objs = []
-        for operation in self.operations:
-            if isinstance(operation.strategy.source, bpy.types.Object):
-                objs.append(operation.strategy.source)
-            elif isinstance(operation.strategy.source, bpy.types.Collection):
-                objs.extend(operation.strategy.source.objects)
-
-        points = []
+        result = (Vector(), Vector())
+        objs = reduce(lambda acc, o: acc + o.strategy.source, self.operations, [])
         depsgraph = bpy.context.evaluated_depsgraph_get()
+        points = []
         for obj in objs:
-            bm = bmesh.new()
-            bm.from_object(obj, depsgraph)
-            points.extend(obj.matrix_world @ v.co for v in bm.verts)
-            bm.free()
+            obj = obj.evaluated_get(depsgraph)
+            mesh = obj.to_mesh()
+            points.extend(obj.matrix_world @ v.co for v in mesh.vertices)
+            obj.to_mesh_clear()
 
-        return (
-            tuple(
-                op(Vector(f(coords) for coords in zip(*points)), self.stock.estimate_offset)
-                for f, op in ((min, sub), (max, add))
+        if len(objs) > 0:
+            result = tuple(
+                op(
+                    Vector(
+                        (0 if f is min else f(0, f(coords))) if i == 2 else f(coords)
+                        for i, coords in enumerate(zip(*points))
+                    ),
+                    eo,
+                )
+                for f, op, eo in (
+                    (min, sub, Vector(self.stock.estimate_offset[:2] + (0,))),
+                    (max, add, self.stock.estimate_offset),
+                )
             )
-            if len(objs) > 0
-            else (Vector(), Vector())
-        )
+        return (Vector(), Vector()) if math.isclose(result[1].z, self.stock.estimate_offset.z) else result
 
     def add_data(self, context: bpy.types.Context) -> None:
         self.data = bpy.data.collections.new(self.NAME)

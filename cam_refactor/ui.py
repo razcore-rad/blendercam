@@ -103,7 +103,7 @@ class CAM_PT_PanelJobsOperationSubPanel(CAM_PT_PanelBase):
         result = False
         try:
             strategy = context.scene.cam_job.operation.strategy
-            result = strategy.source is not None and getattr(strategy, "curve", True)
+            result = strategy.source is not [] and getattr(strategy, "curve", True)
         except IndexError:
             pass
         return result

@@ -52,7 +52,7 @@ def poll_object_source(strategy: bpy.types.Property, obj: bpy.types.Object) -> b
 
 
 def poll_curve_object_source(strategy: bpy.types.Property, obj: bpy.types.Object) -> bool:
-    return obj.users != 0 and obj.type == "CURVE" and obj is not strategy.source
+    return obj.users != 0 and obj.type == "CURVE" and obj not in strategy.source
 
 
 def poll_curve_limit(_work_area: bpy.types.Property, obj: bpy.types.Object) -> bool:

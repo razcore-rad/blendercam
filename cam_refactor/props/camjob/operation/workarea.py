@@ -42,23 +42,11 @@ def update_depth_start(work_area: bpy.types.PropertyGroup, context: bpy.types.Co
 def update_depth_end_type(work_area: bpy.types.PropertyGroup, context: bpy.types.Context) -> None:
     depth_start_dict, depth_end_dict = get_depth_dicts(work_area, context)
     if work_area.depth_end_type == "SOURCE":
-        # TODO: also update on `work-area.depth_end_type == STOCK`
-        strategy = context.scene.cam_job.operation.strategy
-        source = strategy.source
-
-        objs = []
-        if strategy.source_type in ["OBJECT", "CURVE_OBJECT"]:
-            objs.append(strategy.source)
-        elif strategy.source_type == "COLLECTION":
-            objs.extend(o for o in source.objects if o.type in ["CURVE", "MESH"])
-
+        # TODO: also update on `work_area.depth_end_type == STOCK`
         # FIXME: apply transforms and modifiers before `bound_box`
-        # depth_start_dict["min"] = max(
-        #     depth_start_dict["min"],
-        #     min(depth_start_dict["max"], min((obj.matrix_world @ Vector(v)).z for obj in objs for v in obj.bound_box)),
-        # )
+        source = context.scene.cam_job.operation.strategy.source
         depth_start_dict["min"] = clamp(
-            min((obj.matrix_world @ Vector(v)).z for obj in objs for v in obj.bound_box),
+            min((obj.matrix_world @ Vector(v)).z for obj in source for v in obj.bound_box),
             depth_start_dict["min"],
             depth_start_dict["max"],
         )

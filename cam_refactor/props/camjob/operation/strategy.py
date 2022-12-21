@@ -42,8 +42,13 @@ class SourceMixin:
         return f"{self.source_type.lower()}_source"
 
     @property
-    def source(self) -> bpy.types.PropertyGroup:
-        return getattr(self, self.source_propname, None)
+    def source(self) -> list[bpy.types.PropertyGroup]:
+        result = getattr(self, self.source_propname, [])
+        if self.source_type == "OBJECT":
+            result = [result] if result is not None else []
+        elif self.source_type == "COLLECTION":
+            result.extend(o for o in result if o.type in ["CURVE", "MESH"])
+        return result
 
 
 class Block(DistanceAlongPathsMixin, DistanceBetweenPathsMixin, SourceMixin, bpy.types.PropertyGroup):
