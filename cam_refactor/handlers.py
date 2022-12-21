@@ -1,7 +1,13 @@
+import importlib
 from collections import namedtuple
 from functools import reduce
 
 import bpy
+
+mods = {".shaders"}
+
+globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod, __package__)) for mod in mods})
+
 
 HandlerItem = namedtuple("HandlerItem", ("handler", "args", "region_type", "draw_type"), defaults=3 * (None,))
 
@@ -13,9 +19,9 @@ def update_cam_job() -> None:
 
 
 HANDLERS_ADD = {
-    # "types.SpaceView3D.draw_handler_{}": [
-    #     HandlerItem(update_cam_job, (), "UI", "POST_PIXEL"),
-    # ],
+    "types.SpaceView3D.draw_handler_{}": [
+        HandlerItem(shaders.draw_stock, (), "WINDOW", "POST_VIEW"),
+    ],
 }
 
 handlers_rem = {}

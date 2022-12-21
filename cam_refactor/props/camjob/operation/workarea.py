@@ -52,9 +52,15 @@ def update_depth_end_type(work_area: bpy.types.PropertyGroup, context: bpy.types
         elif strategy.source_type == "COLLECTION":
             objs.extend(o for o in source.objects if o.type in ["CURVE", "MESH"])
 
-        depth_start_dict["min"] = max(
+        # FIXME: apply transforms and modifiers before `bound_box`
+        # depth_start_dict["min"] = max(
+        #     depth_start_dict["min"],
+        #     min(depth_start_dict["max"], min((obj.matrix_world @ Vector(v)).z for obj in objs for v in obj.bound_box)),
+        # )
+        depth_start_dict["min"] = clamp(
+            min((obj.matrix_world @ Vector(v)).z for obj in objs for v in obj.bound_box),
             depth_start_dict["min"],
-            min(depth_start_dict["max"], min((obj.matrix_world @ Vector(v)).z for obj in objs for v in obj.bound_box)),
+            depth_start_dict["max"],
         )
         depth_end_dict["min"] = depth_start_dict["min"]
         depth_end_dict["max"] = work_area.depth_start
@@ -71,8 +77,8 @@ class WorkArea(bpy.types.PropertyGroup):
     ICON_MAP = {"curve_limit": "OUTLINER_OB_CURVE"}
     EXCLUDE_PROPNAMES = {"name", "depth_start", "depth_end_type", "depth_end"}
 
-    depth_start: bpy.props.FloatProperty()
-    depth_end: bpy.props.FloatProperty()
+    depth_start: bpy.props.FloatProperty(name="Depth Start")
+    depth_end: bpy.props.FloatProperty(name="Depth End")
     depth_end_type: bpy.props.EnumProperty(
         name="Depth End",
         items=[
@@ -89,8 +95,3 @@ class WorkArea(bpy.types.PropertyGroup):
         name="Ambient", items=[("OFF", "Off", ""), ("ALL", "All", ""), ("AROUND", "Around", "")]
     )
     curve_limit: bpy.props.PointerProperty(name="Curve Limit", type=bpy.types.Object, poll=utils.poll_curve_limit)
-
-    # @property
-    # def layers() -> list[float]:
-    #     if
-    #     pass

@@ -4,8 +4,11 @@
 # - add missing G-code options
 # - add cutters
 import importlib
+from operator import add, sub
 
+import bmesh
 import bpy
+from mathutils import Vector
 
 mods = {".machine", ".operation", ".stock"}
 
@@ -26,6 +29,33 @@ class CAMJob(bpy.types.PropertyGroup):
     @property
     def operation(self) -> operation.Operation:
         return self.operations[self.operation_active_index]
+
+    @property
+    def stock_bound_box(self) -> tuple[Vector]:
+        # TODO: cover CURVE type. At the moment it works only with MESH
+        objs = []
+        for operation in self.operations:
+            if isinstance(operation.strategy.source, bpy.types.Object):
+                objs.append(operation.strategy.source)
+            elif isinstance(operation.strategy.source, bpy.types.Collection):
+                objs.extend(operation.strategy.source.objects)
+
+        points = []
+        depsgraph = bpy.context.evaluated_depsgraph_get()
+        for obj in objs:
+            bm = bmesh.new()
+            bm.from_object(obj, depsgraph)
+            points.extend(obj.matrix_world @ v.co for v in bm.verts)
+            bm.free()
+
+        return (
+            tuple(
+                op(Vector(f(coords) for coords in zip(*points)), self.stock.estimate_offset)
+                for f, op in ((min, sub), (max, add))
+            )
+            if len(objs) > 0
+            else (Vector(), Vector())
+        )
 
     def add_data(self, context: bpy.types.Context) -> None:
         self.data = bpy.data.collections.new(self.NAME)
