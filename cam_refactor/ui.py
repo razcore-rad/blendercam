@@ -263,17 +263,22 @@ class CAM_PT_PanelJobsOperationWorkArea(CAM_PT_PanelJobsOperationSubPanel):
     bl_parent_id = "CAM_PT_PanelJobsOperations"
 
     def draw(self, context: bpy.types.Context) -> None:
-        work_area = context.scene.cam_job.operation.work_area
+        operation = context.scene.cam_job.operation
+        work_area = operation.work_area
 
         layout = self.layout
         col = layout.box().column(align=True)
         col.prop(work_area, "layer_size")
-        row = col.row(align=True)
-        if work_area.depth_end_type == "CUSTOM":
-            row.prop(work_area, "depth_end")
-        row = col.row()
-        row.use_property_split = True
-        row.prop(work_area, "depth_end_type", expand=True)
+        if any(
+            isinstance(operation.strategy, s)
+            for s in [props.camjob.operation.strategy.Drill, props.camjob.operation.strategy.Profile]
+        ):
+            row = col.row(align=True)
+            if work_area.depth_end_type == "CUSTOM":
+                row.prop(work_area, "depth_end")
+            row = col.row()
+            row.use_property_split = True
+            row.prop(work_area, "depth_end_type", expand=True)
         self.draw_property_group(work_area)
 
 
