@@ -8,6 +8,17 @@ mods = {"...utils"}
 globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod, __package__)) for mod in mods})
 
 
+def get_drill_items(
+    strategy: bpy.types.PropertyGroup, _context: bpy.types.Context
+) -> list[tuple[str, str, str, str, int]]:
+    result = [("POINTS", "Points", "Drill at every point", "SNAP_VERTEX", 0)]
+    if strategy.source_type == "OBJECT" and all(o.type == "CURVE" for o in strategy.source):
+        result.append(
+            ("CENTER", "Center", "Position is at the center of disjoint mesh or curve islands", "SNAP_FACE_CENTER", 1)
+        )
+    return result
+
+
 class DistanceAlongPathsMixin:
     distance_along_paths: bpy.props.FloatProperty(
         name="Distance Along Paths", default=2e-4, min=1e-5, max=32, precision=utils.PRECISION, unit="LENGTH"
@@ -44,11 +55,12 @@ class SourceMixin:
     @property
     def source(self) -> list[bpy.types.PropertyGroup]:
         result = getattr(self, self.source_propname, [])
-        if self.source_type == "OBJECT":
+        if self.source_type in ["OBJECT", "CURVE_OBJECT"]:
             result = [result] if result is not None else []
         elif self.source_type == "COLLECTION":
             result.extend(o for o in result if o.type in ["CURVE", "MESH"])
-        return result
+        depsgraph = bpy.context.evaluated_depsgraph_get()
+        return [o.evaluated_get(depsgraph) for o in result]
 
 
 class Block(DistanceAlongPathsMixin, DistanceBetweenPathsMixin, SourceMixin, bpy.types.PropertyGroup):
@@ -90,19 +102,7 @@ class CurveToPath(SourceMixin, bpy.types.PropertyGroup):
 
 
 class Drill(SourceMixin, bpy.types.PropertyGroup):
-    method_type: bpy.props.EnumProperty(
-        name="Method",
-        items=[
-            ("POINTS", "Points", "Drill at every point", "SNAP_VERTEX", 0),
-            (
-                "CENTER",
-                "Center",
-                "Position is at the center of disjoint mesh or curve islands",
-                "SNAP_FACE_CENTER",
-                1,
-            ),
-        ],
-    )
+    method_type: bpy.props.EnumProperty(name="Method", items=get_drill_items)
 
 
 class MedialAxis(SourceMixin, bpy.types.PropertyGroup):

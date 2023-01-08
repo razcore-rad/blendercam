@@ -1,4 +1,8 @@
+from itertools import count, islice, tee
+from typing import Iterator
+
 import bpy
+from mathutils import Vector
 
 PRECISION = 5
 
@@ -37,7 +41,11 @@ def copy(context: bpy.types.Context, from_prop: bpy.types.Property, to_prop: bpy
                         from_subprop.data = from_subprop.data.copy()
                         link = context.scene.cam_job.data.objects.link
                     link(from_subprop)
-                setattr(to_prop, propname, from_subprop)
+
+                try:
+                    setattr(to_prop, propname, from_subprop)
+                except TypeError:
+                    pass
 
     elif isinstance(from_prop, bpy.types.bpy_prop_collection):
         to_prop.clear()
@@ -67,3 +75,14 @@ def poll_curve_limit(_work_area: bpy.types.Property, obj: bpy.types.Object) -> b
     except IndexError:
         pass
     return result
+
+
+def get_bound_box(obj: bpy.types.Object) -> tuple[Vector]:
+    points = (obj.matrix_world @ v.co for v in obj.to_mesh().vertices)
+    obj.to_mesh_clear()
+    return tuple(Vector(f(cs) for cs in zip(*ps)) for f, ps in zip((min, max), tee(points)))
+
+
+def seq(start: float, end: float, step: int = 1) -> Iterator[float]:
+    assert start < end and step > 0 or start > end and step < 0
+    return islice(count(start, step), int(abs((end - start) / step)) + 1)

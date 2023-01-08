@@ -1,15 +1,12 @@
-# FIXME:
-# - update all property descriptions
-# - update all post_processor PointerProperty types
-# - add missing G-code options
-# - add cutters
 import importlib
-import math
 from functools import reduce
+from math import isclose
 from operator import add, sub
 
 import bpy
 from mathutils import Vector
+
+from .. import utils
 
 mods = {".machine", ".operation", ".stock"}
 
@@ -34,36 +31,29 @@ class CAMJob(bpy.types.PropertyGroup):
     @property
     def stock_bound_box(self) -> tuple[Vector]:
         result = (Vector(), Vector())
-        objs = reduce(lambda acc, o: acc + o.strategy.source, self.operations, [])
-        depsgraph = bpy.context.evaluated_depsgraph_get()
-        points = []
-        for obj in objs:
-            obj = obj.evaluated_get(depsgraph)
-            mesh = obj.to_mesh()
-            points.extend(obj.matrix_world @ v.co for v in mesh.vertices)
-            obj.to_mesh_clear()
-
-        if len(objs) > 0:
-            result = tuple(
-                op(
-                    Vector(
-                        (0 if f is min else f(0, f(coords))) if i == 2 else f(coords)
-                        for i, coords in enumerate(zip(*points))
-                    ),
-                    eo,
+        z_compare = 0
+        if self.stock.type == "ESTIMATE":
+            objs = reduce(lambda acc, o: acc + o.strategy.source, self.operations, [])
+            if len(objs) > 0:
+                bound_boxes = (utils.get_bound_box(o) for o in objs)
+                result = tuple(
+                    op(Vector(f(cs) for cs in zip(*vs)), eo)
+                    for (f, op, eo), vs in zip(
+                        ((min, sub, self.stock.estimate_offset.xy.resized(3)), (max, add, self.stock.estimate_offset)),
+                        zip(*bound_boxes),
+                    )
                 )
-                for f, op, eo in (
-                    (min, sub, Vector(self.stock.estimate_offset[:2] + (0,))),
-                    (max, add, self.stock.estimate_offset),
-                )
-            )
-        return (Vector(), Vector()) if math.isclose(result[1].z, self.stock.estimate_offset.z) else result
+                z_compare = self.stock.estimate_offset.z
+        elif self.stock.type == "CUSTOM":
+            custom_location = self.stock.custom_location.copy().resized(3)
+            result = tuple(custom_location + v for v in (Vector(), self.stock.custom_size))
+        return (Vector(), Vector()) if isclose(z_compare, result[1].z) else result
 
     def add_data(self, context: bpy.types.Context) -> None:
         self.data = bpy.data.collections.new(self.NAME)
-        bpy.context.collection.children.link(self.data)
-        operation = self.operations.add()
-        operation.add_data(context)
+        context.collection.children.link(self.data)
+        op = self.operations.add()
+        op.add_data(context)
 
     def remove_data(self) -> None:
         for operation in self.operations:

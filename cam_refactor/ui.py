@@ -267,8 +267,8 @@ class CAM_PT_PanelJobsOperationWorkArea(CAM_PT_PanelJobsOperationSubPanel):
 
         layout = self.layout
         col = layout.box().column(align=True)
+        col.prop(work_area, "layer_size")
         row = col.row(align=True)
-        row.prop(work_area, "depth_start")
         if work_area.depth_end_type == "CUSTOM":
             row.prop(work_area, "depth_end")
         row = col.row()
@@ -320,7 +320,6 @@ class CAM_PT_PanelJobsMachine(CAM_PT_PanelBase):
 
         box = layout.box()
         box.prop(machine, "axes")
-        box.prop(machine, "work_space")
 
         self.draw_property_group(machine.feed_rate, layout=layout.box().column(align=True), label_text=UNITS["MIN"])
         self.draw_property_group(machine.spindle_rpm, layout=layout.box().column(align=True))

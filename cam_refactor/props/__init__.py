@@ -41,7 +41,7 @@ CLASSES = [
 
 
 @property
-def cam_job(self) -> bpy.types.PropertyGroup:
+def cam_job(self: bpy.types.Scene) -> bpy.types.PropertyGroup:
     return self.cam_jobs[self.cam_job_active_index]
 
 

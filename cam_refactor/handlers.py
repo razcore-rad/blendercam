@@ -12,12 +12,6 @@ globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod,
 HandlerItem = namedtuple("HandlerItem", ("handler", "args", "region_type", "draw_type"), defaults=3 * (None,))
 
 
-@bpy.app.handlers.persistent
-def update_cam_job() -> None:
-    # TODO: update cam job stock estimate based on job sources
-    print("CAMJOB")
-
-
 HANDLERS_ADD = {
     "types.SpaceView3D.draw_handler_{}": [
         HandlerItem(shaders.draw_stock, (), "WINDOW", "POST_VIEW"),
