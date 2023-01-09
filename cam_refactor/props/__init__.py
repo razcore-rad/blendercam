@@ -45,15 +45,22 @@ def cam_job(self: bpy.types.Scene) -> bpy.types.PropertyGroup:
     return self.cam_jobs[self.cam_job_active_index]
 
 
+@property
+def cam_is_source(self: bpy.types.Object) -> bool:
+    return any(o.strategy.is_source(self) for c in bpy.context.scene.cam_jobs for o in c.operations)
+
+
 def register() -> None:
     for cls in CLASSES:
         bpy.utils.register_class(cls)
     bpy.types.Scene.cam_jobs = bpy.props.CollectionProperty(type=camjob.CAMJob)
     bpy.types.Scene.cam_job_active_index = bpy.props.IntProperty(default=0, min=0)
     bpy.types.Scene.cam_job = cam_job
+    bpy.types.Object.cam_is_source = cam_is_source
 
 
 def unregister() -> None:
+    del bpy.types.Object.cam_is_source
     del bpy.types.Scene.cam_job
     del bpy.types.Scene.cam_jobs
     del bpy.types.Scene.cam_job_active_index

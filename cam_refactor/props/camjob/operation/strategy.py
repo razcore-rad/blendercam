@@ -1,6 +1,7 @@
 import importlib
 import math
 
+import bmesh
 import bpy
 
 mods = {"...utils"}
@@ -38,7 +39,7 @@ class PathsAngleMixin:
 
 
 class SourceMixin:
-    EXCLUDE_PROPNAMES = {"name", "source_type", "object_source", "collection_source"}
+    EXCLUDE_PROPNAMES = {"name", "computed", "source_type", "object_source", "collection_source"}
 
     source_type_items = [
         ("OBJECT", "Object", "Object data source.", "OBJECT_DATA", 0),
@@ -54,13 +55,17 @@ class SourceMixin:
 
     @property
     def source(self) -> list[bpy.types.PropertyGroup]:
-        result = getattr(self, self.source_propname, [])
+        result = getattr(self, self.source_propname)
         if self.source_type in ["OBJECT", "CURVE_OBJECT"]:
             result = [result] if result is not None else []
         elif self.source_type == "COLLECTION":
-            result.extend(o for o in result if o.type in ["CURVE", "MESH"])
+            result = (o for o in result.objects if o.type in ["CURVE", "MESH"])
         depsgraph = bpy.context.evaluated_depsgraph_get()
         return [o.evaluated_get(depsgraph) for o in result]
+
+    def is_source(self, obj: bpy.types.Object) -> bool:
+        collection_source = [] if self.collection_source is None else self.collection_source
+        return obj == self.object_source or obj in collection_source
 
 
 class Block(DistanceAlongPathsMixin, DistanceBetweenPathsMixin, SourceMixin, bpy.types.PropertyGroup):
@@ -100,9 +105,22 @@ class CurveToPath(SourceMixin, bpy.types.PropertyGroup):
         type=bpy.types.Object, name="Source", poll=utils.poll_curve_object_source
     )
 
+    def is_source(self, obj: bpy.types.Object) -> bool:
+        collection_source = [] if self.collection_source is None else self.collection_source
+        return obj == self.curve_object_source or obj in collection_source
+
 
 class Drill(SourceMixin, bpy.types.PropertyGroup):
     method_type: bpy.props.EnumProperty(name="Method", items=get_drill_items)
+
+    def execute(self, operation: bpy.types.PropertyGroup) -> set[str]:
+        bm = bmesh.new()
+        print(self.source)
+        for vector in (o.matrix_world @ v.co for o in self.source for v in o.data.vertices):
+            bm.verts.new(vector)
+        bm.to_mesh(operation.data.data)
+        bm.free()
+        return {"FINISHED"}
 
 
 class MedialAxis(SourceMixin, bpy.types.PropertyGroup):

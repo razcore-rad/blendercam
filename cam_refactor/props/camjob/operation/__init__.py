@@ -52,7 +52,7 @@ def update_strategy(operation: bpy.types.PropertyGroup, context: bpy.types.Conte
 
 
 class Operation(bpy.types.PropertyGroup):
-    EXCLUDE_PROPNAMES = {"previous_strategy_type"}
+    EXCLUDE_PROPNAMES = {"data", "previous_strategy_type", "previous_cutter_type", "use_modifiers"}
     NAME = "CAMOperation"
 
     data: bpy.props.PointerProperty(type=bpy.types.Object)

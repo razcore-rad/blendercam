@@ -10,34 +10,15 @@ globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod,
 UNITS = {"MIN": "/ min"}
 
 
-def get_icon(p: bpy.types.Property, propname: str) -> str:
-    return getattr(p, "ICON_MAP", {}).get(propname, "NONE")
-
-
 def get_enum_item_icon(items: list[tuple], item_type: str) -> str:
     return reduce(lambda acc, item: item[-2] if item_type == item[0] and len(item) == 5 else acc, items, "NONE")
 
 
 class CAM_UL_List(bpy.types.UIList):
-    ICON_MAP = {
-        "use_modifiers": {True: "MODIFIER_ON", False: "MODIFIER_OFF"},
-    }
-
     def draw_item(self, _context, layout, _data, item, icon, _active_data, _active_propname):
         if self.layout_type in {"DEFAULT", "COMPACT"}:
             layout.row().prop(item.data, "name", text="", emboss=False, icon_value=icon)
             layout.row(align=True).prop(item.data, "hide_viewport", text="", emboss=False)
-
-            for propname in self.ICON_MAP:
-                if hasattr(item, propname):
-                    layout.row(align=True).prop(
-                        item,
-                        propname,
-                        text="",
-                        emboss=False,
-                        icon=self.ICON_MAP[propname][getattr(item, propname)],
-                    )
-
         elif self.layout_type in {"GRID"}:
             layout.alignment = "CENTER"
             layout.label(text="", icon_value=icon)
@@ -88,7 +69,7 @@ class CAM_PT_PanelBase(bpy.types.Panel):
             if label_text is not None:
                 split = layout.split(factor=0.85, align=True)
                 row = split.row(align=True)
-            row.prop(pg, propname, icon=get_icon(pg, propname), expand=propname.endswith("type"))
+            row.prop(pg, propname, expand=propname.endswith("type"))
             if label_text is not None:
                 row = split.row(align=True)
                 row.alignment = "RIGHT"

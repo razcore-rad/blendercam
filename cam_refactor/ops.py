@@ -3,7 +3,7 @@ import importlib
 import bl_operators
 import bpy
 
-mods = {"..props", ".strategy"}
+mods = {".props"}
 
 globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod, __package__)) for mod in mods})
 
@@ -114,6 +114,14 @@ class CAM_OT_Action(bpy.types.Operator):
         setattr(dataptr, active_propname, len(propscol) - 1)
         return {"FINISHED"}
 
+    def execute_compute(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> set[str]:
+        result = {"FINISHED"}
+        for operation in context.scene.cam_job.operations:
+            result_item, = result = operation.strategy.execute(operation)
+            if result_item != "FINISHED":
+                break
+        return result
+
     def execute_duplicate(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> set[str]:
         result = {"FINISHED"}
         propscol = getattr(dataptr, propname)
@@ -135,13 +143,13 @@ class CAM_OT_Action(bpy.types.Operator):
             pass
         return {"FINISHED"}
 
-    # def execute_move(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> set[str]:
-    #     propscol = getattr(dataptr, propname)
-    #     active_index = getattr(dataptr, active_propname)
-    #     new_active_index = max(0, min(active_index + self.move_direction, len(propscol) - 1))
-    #     propscol.move(active_index, new_active_index)
-    #     setattr(dataptr, active_propname, new_active_index)
-    #     return {"FINISHED"}
+    def execute_move(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> set[str]:
+        propscol = getattr(dataptr, propname)
+        active_index = getattr(dataptr, active_propname)
+        new_active_index = max(0, min(active_index + self.move_direction, len(propscol) - 1))
+        propscol.move(active_index, new_active_index)
+        setattr(dataptr, active_propname, new_active_index)
+        return {"FINISHED"}
 
     def execute(self, context: bpy.types.Context) -> set[str]:
         scene = context.scene
