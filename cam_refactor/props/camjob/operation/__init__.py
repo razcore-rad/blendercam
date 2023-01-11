@@ -153,8 +153,12 @@ class Operation(bpy.types.PropertyGroup):
         return getattr(self, self.strategy_propname)
 
     def add_data(self, context: bpy.types.Context) -> None:
+        if self.data is not None:
+            return
         self.data = bpy.data.objects.new(self.NAME, bpy.data.meshes.new(self.NAME))
         context.scene.cam_job.data.objects.link(self.data)
 
     def remove_data(self) -> None:
+        if self.data is None:
+            return
         bpy.data.meshes.remove(self.data.data)

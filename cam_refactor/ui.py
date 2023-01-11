@@ -17,8 +17,11 @@ def get_enum_item_icon(items: list[tuple], item_type: str) -> str:
 class CAM_UL_List(bpy.types.UIList):
     def draw_item(self, _context, layout, _data, item, icon, _active_data, _active_propname):
         if self.layout_type in {"DEFAULT", "COMPACT"}:
-            layout.row().prop(item.data, "name", text="", emboss=False, icon_value=icon)
-            layout.row(align=True).prop(item.data, "hide_viewport", text="", emboss=False)
+            if item.data is not None:
+                layout.row().prop(item.data, "name", text="", emboss=False, icon_value=icon)
+                layout.row(align=True).prop(item.data, "hide_viewport", text="", emboss=False)
+            else:
+                layout.row().prop(item, "name", text="", emboss=False, icon_value=icon)
         elif self.layout_type in {"GRID"}:
             layout.alignment = "CENTER"
             layout.label(text="", icon_value=icon)

@@ -45,17 +45,18 @@ class CAMJob(bpy.types.PropertyGroup):
                 )
                 z_compare = self.stock.estimate_offset.z
         elif self.stock.type == "CUSTOM":
-            custom_location = self.stock.custom_location.copy().resized(3)
-            result = tuple(custom_location + v for v in (Vector(), self.stock.custom_size))
+            result = tuple(self.stock.custom_location.to_3d() + v for v in (Vector(), self.stock.custom_size))
         return (Vector(), Vector()) if isclose(z_compare, result[1].z) else result
 
     def add_data(self, context: bpy.types.Context) -> None:
-        self.data = bpy.data.collections.new(self.NAME)
-        context.collection.children.link(self.data)
+        if self.data is None:
+            self.data = bpy.data.collections.new(self.NAME)
+            context.collection.children.link(self.data)
         op = self.operations.add()
         op.add_data(context)
 
     def remove_data(self) -> None:
         for operation in self.operations:
             operation.remove_data()
-        bpy.data.collections.remove(self.data)
+        if self.data is not None:
+            bpy.data.collections.remove(self.data)

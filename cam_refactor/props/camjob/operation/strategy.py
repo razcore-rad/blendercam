@@ -4,7 +4,7 @@ import math
 import bmesh
 import bpy
 
-mods = {"...utils"}
+mods = {".tsp", "...utils"}
 
 globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod, __package__)) for mod in mods})
 
@@ -59,7 +59,7 @@ class SourceMixin:
         if self.source_type in ["OBJECT", "CURVE_OBJECT"]:
             result = [result] if result is not None else []
         elif self.source_type == "COLLECTION":
-            result = (o for o in result.objects if o.type in ["CURVE", "MESH"])
+            result = (o for o in result.objects if o.type in ["CURVE", "MESH"]) if result is not None else []
         depsgraph = bpy.context.evaluated_depsgraph_get()
         return [o.evaluated_get(depsgraph) for o in result]
 
@@ -115,9 +115,13 @@ class Drill(SourceMixin, bpy.types.PropertyGroup):
 
     def execute(self, operation: bpy.types.PropertyGroup) -> set[str]:
         bm = bmesh.new()
-        print(self.source)
-        for vector in (o.matrix_world @ v.co for o in self.source for v in o.data.vertices):
-            bm.verts.new(vector)
+        for v in tsp.run({(o.matrix_world @ v.co).xy.freeze() for o in self.source for v in o.data.vertices}):
+            bm.verts.new(v.to_3d())
+        bm.verts.index_update()
+        for pair in zip(bm.verts[:-1], bm.verts[1:]):
+            bm.edges.new(pair)
+        bm.edges.index_update()
+        operation.add_data(bpy.context)
         bm.to_mesh(operation.data.data)
         bm.free()
         return {"FINISHED"}
