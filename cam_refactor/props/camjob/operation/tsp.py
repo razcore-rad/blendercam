@@ -1,25 +1,10 @@
-import importlib
-import random
 from typing import Iterator
 
 from mathutils import Vector
 
-mods = {"...utils"}
-
-globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod, __package__)) for mod in mods})
-
 
 def distance(v1: Vector, v2: Vector) -> float:
     return (v2 - v1).xy.length
-
-
-def sample(population, samples: int, seed=42):
-    """Return a list of `samples` elements sampled from `population`. Set `random.seed` with `seed`."""
-    result = population
-    if samples < (result_len := len(result)):
-        random.seed(result_len * samples * seed)
-        result = random.sample(result, samples)
-    return result
 
 
 def length(tour: list[Vector]) -> float:
@@ -27,12 +12,7 @@ def length(tour: list[Vector]) -> float:
     return sum(distance(tour[i], tour[i - 1]) for i in range(len(tour)))
 
 
-def shortest(tours: list[list[Vector]]) -> float:
-    """Return the tour with minimum length"""
-    return min(tours, key=length)
-
-
-def nearest_neighbor(points: Iterator[Vector], origin: Vector) -> Vector:
+def get_nearest_neighbor(points: Iterator[Vector], origin: Vector) -> Vector:
     return min(points, key=lambda p: distance(p, origin))
 
 
@@ -41,7 +21,7 @@ def sorted_nearest_neighbor(points: set[Vector], start=None) -> list[Vector]:
     result = [start]
     unvisited = set(points - {start})
     while unvisited:
-        p = nearest_neighbor(unvisited, result[-1])
+        p = get_nearest_neighbor(unvisited, result[-1])
         result.append(p)
         unvisited.remove(p)
     return result
@@ -70,5 +50,6 @@ def alter(tour: list[Vector]) -> list[Vector]:
     return tour
 
 
-def run(points: set[Vector], repetitions=10) -> list[Vector]:
-    return shortest([alter(sorted_nearest_neighbor(points, p)) for p in sample(points, repetitions)])
+def run(points: set[Vector], start=Vector()) -> list[Vector]:
+    start = get_nearest_neighbor(points, start.freeze())
+    return alter(sorted_nearest_neighbor(points, start))
