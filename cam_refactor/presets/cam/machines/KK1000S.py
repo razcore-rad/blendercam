@@ -3,7 +3,6 @@ import bpy
 machine = bpy.context.scene.cam_job.machine
 
 machine.post_processor_enum = "MACH3"
-machine.working_area = (8e-1, 5.6e-1, 9e-2)
 machine.feed_rate.default = 1.5
 machine.feed_rate.min = 1e-05
 machine.feed_rate.max = 2

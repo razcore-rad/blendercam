@@ -1,5 +1,6 @@
-from itertools import count, islice, tee
-from typing import Iterator
+from itertools import chain, count, islice, repeat, tee
+from math import ceil, copysign, isclose
+from typing import Any, Iterator
 
 import bpy
 from mathutils import Vector
@@ -83,6 +84,18 @@ def get_bound_box(obj: bpy.types.Object) -> tuple[Vector]:
     return tuple(Vector(f(cs) for cs in zip(*ps)) for f, ps in zip((min, max), tee(points)))
 
 
-def seq(start: float, end: float, step: int = 1) -> Iterator[float]:
-    assert start < end and step > 0 or start > end and step < 0
-    return islice(count(start, step), int(abs((end - start) / step)) + 1)
+def sign(x: float) -> float:
+    if isclose(x, 0):
+        x = 0
+    return copysign(1, x)
+
+
+def seq(start: float, end: float, step=1) -> Iterator[float]:
+    result = iter(())
+    if sign(end - start) == sign(step) and not isclose(step, 0):
+        result = islice(count(start, step), ceil(abs((end - start) / step)))
+    return result
+
+
+def intersperse(seq: Iterator[Any], delim: Any) -> Iterator[Any]:
+    return islice(chain(*zip(repeat(delim), seq)), 1, None)

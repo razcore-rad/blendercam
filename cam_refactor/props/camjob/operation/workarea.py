@@ -22,7 +22,7 @@ class WorkArea(bpy.types.PropertyGroup):
     EXCLUDE_PROPNAMES = {"name", "depth_end_type", "depth_end", "layer_size"}
 
     depth_end: bpy.props.FloatProperty(
-        name="Depth End", default=0, min=-1, max=0, precision=utils.PRECISION, unit="LENGTH"
+        name="Depth End", default=-1e-3, min=-1, max=0, precision=utils.PRECISION, unit="LENGTH"
     )
     depth_end_type: bpy.props.EnumProperty(name="Depth End", items=get_depth_end_type_items)
     layer_size: bpy.props.FloatProperty(

@@ -1,8 +1,11 @@
 import importlib
-import math
+from itertools import chain
+from math import isclose, tau
+from typing import Iterator
 
 import bmesh
 import bpy
+from mathutils import Vector
 
 mods = {".tsp", "...utils"}
 
@@ -34,7 +37,7 @@ class DistanceBetweenPathsMixin:
 
 class PathsAngleMixin:
     paths_angle: bpy.props.FloatProperty(
-        name="Paths Angle", default=0, min=-math.tau, max=math.tau, precision=0, subtype="ANGLE", unit="ROTATION"
+        name="Paths Angle", default=0, min=-tau, max=tau, precision=0, subtype="ANGLE", unit="ROTATION"
     )
 
 
@@ -54,14 +57,17 @@ class SourceMixin:
         return f"{self.source_type.lower()}_source"
 
     @property
-    def source(self) -> list[bpy.types.PropertyGroup]:
+    def source(self) -> Iterator[bpy.types.Object]:
         result = getattr(self, self.source_propname)
         if self.source_type in ["OBJECT", "CURVE_OBJECT"]:
             result = [result] if result is not None else []
         elif self.source_type == "COLLECTION":
-            result = (o for o in result.objects if o.type in ["CURVE", "MESH"]) if result is not None else []
+            result = [o for o in result.objects if o.type in ["CURVE", "MESH"]] if result is not None else []
+        return result
+
+    def get_evaluated_source(self) -> list[bpy.types.Object]:
         depsgraph = bpy.context.evaluated_depsgraph_get()
-        return [o.evaluated_get(depsgraph) for o in result]
+        return [o.evaluated_get(depsgraph) for o in self.source]
 
     def is_source(self, obj: bpy.types.Object) -> bool:
         collection_source = [] if self.collection_source is None else self.collection_source
@@ -113,18 +119,51 @@ class CurveToPath(SourceMixin, bpy.types.PropertyGroup):
 class Drill(SourceMixin, bpy.types.PropertyGroup):
     method_type: bpy.props.EnumProperty(name="Method", items=get_drill_items)
 
-    def execute(self, operation: bpy.types.PropertyGroup) -> set[str]:
+    def execute(self, context: bpy.types.Context, operation: bpy.types.PropertyGroup) -> set[str]:
+        # TODO: cover `method_type == "CENTER"`
+        # FIXME: fix for `source_type == "COLLECTION"`
+        depth_end = operation.get_depth_end(context)
+        _, bound_box_max = operation.bound_box
+        if isclose(depth_end, 0) or depth_end > 0 or depth_end > bound_box_max.z or bound_box_max.z > 0:
+            return (
+                "CANCELLED",
+                f"Drill `{operation.data.name}` can't be computed. See Depth End and check Bound Box Z < 0",
+            )
+
+        free_height = operation.movement.free_height
+        layer_size = operation.work_area.layer_size
+        layers = (
+            [free_height, depth_end, free_height]
+            if isclose(operation.work_area.layer_size, 0)
+            else list(utils.seq(-layer_size, depth_end, -layer_size)) + [depth_end]
+        )
         bm = bmesh.new()
-        for v in tsp.run({(o.matrix_world @ v.co).xy.freeze() for o in self.source for v in o.data.vertices}):
-            bm.verts.new(v.to_3d())
+        for v in tsp.run({(o.matrix_world @ v.co).freeze() for o in self.source for v in o.data.vertices}):
+            if v.z < depth_end:
+                bm.free()
+                # TODO: `continue` instead of `return`
+                return (
+                    "CANCELLED",
+                    f"Drill `{operation.data.name}` can't be computed because"
+                    f" Vertex.z ({v.z}) < Depth End ({depth_end}) is True.",
+                )
+            vectors = (
+                Vector((v.x, v.y, z))
+                for z in (
+                    layers
+                    if isclose(operation.work_area.layer_size, 0)
+                    else chain([free_height], utils.intersperse(layers, v.z), [free_height])
+                )
+            )
+            for v in vectors:
+                bm.verts.new(v)
         bm.verts.index_update()
         for pair in zip(bm.verts[:-1], bm.verts[1:]):
             bm.edges.new(pair)
         bm.edges.index_update()
-        operation.add_data(bpy.context)
         bm.to_mesh(operation.data.data)
         bm.free()
-        return {"FINISHED"}
+        return "FINISHED", ""
 
 
 class MedialAxis(SourceMixin, bpy.types.PropertyGroup):

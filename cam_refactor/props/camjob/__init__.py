@@ -29,24 +29,25 @@ class CAMJob(bpy.types.PropertyGroup):
         return self.operations[self.operation_active_index]
 
     @property
-    def stock_bound_box(self) -> tuple[Vector]:
+    def stock_bound_box(self) -> tuple[Vector, Vector]:
         result = (Vector(), Vector())
-        z_compare = 0
         if self.stock.type == "ESTIMATE":
-            objs = reduce(lambda acc, o: acc + o.strategy.source, self.operations, [])
-            if len(objs) > 0:
-                bound_boxes = (utils.get_bound_box(o) for o in objs)
+            bound_boxes = reduce(lambda acc, o: acc + [o.bound_box], self.operations, [])
+            if sum((bb_max - bb_min).length for (bb_min, bb_max) in bound_boxes) > 0:
                 result = tuple(
                     op(Vector(f(cs) for cs in zip(*vs)), eo)
                     for (f, op, eo), vs in zip(
-                        ((min, sub, self.stock.estimate_offset.xy.resized(3)), (max, add, self.stock.estimate_offset)),
+                        ((min, sub, self.stock.estimate_offset), (max, add, self.stock.estimate_offset)),
                         zip(*bound_boxes),
                     )
                 )
-                z_compare = self.stock.estimate_offset.z
         elif self.stock.type == "CUSTOM":
             result = tuple(self.stock.custom_location.to_3d() + v for v in (Vector(), self.stock.custom_size))
-        return (Vector(), Vector()) if isclose(z_compare, result[1].z) else result
+        return result
+
+    @property
+    def stock_z_min(self) -> float:
+        return self.stock_bound_box[0][-1]
 
     def add_data(self, context: bpy.types.Context) -> None:
         if self.data is None:

@@ -1,6 +1,7 @@
 import importlib
 
 import bpy
+from mathutils import Vector
 
 mods = {".cutter", ".feedmovementspindle", ".strategy", ".workarea", "...utils"}
 
@@ -151,6 +152,22 @@ class Operation(bpy.types.PropertyGroup):
     @property
     def strategy(self) -> bpy.types.PropertyGroup:
         return getattr(self, self.strategy_propname)
+
+    @property
+    def bound_box(self) -> tuple[Vector]:
+        result = (Vector(), Vector())
+        if len(self.strategy.source) > 0:
+            bound_boxes = (utils.get_bound_box(o) for o in self.strategy.get_evaluated_source())
+            result = tuple(Vector(f(cs) for cs in zip(*vs)) for f, vs in zip((min, max), zip(*bound_boxes)))
+        return result
+
+    def get_depth_end(self, context: bpy.types.Context) -> float:
+        result = 0
+        if self.work_area.depth_end_type == "CUSTOM":
+            result = self.work_area.depth_end
+        elif self.work_area.depth_end_type == "STOCK":
+            result = context.scene.cam_job.stock_z_min
+        return result
 
     def add_data(self, context: bpy.types.Context) -> None:
         if self.data is not None:
