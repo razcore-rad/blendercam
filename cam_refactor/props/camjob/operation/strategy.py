@@ -3,7 +3,7 @@ from itertools import chain
 from math import isclose, tau
 from typing import Iterator
 
-import bmesh
+# import bmesh
 import bpy
 from mathutils import Vector
 
@@ -119,51 +119,38 @@ class CurveToPath(SourceMixin, bpy.types.PropertyGroup):
 class Drill(SourceMixin, bpy.types.PropertyGroup):
     method_type: bpy.props.EnumProperty(name="Method", items=get_drill_items)
 
-    def execute(self, context: bpy.types.Context, operation: bpy.types.PropertyGroup) -> set[str]:
-        # TODO: cover `method_type == "CENTER"`
-        # FIXME: fix for `source_type == "COLLECTION"`
+    def execute_compute(
+        self, context: bpy.types.Context, operation: bpy.types.PropertyGroup
+    ) -> tuple[set[str], str, list[Vector]]:
+        # TODO: comptute source vectors for `self.method_type == "CENTER"`
+        result_execute, result_msgs, result_vectors = set(), [], []
         depth_end = operation.get_depth_end(context)
         _, bound_box_max = operation.bound_box
-        if isclose(depth_end, 0) or depth_end > 0 or depth_end > bound_box_max.z or bound_box_max.z > 0:
+        if isclose(depth_end, 0) or depth_end > 0 or bound_box_max.z > 0:
             return (
-                "CANCELLED",
+                {"CANCELLED"},
                 f"Drill `{operation.data.name}` can't be computed. See Depth End and check Bound Box Z < 0",
+                result_vectors,
             )
 
         free_height = operation.movement.free_height
         layer_size = operation.work_area.layer_size
-        layers = (
-            [free_height, depth_end, free_height]
-            if isclose(operation.work_area.layer_size, 0)
-            else list(utils.seq(-layer_size, depth_end, -layer_size)) + [depth_end]
-        )
-        bm = bmesh.new()
+        is_layer_size_zero = isclose(layer_size, 0)
+        layers = list(utils.seq(-layer_size, depth_end, -layer_size)) + [depth_end]
+        layers = [free_height, depth_end, free_height] if is_layer_size_zero else layers
         for v in tsp.run({(o.matrix_world @ v.co).freeze() for o in self.source for v in o.data.vertices}):
             if v.z < depth_end:
-                bm.free()
-                # TODO: `continue` instead of `return`
-                return (
-                    "CANCELLED",
-                    f"Drill `{operation.data.name}` can't be computed because"
-                    f" Vertex.z ({v.z}) < Depth End ({depth_end}) is True.",
+                result_execute.add("CANCELLED")
+                result_msgs.append(
+                    f"Drill `{operation.data.name}` can't compute {v}"
+                    f" because Vector.Z < Depth End (`{v.z} < {depth_end}` is `True`)"
                 )
-            vectors = (
-                Vector((v.x, v.y, z))
-                for z in (
-                    layers
-                    if isclose(operation.work_area.layer_size, 0)
-                    else chain([free_height], utils.intersperse(layers, v.z), [free_height])
-                )
-            )
-            for v in vectors:
-                bm.verts.new(v)
-        bm.verts.index_update()
-        for pair in zip(bm.verts[:-1], bm.verts[1:]):
-            bm.edges.new(pair)
-        bm.edges.index_update()
-        bm.to_mesh(operation.data.data)
-        bm.free()
-        return "FINISHED", ""
+                continue
+            computed_layers = chain([free_height], utils.intersperse(layers, v.z), [free_height])
+            computed_layers = layers if is_layer_size_zero else computed_layers
+            result_vectors.extend(Vector((v.x, v.y, z)) for z in computed_layers)
+            result_execute.add("FINISHED")
+        return utils.reduce_cancelled_or_finished(result_execute), "\n".join(result_msgs), result_vectors
 
 
 class MedialAxis(SourceMixin, bpy.types.PropertyGroup):

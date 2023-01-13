@@ -1,5 +1,4 @@
 import importlib
-from collections import namedtuple
 
 import bl_operators
 import bpy
@@ -115,19 +114,10 @@ class CAM_OT_Action(bpy.types.Operator):
         return {"FINISHED"}
 
     def execute_compute(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> set[str]:
-        results = []
+        result = set()
         for operation in context.scene.cam_job.operations:
-            operation.add_data(context)
-            bpy.ops.object.mode_set(mode="OBJECT")
-            bpy.ops.object.select_all(action="DESELECT")
-            operation.data.select_set(True)
-            bpy.ops.object.location_clear(clear_delta=True)
-            bpy.ops.object.rotation_clear(clear_delta=True)
-            bpy.ops.object.scale_clear(clear_delta=True)
-            results.append(operation.strategy.execute(context, operation))
-        if len(msgs := [f"\t{m}" for _, m in results if m != ""]) > 0:
-            self.report({"WARNING"}, "\n".join(["CAM Job couldn't compute all operations."] + msgs))
-        return {"FINISHED"} if any(r == "FINISHED" for r, _ in results) else {"CANCELLED"}
+            result.update(operation.execute_compute(context, self.report))
+        return props.utils.reduce_cancelled_or_finished(result)
 
     def execute_duplicate(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> set[str]:
         result = {"FINISHED"}

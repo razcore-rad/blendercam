@@ -13,7 +13,7 @@ def get_depth_end_type_items(
     result = [("CUSTOM", "Custom", "")]
     if not isinstance(context.scene.cam_job.operation.strategy, strategy.Drill):
         result.append(("SOURCE", "Source", ""))
-    result.append(("STOCK", "Stock", ""))
+        result.append(("STOCK", "Stock", ""))
     return result
 
 

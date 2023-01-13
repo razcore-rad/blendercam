@@ -1,6 +1,8 @@
 import importlib
+from typing import Callable
 
 import bpy
+import bmesh
 from mathutils import Vector
 
 mods = {".cutter", ".feedmovementspindle", ".strategy", ".workarea", "...utils"}
@@ -179,3 +181,28 @@ class Operation(bpy.types.PropertyGroup):
         if self.data is None:
             return
         bpy.data.meshes.remove(self.data.data)
+
+    def execute_compute(self, context: bpy.types.Context, report: Callable[[set[str], str], None]) -> set[str]:
+        self.add_data(context)
+        result, msg, vectors = self.strategy.execute_compute(context, self)
+        msg != "" and report(utils.REPORT_MAP[utils.first(result)], msg)
+        if result == {"CANCELLED"}:
+            return result
+
+        bpy.ops.object.mode_set(mode="OBJECT")
+        bpy.ops.object.select_all(action="DESELECT")
+        self.data.select_set(True)
+        bpy.ops.object.location_clear(clear_delta=True)
+        bpy.ops.object.rotation_clear(clear_delta=True)
+        bpy.ops.object.scale_clear(clear_delta=True)
+
+        bm = bmesh.new()
+        for v in vectors:
+            bm.verts.new(v)
+        bm.verts.index_update()
+        for pair in zip(bm.verts[:-1], bm.verts[1:]):
+            bm.edges.new(pair)
+        bm.edges.index_update()
+        bm.to_mesh(self.data.data)
+        bm.free()
+        return result

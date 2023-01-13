@@ -1,3 +1,4 @@
+# from functools import reduce
 from itertools import chain, count, islice, repeat, tee
 from math import ceil, copysign, isclose
 from typing import Any, Iterator
@@ -6,6 +7,10 @@ import bpy
 from mathutils import Vector
 
 PRECISION = 5
+
+REPORT_MAP = {"CANCELLED": {"ERROR"}, "FINISHED": {"WARNING"}}
+
+REDUCE_MAP = {True: {"FINISHED"}, False: {"CANCELLED"}}
 
 
 def get_propnames(pg: bpy.types.PropertyGroup, use_exclude_propnames=True):
@@ -99,3 +104,11 @@ def seq(start: float, end: float, step=1) -> Iterator[float]:
 
 def intersperse(seq: Iterator[Any], delim: Any) -> Iterator[Any]:
     return islice(chain(*zip(repeat(delim), seq)), 1, None)
+
+
+def reduce_cancelled_or_finished(results: set[str]) -> set[str]:
+    return REDUCE_MAP[any(r == "FINISHED" for r in results) or len(results) == 0]
+
+
+def first(seq) -> Any:
+    return next(iter(seq))
