@@ -41,15 +41,6 @@ def all_segments(n: int) -> list[tuple[Vector, Vector]]:
     return [(start, start + length) for length in range(n, 1, -1) for start in range(n - length + 1)]
 
 
-def alter(tour: list[Vector]) -> list[Vector]:
-    original_length = length(tour)
-    for (start, end) in all_segments(len(tour)):
-        reverse_segment_if_better(tour, start, end)
-    if length(tour) < original_length:
-        return alter(tour)
-    return tour
-
-
 def run(points: set[Vector], start=Vector()) -> list[Vector]:
     start = get_nearest_neighbor(points, start.freeze())
-    return alter(sorted_nearest_neighbor(points, start))
+    return sorted_nearest_neighbor(points, start)

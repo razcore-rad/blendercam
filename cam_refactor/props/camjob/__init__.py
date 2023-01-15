@@ -28,11 +28,10 @@ class CAMJob(bpy.types.PropertyGroup):
     def operation(self) -> operation.Operation:
         return self.operations[self.operation_active_index]
 
-    @property
-    def stock_bound_box(self) -> tuple[Vector, Vector]:
+    def get_stock_bound_box(self, context: bpy.types.Context) -> tuple[Vector, Vector]:
         result = (Vector(), Vector())
         if self.stock.type == "ESTIMATE":
-            bound_boxes = reduce(lambda acc, o: acc + [o.bound_box], self.operations, [])
+            bound_boxes = reduce(lambda acc, o: acc + [o.get_bound_box(context)], self.operations, [])
             if sum((bb_max - bb_min).length for (bb_min, bb_max) in bound_boxes) > 0:
                 result = tuple(
                     op(Vector(f(cs) for cs in zip(*vs)), eo)
@@ -44,10 +43,6 @@ class CAMJob(bpy.types.PropertyGroup):
         elif self.stock.type == "CUSTOM":
             result = tuple(self.stock.custom_location.to_3d() + v for v in (Vector(), self.stock.custom_size))
         return result
-
-    @property
-    def stock_z_min(self) -> float:
-        return self.stock_bound_box[0][-1]
 
     def add_data(self, context: bpy.types.Context) -> None:
         if self.data is None:

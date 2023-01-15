@@ -83,10 +83,13 @@ def poll_curve_limit(_work_area: bpy.types.Property, obj: bpy.types.Object) -> b
     return result
 
 
-def get_bound_box(obj: bpy.types.Object) -> tuple[Vector]:
-    points = (obj.matrix_world @ v.co for v in obj.to_mesh().vertices)
+def get_bound_box(obj: bpy.types.Object, depsgraph: bpy.types.Depsgraph = None) -> tuple[Vector, Vector]:
+    result = (Vector(), Vector())
+    points = [obj.matrix_world @ v.co for v in obj.to_mesh(depsgraph=depsgraph).vertices]
     obj.to_mesh_clear()
-    return tuple(Vector(f(cs) for cs in zip(*ps)) for f, ps in zip((min, max), tee(points)))
+    if len(points) > 0:
+        result = tuple(Vector(f(cs) for cs in zip(*ps)) for f, ps in zip((min, max), tee(points)))
+    return result
 
 
 def sign(x: float) -> float:

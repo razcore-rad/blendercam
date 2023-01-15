@@ -29,7 +29,7 @@ def draw_stock() -> None:
     if len(context.scene.cam_jobs) == 0 or len(context.scene.cam_job.operations) == 0:
         return
 
-    stock_bound_box_min, stock_bound_box_max = context.scene.cam_job.stock_bound_box
+    stock_bound_box_min, stock_bound_box_max = context.scene.cam_job.get_stock_bound_box(context)
     coords = [
         # bottom
         Vector((stock_bound_box_min.x, stock_bound_box_min.y, stock_bound_box_min.z)),

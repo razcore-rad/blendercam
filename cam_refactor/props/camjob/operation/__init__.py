@@ -155,11 +155,12 @@ class Operation(bpy.types.PropertyGroup):
     def strategy(self) -> bpy.types.PropertyGroup:
         return getattr(self, self.strategy_propname)
 
-    @property
-    def bound_box(self) -> tuple[Vector]:
+    def get_bound_box(self, context: bpy.types.Context) -> tuple[Vector]:
         result = (Vector(), Vector())
-        if len(self.strategy.source) > 0:
-            bound_boxes = (utils.get_bound_box(o) for o in self.strategy.get_evaluated_source())
+        depsgraph = context.evaluated_depsgraph_get()
+        source = self.strategy.get_evaluated_source(depsgraph)
+        if len(source) > 0:
+            bound_boxes = (utils.get_bound_box(o, depsgraph) for o in source)
             result = tuple(Vector(f(cs) for cs in zip(*vs)) for f, vs in zip((min, max), zip(*bound_boxes)))
         return result
 
@@ -168,7 +169,8 @@ class Operation(bpy.types.PropertyGroup):
         if self.work_area.depth_end_type == "CUSTOM":
             result = self.work_area.depth_end
         elif self.work_area.depth_end_type == "STOCK":
-            result = context.scene.cam_job.stock_z_min
+            stock_bound_box_min, = context.scene.cam_job.get_stock_bound_box(context)
+            result = stock_bound_box_min.z
         return result
 
     def add_data(self, context: bpy.types.Context) -> None:
