@@ -29,20 +29,6 @@ def sorted_nearest_neighbor(points: set[Vector], start=None) -> list[tuple[int, 
     return result
 
 
-def reverse_segment_if_better(tour: list[Vector], i: int, j: int) -> None:
-    """If reversing `tour[i:j]` would make the tour shorter do it."""
-    # Given tour [...A-B...C-D...], consider reversing [B...C] to get [...A-C...B-D...]
-    a, b, c, d = tour[i - 1], tour[i], tour[j - 1], tour[j % len(tour)]
-    # Are old edges (AB + CD) longer than new ones (AC + BD)? If so, reverese segment.
-    if distance(a, b) + distance(c, d) > distance(a, c) + distance(b, d):
-        tour[i:j] = reversed(tour[i:j])
-
-
-def all_segments(n: int) -> list[tuple[Vector, Vector]]:
-    """Return `(start, end)` pairs of indices that form segments of tour of length `n`."""
-    return [(start, start + length) for length in range(n, 1, -1) for start in range(n - length + 1)]
-
-
 def run(points: set[Vector], start=Vector()) -> list[Vector]:
     start = get_nearest_neighbor(points, start.freeze())
     return sorted_nearest_neighbor(points, start)
