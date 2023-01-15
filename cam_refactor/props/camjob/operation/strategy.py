@@ -3,7 +3,6 @@ from itertools import chain
 from math import isclose, tau
 from typing import Iterator
 
-# import bmesh
 import bpy
 from mathutils import Vector
 
@@ -11,22 +10,48 @@ mods = {".tsp", "...utils"}
 
 globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod, __package__)) for mod in mods})
 
+MAP_SPLINE_POINTS = {"POLY": "points", "NURBS": "points", "BEZIER": "bezier_points"}
+
 
 def get_drill_items(
     strategy: bpy.types.PropertyGroup, _context: bpy.types.Context
 ) -> list[tuple[str, str, str, str, int]]:
     result = [("POINTS", "Points", "Drill at every point", "SNAP_VERTEX", 0)]
     if strategy.source_type == "OBJECT" and all(o.type == "CURVE" for o in strategy.source):
-        result.append(
-            ("CENTER", "Center", "Position is at the center of disjoint mesh or curve islands", "SNAP_FACE_CENTER", 1)
+        result.extend(
+            (
+                (
+                    "CENTER",
+                    "Center",
+                    "Position is at the center of disjoint mesh or curve islands",
+                    "SNAP_FACE_CENTER",
+                    1,
+                ),
+                ("SEGMENTS", "Segments", "Position is at the top point and depth from bottom point", "SNAP_EDGE", 2),
+            )
         )
     return result
 
 
 def update_object_source(strategy: bpy.types.PropertyGroup, context: bpy.types.Context) -> None:
-    if isinstance(strategy, Drill) and strategy.source_type == "OBJECT" and strategy.object_source is not None:
-        strategy.method_type = "POINTS"
+    if isinstance(strategy, Drill):
         context.scene.cam_job.operation.work_area.depth_end_type = "CUSTOM"
+        if (
+            strategy.source_type == "OBJECT"
+            and strategy.object_source is not None
+            and strategy.object_source.type == "MESH"
+        ):
+            strategy.method_type = "POINTS"
+
+
+def update_source_type(strategy: bpy.types.PropertyGroup, context: bpy.types.Context) -> None:
+    if isinstance(strategy, Drill) and strategy.source_type == "COLLECTION":
+        strategy.method_type = "POINTS"
+
+
+def update_method_type(strategy: bpy.types.PropertyGroup, context: bpy.types.Context) -> None:
+    if isinstance(strategy, Drill) and strategy.method_type == "SEGMENTS":
+        context.scene.cam_job.operation.work_area.depth_end_type = "VARIABLE"
 
 
 class DistanceAlongPathsMixin:
@@ -54,8 +79,10 @@ class SourceMixin:
         ("OBJECT", "Object", "Object data source.", "OBJECT_DATA", 0),
         ("COLLECTION", "Collection", "Collection data source", "OUTLINER_COLLECTION", 1),
     ]
-    source_type: bpy.props.EnumProperty(items=source_type_items, name="Source Type")
-    object_source: bpy.props.PointerProperty(type=bpy.types.Object, name="Source", poll=utils.poll_object_source, update=update_object_source)
+    source_type: bpy.props.EnumProperty(items=source_type_items, name="Source Type", update=update_source_type)
+    object_source: bpy.props.PointerProperty(
+        type=bpy.types.Object, name="Source", poll=utils.poll_object_source, update=update_object_source
+    )
     collection_source: bpy.props.PointerProperty(type=bpy.types.Collection, name="Source")
 
     @property
@@ -150,7 +177,14 @@ class Drill(SourceMixin, bpy.types.PropertyGroup):
                 bpy.data.curves.remove(temp_obj.data)
         return result
 
-    tsp_funcs = {"POINTS": get_tsp_points, "CENTER": get_tsp_center}
+    def get_tsp_segments(source: Iterator[bpy.types.Object], depsgraph: bpy.types.Depsgraph) -> set[Vector]:
+        return {
+            (o.matrix_world @ max(getattr(s, MAP_SPLINE_POINTS[s.type]), key=lambda p: p.co.z).co).freeze()
+            for o in source
+            for s in o.evaluated_get(depsgraph).data.splines
+        }
+
+    tsp_funcs = {"POINTS": get_tsp_points, "CENTER": get_tsp_center, "SEGMENTS": get_tsp_segments}
 
     def execute_compute(
         self, context: bpy.types.Context, operation: bpy.types.PropertyGroup
@@ -158,7 +192,7 @@ class Drill(SourceMixin, bpy.types.PropertyGroup):
         result_execute, result_msgs, result_vectors = set(), [], []
         depth_end = operation.get_depth_end(context)
         _, bound_box_max = operation.get_bound_box(context)
-        if isclose(depth_end, 0) or depth_end > 0 or bound_box_max.z > 0:
+        if (self.method_type != "SEGMENTS" and isclose(depth_end, 0) or depth_end > 0) or bound_box_max.z > 0:
             return (
                 {"CANCELLED"},
                 f"Drill `{operation.data.name}` can't be computed. See Depth End and check Bound Box Z < 0",
@@ -171,14 +205,24 @@ class Drill(SourceMixin, bpy.types.PropertyGroup):
         layers = list(utils.seq(-layer_size, depth_end, -layer_size)) + [depth_end]
         layers = [free_height, depth_end, free_height] if is_layer_size_zero else layers
         depsgraph = context.evaluated_depsgraph_get()
-        for v in tsp.run(self.tsp_funcs[self.method_type](self.source, depsgraph)):
-            if v.z < depth_end:
+        for i, v in tsp.run(self.tsp_funcs[self.method_type](self.source, depsgraph)):
+            do_skip = False
+            z = v.z
+            if self.method_type == "SEGMENTS":
+                obj, spline = [(o, s) for o in self.get_evaluated_source(depsgraph) for s in o.data.splines][i]
+                points = getattr(spline, MAP_SPLINE_POINTS[spline.type])
+                do_skip = len(points) != 2
+                if not do_skip:
+                    z = depth_end = (obj.matrix_world @ min(points, key=lambda p: p.co.z).co).z
+                    layers = list(utils.seq(-layer_size, depth_end, -layer_size)) + [depth_end]
+                    layers = [free_height, depth_end, free_height] if is_layer_size_zero else layers
+
+            do_skip = do_skip or z < depth_end
+            if do_skip:
                 result_execute.add("CANCELLED")
-                result_msgs.append(
-                    f"Drill `{operation.data.name}` can't compute {v}"
-                    f" because Vector.Z < Depth End (`{v.z} < {depth_end}` is `True`)"
-                )
+                result_msgs.append(f"Drill `{operation.data.name}` can't compute {v}")
                 continue
+
             computed_layers = chain([free_height], utils.intersperse(layers, v.z), [free_height])
             computed_layers = layers if is_layer_size_zero else computed_layers
             result_vectors.extend(Vector((v.x, v.y, z)) for z in computed_layers)

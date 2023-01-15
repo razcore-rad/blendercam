@@ -16,13 +16,15 @@ def get_nearest_neighbor(points: Iterator[Vector], origin: Vector) -> Vector:
     return min(points, key=lambda p: distance(p, origin))
 
 
-def sorted_nearest_neighbor(points: set[Vector], start=None) -> list[Vector]:
+def sorted_nearest_neighbor(points: set[Vector], start=None) -> list[tuple[int, Vector]]:
     start = next(iter(points)) if start is None else start
-    result = [start]
+    i = 0
+    result = [(i, start)]
     unvisited = set(points - {start})
     while unvisited:
-        p = get_nearest_neighbor(unvisited, result[-1])
-        result.append(p)
+        i += 1
+        p = get_nearest_neighbor(unvisited, result[-1][-1])
+        result.append((i, p))
         unvisited.remove(p)
     return result
 

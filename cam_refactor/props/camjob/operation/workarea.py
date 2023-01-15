@@ -10,10 +10,12 @@ globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod,
 def get_depth_end_type_items(
     workarea: bpy.types.PropertyGroup, context: bpy.types.Context
 ) -> list[tuple[str, str, str]]:
-    result = [("CUSTOM", "Custom", "")]
-    if not isinstance(context.scene.cam_job.operation.strategy, strategy.Drill):
-        result.append(("SOURCE", "Source", ""))
-        result.append(("STOCK", "Stock", ""))
+    result = []
+    if isinstance(context.scene.cam_job.operation.strategy, strategy.Drill):
+        method_type = context.scene.cam_job.operation.strategy.method_type
+        result.append(("CUSTOM", "Custom", "") if method_type != "SEGMENTS" else ("VARIABLE", "Variable", ""))
+    else:
+        result.extend((("CUSTOM", "Custom", ""), ("SOURCE", "Source", ""), ("STOCK", "Stock", "")))
     return result
 
 
@@ -21,13 +23,9 @@ class WorkArea(bpy.types.PropertyGroup):
     ICON_MAP = {"curve_limit": "OUTLINER_OB_CURVE"}
     EXCLUDE_PROPNAMES = {"name", "depth_end_type", "depth_end", "layer_size"}
 
-    depth_end: bpy.props.FloatProperty(
-        name="Depth End", default=-1e-3, min=-1, max=0, precision=utils.PRECISION, unit="LENGTH"
-    )
+    depth_end: bpy.props.FloatProperty(name="Depth End", default=-1e-3, max=0, precision=utils.PRECISION, unit="LENGTH")
     depth_end_type: bpy.props.EnumProperty(name="Depth End", items=get_depth_end_type_items)
-    layer_size: bpy.props.FloatProperty(
-        name="Layer Size", default=0, min=0, max=1e-1, precision=utils.PRECISION, unit="LENGTH"
-    )
+    layer_size: bpy.props.FloatProperty(name="Layer Size", default=0, min=0, precision=utils.PRECISION, unit="LENGTH")
     ambient_type: bpy.props.EnumProperty(
         name="Ambient", items=[("OFF", "Off", ""), ("ALL", "All", ""), ("AROUND", "Around", "")]
     )

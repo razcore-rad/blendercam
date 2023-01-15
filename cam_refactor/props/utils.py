@@ -60,13 +60,20 @@ def copy(context: bpy.types.Context, from_prop: bpy.types.Property, to_prop: bpy
 
 
 def poll_object_source(strategy: bpy.types.Property, obj: bpy.types.Object) -> bool:
+    context = bpy.context
     curve = getattr(strategy, "curve", None)
-    obj_is_cam_object = obj in [op.data for cj in bpy.context.scene.cam_jobs for op in cj.operations]
-    return obj.users != 0 and obj.type in ["CURVE", "MESH"] and obj is not curve and not obj_is_cam_object
+    obj_is_cam_object = obj in [op.data for cj in context.scene.cam_jobs for op in cj.operations]
+    return (
+        obj.type in ["CURVE", "MESH"]
+        and obj.name in context.view_layer.objects
+        and obj is not curve
+        and not obj_is_cam_object
+    )
 
 
 def poll_curve_object_source(strategy: bpy.types.Property, obj: bpy.types.Object) -> bool:
-    return obj.users != 0 and obj.type == "CURVE" and obj not in strategy.source
+    context = bpy.context
+    return obj.type == "CURVE" and obj.name in context.view_layer.objects and obj not in strategy.source
 
 
 def poll_curve_limit(_work_area: bpy.types.Property, obj: bpy.types.Object) -> bool:
