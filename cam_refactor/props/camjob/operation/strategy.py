@@ -13,9 +13,7 @@ globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod,
 MAP_SPLINE_POINTS = {"POLY": "points", "NURBS": "points", "BEZIER": "bezier_points"}
 
 
-def get_drill_items(
-    strategy: bpy.types.PropertyGroup, _context: bpy.types.Context
-) -> list[tuple[str, str, str, str, int]]:
+def get_drill_items(strategy: bpy.types.PropertyGroup, _context: bpy.types.Context) -> [(str, str, str, str, int)]:
     result = [("POINTS", "Points", "Drill at every point", "SNAP_VERTEX", 0)]
     if strategy.source_type == "OBJECT" and all(o.type == "CURVE" for o in strategy.source):
         result.extend(
@@ -54,6 +52,47 @@ def update_method_type(strategy: bpy.types.PropertyGroup, context: bpy.types.Con
         context.scene.cam_job.operation.work_area.depth_end_type = "VARIABLE"
 
 
+def get_drill_tsp_points(source: Iterator[bpy.types.Object], depsgraph: bpy.types.Depsgraph) -> {Vector}:
+    def get_vertices(obj: bpy.types.Object, depsgraph: bpy.types.Depsgraph) -> Iterator[bpy.types.MeshVertex]:
+        result = obj.to_mesh(depsgraph=depsgraph).vertices.values()
+        obj.to_mesh_clear()
+        return result
+
+    return {(o.matrix_world @ v.co).freeze() for o in source for v in get_vertices(o, depsgraph)}
+
+
+def get_drill_tsp_center(source: Iterator[bpy.types.Object], depsgraph: bpy.types.Depsgraph) -> {Vector}:
+    result = set()
+    for obj in source:
+        for index in range(len(obj.data.splines)):
+            temp_obj = obj.evaluated_get(depsgraph).copy()
+            temp_obj.data = temp_obj.data.copy()
+            for temp_spline in chain(temp_obj.data.splines[:index], temp_obj.data.splines[index + 1:]):
+                temp_obj.data.splines.remove(temp_spline)
+            temp_obj.data.splines.active = utils.first(temp_obj.data.splines)
+            temp_mesh = obj.to_mesh()
+            if len(temp_mesh.vertices) > 0:
+                vector_mean = sum((v.co for v in temp_mesh.vertices), Vector()) / len(temp_mesh.vertices)
+                result.add((temp_obj.matrix_world @ vector_mean).freeze())
+            temp_obj.to_mesh_clear()
+            bpy.data.curves.remove(temp_obj.data)
+    return result
+
+
+def get_drill_tsp_segments(source: Iterator[bpy.types.Object], depsgraph: bpy.types.Depsgraph) -> {Vector}:
+    result = {
+        (o.matrix_world @ max(getattr(s, MAP_SPLINE_POINTS[s.type]), key=lambda p: p.co.z).co).freeze()
+        for o in source
+        for s in o.evaluated_get(depsgraph).data.splines
+    }
+    if len(result) < 2:
+        result = set()
+    return result
+
+
+TSP_FUNCS = {"POINTS": get_drill_tsp_points, "CENTER": get_drill_tsp_center, "SEGMENTS": get_drill_tsp_segments}
+
+
 class DistanceAlongPathsMixin:
     distance_along_paths: bpy.props.FloatProperty(
         name="Distance Along Paths", default=2e-4, min=1e-5, max=32, precision=utils.PRECISION, unit="LENGTH"
@@ -90,7 +129,7 @@ class SourceMixin:
         return f"{self.source_type.lower()}_source"
 
     @property
-    def source(self) -> list[bpy.types.Object]:
+    def source(self) -> [bpy.types.Object]:
         result = getattr(self, self.source_propname)
         if self.source_type in ["OBJECT", "CURVE_OBJECT"]:
             result = [result] if result is not None else []
@@ -98,7 +137,7 @@ class SourceMixin:
             result = [o for o in result.objects if o.type in ["CURVE", "MESH"]] if result is not None else []
         return result
 
-    def get_evaluated_source(self, depsgraph: bpy.types.Depsgraph) -> list[bpy.types.Object]:
+    def get_evaluated_source(self, depsgraph: bpy.types.Depsgraph) -> [bpy.types.Object]:
         return [o.evaluated_get(depsgraph) for o in self.source]
 
     def is_source(self, obj: bpy.types.Object) -> bool:
@@ -151,44 +190,7 @@ class CurveToPath(SourceMixin, bpy.types.PropertyGroup):
 class Drill(SourceMixin, bpy.types.PropertyGroup):
     method_type: bpy.props.EnumProperty(name="Method", items=get_drill_items)
 
-    def get_tsp_points(source: Iterator[bpy.types.Object], depsgraph: bpy.types.Depsgraph) -> set[Vector]:
-        def get_vertices(obj: bpy.types.Object, depsgraph: bpy.types.Depsgraph) -> Iterator[bpy.types.MeshVertex]:
-            result = obj.to_mesh(depsgraph=depsgraph).vertices.values()
-            obj.to_mesh_clear()
-            return result
-
-        return {(o.matrix_world @ v.co).freeze() for o in source for v in get_vertices(o, depsgraph)}
-
-    def get_tsp_center(source: Iterator[bpy.types.Object], depsgraph: bpy.types.Depsgraph) -> set[Vector]:
-        result = set()
-        for obj in source:
-            obj_data = obj.data
-            for index in range(len(obj.data.splines)):
-                temp_obj = obj.evaluated_get(depsgraph).copy()
-                temp_obj.data = temp_obj.data.copy()
-                for temp_spline in chain(temp_obj.data.splines[:index], temp_obj.data.splines[index + 1:]):
-                    temp_obj.data.splines.remove(temp_spline)
-                obj.data = temp_obj.data
-                temp_mesh = obj.to_mesh()
-                vector_mean = sum((v.co for v in temp_mesh.vertices), Vector()) / len(temp_mesh.vertices)
-                result.add((temp_obj.matrix_world @ vector_mean).freeze())
-                obj.to_mesh_clear()
-                obj.data = obj_data
-                bpy.data.curves.remove(temp_obj.data)
-        return result
-
-    def get_tsp_segments(source: Iterator[bpy.types.Object], depsgraph: bpy.types.Depsgraph) -> set[Vector]:
-        return {
-            (o.matrix_world @ max(getattr(s, MAP_SPLINE_POINTS[s.type]), key=lambda p: p.co.z).co).freeze()
-            for o in source
-            for s in o.evaluated_get(depsgraph).data.splines
-        }
-
-    tsp_funcs = {"POINTS": get_tsp_points, "CENTER": get_tsp_center, "SEGMENTS": get_tsp_segments}
-
-    def execute_compute(
-        self, context: bpy.types.Context, operation: bpy.types.PropertyGroup
-    ) -> tuple[set[str], str, list[Vector]]:
+    def execute_compute(self, context: bpy.types.Context, operation: bpy.types.PropertyGroup) -> ({str}, str, [Vector]):
         result_execute, result_msgs, result_vectors = set(), [], []
         depth_end = operation.get_depth_end(context)
         _, bound_box_max = operation.get_bound_box(context)
@@ -205,7 +207,8 @@ class Drill(SourceMixin, bpy.types.PropertyGroup):
         layers = list(utils.seq(-layer_size, depth_end, -layer_size)) + [depth_end]
         layers = [free_height, depth_end, free_height] if is_layer_size_zero else layers
         depsgraph = context.evaluated_depsgraph_get()
-        for i, v in tsp.run(self.tsp_funcs[self.method_type](self.source, depsgraph)):
+        tour = tsp.run(TSP_FUNCS[self.method_type](self.source, depsgraph))
+        for i, v in tour:
             do_skip = False
             z = v.z
             if self.method_type == "SEGMENTS":
@@ -227,6 +230,9 @@ class Drill(SourceMixin, bpy.types.PropertyGroup):
             computed_layers = layers if is_layer_size_zero else computed_layers
             result_vectors.extend(Vector((v.x, v.y, z)) for z in computed_layers)
             result_execute.add("FINISHED")
+
+        if len(tour) == 0:
+            result_msgs.append(f"Drill {operation.data.name} skipped because source data has no valid points")
         return utils.reduce_cancelled_or_finished(result_execute), "\n".join(result_msgs), result_vectors
 
 

@@ -28,7 +28,7 @@ class CAMJob(bpy.types.PropertyGroup):
     def operation(self) -> operation.Operation:
         return self.operations[self.operation_active_index]
 
-    def get_stock_bound_box(self, context: bpy.types.Context) -> tuple[Vector, Vector]:
+    def get_stock_bound_box(self, context: bpy.types.Context) -> (Vector, Vector):
         result = (Vector(), Vector())
         if self.stock.type == "ESTIMATE":
             bound_boxes = reduce(lambda acc, o: acc + [o.get_bound_box(context)], self.operations, [])

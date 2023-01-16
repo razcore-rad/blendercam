@@ -43,7 +43,7 @@ class CAM_OT_AddPresetCutter(bl_operators.presets.AddPresetBase, bpy.types.Opera
     preset_defines = ["operation = bpy.context.scene.cam_job.operation"]
 
     @property
-    def preset_values(self) -> list[str]:
+    def preset_values(self) -> [str]:
         result = [
             "operation.cutter_type",
             "operation.cutter.id",
@@ -102,24 +102,30 @@ class CAM_OT_Action(bpy.types.Operator):
     def poll(cls, context: bpy.types.Context) -> bool:
         return context.scene is not None
 
-    def execute_todo(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> set[str]:
+    def execute_todo(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> {str}:
         self.report({"INFO"}, f"{self.bl_idname}:{self.type}:NOT_IMPLTEMENTED_YET")
         return {"FINISHED"}
 
-    def execute_add(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> set[str]:
+    def execute_add(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> {str}:
         propscol = getattr(dataptr, propname)
         item = propscol.add()
         item.add_data(context)
         setattr(dataptr, active_propname, len(propscol) - 1)
         return {"FINISHED"}
 
-    def execute_compute(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> set[str]:
+    def execute_compute(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> {str}:
         result = set()
-        for operation in context.scene.cam_job.operations:
-            result.update(operation.execute_compute(context, self.report))
-        return props.utils.reduce_cancelled_or_finished(result)
+        cam_job = context.scene.cam_job
+        for operation in cam_job.operations:
+            partial_result, msg = operation.execute_compute(context)
+            msg != "" and self.report(props.utils.REPORT_MAP[props.utils.first(partial_result)], msg)
+            result.update(partial_result)
+        result = props.utils.reduce_cancelled_or_finished(result)
+        if (result_item := props.utils.first(result)) == "CANCELLED":
+            self.report(props.utils.REPORT_MAP[result_item], f"CAM Job {cam_job.data.name} canceled")
+        return result
 
-    def execute_duplicate(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> set[str]:
+    def execute_duplicate(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> {str}:
         result = {"FINISHED"}
         propscol = getattr(dataptr, propname)
         if len(propscol) == 0:
@@ -129,7 +135,7 @@ class CAM_OT_Action(bpy.types.Operator):
         setattr(dataptr, active_propname, active_index + 1)
         return result
 
-    def execute_remove(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> set[str]:
+    def execute_remove(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> {str}:
         try:
             propscol = getattr(dataptr, propname)
             item = propscol[getattr(dataptr, active_propname)]
@@ -140,7 +146,7 @@ class CAM_OT_Action(bpy.types.Operator):
             pass
         return {"FINISHED"}
 
-    def execute_move(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> set[str]:
+    def execute_move(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> {str}:
         propscol = getattr(dataptr, propname)
         active_index = getattr(dataptr, active_propname)
         new_active_index = max(0, min(active_index + self.move_direction, len(propscol) - 1))
@@ -148,7 +154,7 @@ class CAM_OT_Action(bpy.types.Operator):
         setattr(dataptr, active_propname, new_active_index)
         return {"FINISHED"}
 
-    def execute(self, context: bpy.types.Context) -> set[str]:
+    def execute(self, context: bpy.types.Context) -> {str}:
         scene = context.scene
         args = {
             "JOB": (context, scene, "cam_jobs", "cam_job_active_index"),

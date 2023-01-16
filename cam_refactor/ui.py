@@ -10,7 +10,7 @@ globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod,
 UNITS = {"MIN": "/ min"}
 
 
-def get_enum_item_icon(items: list[tuple], item_type: str) -> str:
+def get_enum_item_icon(items: [(str, str, str, str, int)], item_type: str) -> str:
     return reduce(lambda acc, item: item[-2] if item_type == item[0] and len(item) == 5 else acc, items, "NONE")
 
 

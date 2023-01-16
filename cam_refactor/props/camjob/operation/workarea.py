@@ -7,9 +7,7 @@ mods = {".strategy", "...utils"}
 globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod, __package__)) for mod in mods})
 
 
-def get_depth_end_type_items(
-    workarea: bpy.types.PropertyGroup, context: bpy.types.Context
-) -> list[tuple[str, str, str]]:
+def get_depth_end_type_items(workarea: bpy.types.PropertyGroup, context: bpy.types.Context) -> [(str, str, str)]:
     result = []
     if isinstance(context.scene.cam_job.operation.strategy, strategy.Drill):
         method_type = context.scene.cam_job.operation.strategy.method_type

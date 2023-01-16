@@ -1,5 +1,4 @@
 import importlib
-from typing import Callable
 
 import bpy
 import bmesh
@@ -10,7 +9,7 @@ mods = {".cutter", ".feedmovementspindle", ".strategy", ".workarea", "...utils"}
 globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod, __package__)) for mod in mods})
 
 
-def get_cutter_types(operation: bpy.types.PropertyGroup, _context: bpy.types.Context) -> list[tuple[str, str, str]]:
+def get_cutter_types(operation: bpy.types.PropertyGroup, _context: bpy.types.Context) -> [(str, str, str)]:
     result = []
     try:
         result.extend(
@@ -155,7 +154,7 @@ class Operation(bpy.types.PropertyGroup):
     def strategy(self) -> bpy.types.PropertyGroup:
         return getattr(self, self.strategy_propname)
 
-    def get_bound_box(self, context: bpy.types.Context) -> tuple[Vector]:
+    def get_bound_box(self, context: bpy.types.Context) -> (Vector,):
         result = (Vector(), Vector())
         depsgraph = context.evaluated_depsgraph_get()
         source = self.strategy.get_evaluated_source(depsgraph)
@@ -184,12 +183,11 @@ class Operation(bpy.types.PropertyGroup):
             return
         bpy.data.meshes.remove(self.data.data)
 
-    def execute_compute(self, context: bpy.types.Context, report: Callable[[set[str], str], None]) -> set[str]:
+    def execute_compute(self, context: bpy.types.Context) -> ({str}, str):
         self.add_data(context)
         result, msg, vectors = self.strategy.execute_compute(context, self)
-        msg != "" and report(utils.REPORT_MAP[utils.first(result)], msg)
-        if result == {"CANCELLED"}:
-            return result
+        if utils.first(result) == "CANCELLED":
+            return result, msg
 
         bpy.ops.object.mode_set(mode="OBJECT")
         bpy.ops.object.select_all(action="DESELECT")
@@ -207,4 +205,4 @@ class Operation(bpy.types.PropertyGroup):
         bm.edges.index_update()
         bm.to_mesh(self.data.data)
         bm.free()
-        return result
+        return result, msg

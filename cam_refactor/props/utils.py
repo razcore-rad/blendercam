@@ -90,7 +90,7 @@ def poll_curve_limit(_work_area: bpy.types.Property, obj: bpy.types.Object) -> b
     return result
 
 
-def get_bound_box(obj: bpy.types.Object, depsgraph: bpy.types.Depsgraph = None) -> tuple[Vector, Vector]:
+def get_bound_box(obj: bpy.types.Object, depsgraph: bpy.types.Depsgraph = None) -> (Vector, Vector):
     result = (Vector(), Vector())
     points = [obj.matrix_world @ v.co for v in obj.to_mesh(depsgraph=depsgraph).vertices]
     obj.to_mesh_clear()
@@ -116,8 +116,8 @@ def intersperse(seq: Iterator[Any], delim: Any) -> Iterator[Any]:
     return islice(chain(*zip(repeat(delim), seq)), 1, None)
 
 
-def reduce_cancelled_or_finished(results: set[str]) -> set[str]:
-    return REDUCE_MAP[any(r == "FINISHED" for r in results) or len(results) == 0]
+def reduce_cancelled_or_finished(results: {str}) -> {str}:
+    return REDUCE_MAP[any(r == "FINISHED" for r in results)]
 
 
 def first(seq) -> Any:
