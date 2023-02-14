@@ -118,11 +118,11 @@ class CAM_OT_Action(bpy.types.Operator):
         cam_job = context.scene.cam_job
         for operation in cam_job.operations:
             partial_result, msg = operation.execute_compute(context)
-            msg != "" and self.report(props.utils.REPORT_MAP[props.utils.first(partial_result)], msg)
+            msg != "" and self.report({"ERROR"}, msg)
             result.update(partial_result)
-        result = props.utils.reduce_cancelled_or_finished(result)
-        if (result_item := props.utils.first(result)) == "CANCELLED":
-            self.report(props.utils.REPORT_MAP[result_item], f"CAM Job {cam_job.data.name} canceled")
+        result_item, = result = props.utils.reduce_cancelled_or_finished(result)
+        if result_item == "CANCELLED":
+            self.report({"ERROR"}, f"CAM Job {cam_job.data.name} canceled")
         return result
 
     def execute_duplicate(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> {str}:

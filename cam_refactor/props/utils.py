@@ -5,10 +5,9 @@ from typing import Any, Iterator
 
 import bpy
 from mathutils import Vector
+import numpy as np
 
 PRECISION = 5
-
-REPORT_MAP = {"CANCELLED": {"ERROR"}, "FINISHED": {"WARNING"}}
 
 REDUCE_MAP = {True: {"FINISHED"}, False: {"CANCELLED"}}
 
@@ -63,8 +62,11 @@ def poll_object_source(strategy: bpy.types.Property, obj: bpy.types.Object) -> b
     context = bpy.context
     curve = getattr(strategy, "curve", None)
     obj_is_cam_object = obj in [op.data for cj in context.scene.cam_jobs for op in cj.operations]
+    operation = context.scene.cam_job.operation
     return (
-        obj.type in ["CURVE", "MESH"]
+        obj.type in ["CURVE"]
+        if operation.strategy_type == "DRILL"
+        else obj.type in ["CURVE", "MESH"]
         and obj.name in context.view_layer.objects
         and obj is not curve
         and not obj_is_cam_object
@@ -90,12 +92,10 @@ def poll_curve_limit(_work_area: bpy.types.Property, obj: bpy.types.Object) -> b
     return result
 
 
-def get_bound_box(obj: bpy.types.Object, depsgraph: bpy.types.Depsgraph = None) -> (Vector, Vector):
+def get_bound_box(vectors: Iterator[Vector]) -> (Vector, Vector):
     result = (Vector(), Vector())
-    points = [obj.matrix_world @ v.co for v in obj.to_mesh(depsgraph=depsgraph).vertices]
-    obj.to_mesh_clear()
-    if len(points) > 0:
-        result = tuple(Vector(f(cs) for cs in zip(*ps)) for f, ps in zip((min, max), tee(points)))
+    if len(vectors) > 0:
+        result = tuple(Vector(f(cs) for cs in zip(*ps)) for f, ps in zip((min, max), tee(vectors)))
     return result
 
 
@@ -120,5 +120,15 @@ def reduce_cancelled_or_finished(results: {str}) -> {str}:
     return REDUCE_MAP[any(r == "FINISHED" for r in results)]
 
 
-def first(seq) -> Any:
+def iter_next(seq) -> Any:
     return next(iter(seq))
+
+
+def transpose(it: Iterator) -> Iterator:
+    return zip(*it, strict=True)
+
+
+def get_fit_circle_2d_residual(xy: Iterator) -> float:
+    x = np.array(iter_next(xy))
+    y = np.array(iter_next(xy))
+    return np.linalg.lstsq(np.array([x, y, np.ones(len(x))]).T, x**2 + y**2, rcond=None)[1][0]

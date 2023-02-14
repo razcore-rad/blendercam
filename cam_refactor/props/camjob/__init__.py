@@ -1,12 +1,9 @@
 import importlib
 from functools import reduce
-from math import isclose
 from operator import add, sub
 
 import bpy
 from mathutils import Vector
-
-from .. import utils
 
 mods = {".machine", ".operation", ".stock"}
 

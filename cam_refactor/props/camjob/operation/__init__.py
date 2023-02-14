@@ -1,7 +1,7 @@
 import importlib
 
-import bpy
 import bmesh
+import bpy
 from mathutils import Vector
 
 mods = {".cutter", ".feedmovementspindle", ".strategy", ".workarea", "...utils"}
@@ -154,13 +154,20 @@ class Operation(bpy.types.PropertyGroup):
     def strategy(self) -> bpy.types.PropertyGroup:
         return getattr(self, self.strategy_propname)
 
-    def get_bound_box(self, context: bpy.types.Context) -> (Vector,):
+    def get_bound_box(self, context: bpy.types.Context) -> (Vector, Vector):
+        def get_vectors(source: list[bpy.types.Object]) -> [Vector]:
+            result = []
+            for obj in source:
+                for v in obj.to_mesh().vertices:
+                    result.append(obj.matrix_world @ v.co)
+                obj.to_mesh_clear()
+            return result
+
         result = (Vector(), Vector())
         depsgraph = context.evaluated_depsgraph_get()
         source = self.strategy.get_evaluated_source(depsgraph)
         if len(source) > 0:
-            bound_boxes = (utils.get_bound_box(o, depsgraph) for o in source)
-            result = tuple(Vector(f(cs) for cs in zip(*vs)) for f, vs in zip((min, max), zip(*bound_boxes)))
+            result = utils.get_bound_box(get_vectors(source))
         return result
 
     def get_depth_end(self, context: bpy.types.Context) -> float:
@@ -168,7 +175,7 @@ class Operation(bpy.types.PropertyGroup):
         if self.work_area.depth_end_type == "CUSTOM":
             result = self.work_area.depth_end
         elif self.work_area.depth_end_type == "STOCK":
-            stock_bound_box_min, = context.scene.cam_job.get_stock_bound_box(context)
+            (stock_bound_box_min,) = context.scene.cam_job.get_stock_bound_box(context)
             result = stock_bound_box_min.z
         return result
 
@@ -186,7 +193,7 @@ class Operation(bpy.types.PropertyGroup):
     def execute_compute(self, context: bpy.types.Context) -> ({str}, str):
         self.add_data(context)
         result, msg, vectors = self.strategy.execute_compute(context, self)
-        if utils.first(result) == "CANCELLED":
+        if result == {"CANCELLED"}:
             return result, msg
 
         bpy.ops.object.mode_set(mode="OBJECT")
