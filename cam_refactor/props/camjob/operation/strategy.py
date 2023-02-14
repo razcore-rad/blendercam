@@ -19,7 +19,7 @@ def update_object_source(strategy: bpy.types.PropertyGroup, context: bpy.types.C
 
 
 def get_drill_tsp_center(
-    source: Iterator[bpy.types.Object], depsgraph: bpy.types.Depsgraph, residual_tolerance=1e-5
+    source: Iterator[bpy.types.Object], depsgraph: bpy.types.Depsgraph, cutter_diameter: float, tolerance=1e-5
 ) -> {Vector}:
     result = set()
     for obj in source:
@@ -27,16 +27,17 @@ def get_drill_tsp_center(
         for index in range(len(obj.data.splines)):
             temp_obj = obj.evaluated_get(depsgraph).copy()
             temp_obj.data = temp_obj.data.copy()
-            for temp_spline in chain(temp_obj.data.splines[:index], temp_obj.data.splines[index + 1 :]):
+            for temp_spline in chain(temp_obj.data.splines[:index], temp_obj.data.splines[index + 1:]):
                 temp_obj.data.splines.remove(temp_spline)
             obj.data = temp_obj.data
             temp_mesh = obj.to_mesh()
             obj.data = obj_data
             if len(temp_mesh.vertices) > 0:
-                xy = utils.transpose(v.co.xy for v in temp_mesh.vertices)
-                if utils.get_fit_circle_2d_residual(xy) < residual_tolerance:
-                    vector_mean = sum((v.co for v in temp_mesh.vertices), Vector()) / len(temp_mesh.vertices)
-                    result.add((temp_obj.matrix_world @ vector_mean).freeze())
+                vectors = [temp_obj.matrix_world @ v.co for v in temp_mesh.vertices]
+                _, diameter = utils.get_fit_circle_2d(vectors, tolerance)
+                if cutter_diameter <= diameter:
+                    vector_mean = sum(vectors, Vector()) / len(vectors)
+                    result.add(vector_mean.freeze())
             obj.to_mesh_clear()
             temp_obj.to_mesh_clear()
             bpy.data.curves.remove(temp_obj.data)
@@ -160,6 +161,7 @@ class Drill(SourceMixin, bpy.types.PropertyGroup):
         result_execute, result_msgs, result_vectors = set(), [], []
         depth_end = operation.get_depth_end(context)
         bound_box_min, *_ = operation.get_bound_box(context)
+        cutter_diameter = operation.cutter.diameter
         if depth_end > 0 or bound_box_min.z > 0:
             return (
                 {"CANCELLED"},
@@ -171,7 +173,7 @@ class Drill(SourceMixin, bpy.types.PropertyGroup):
         layer_size = operation.work_area.layer_size
         is_layer_size_zero = isclose(layer_size, 0)
         depsgraph = context.evaluated_depsgraph_get()
-        tour = tsp.run(TSP_FUNCS[self.method_type](self.source, depsgraph))
+        tour = tsp.run(TSP_FUNCS[self.method_type](self.source, depsgraph, cutter_diameter))
         for i, v in tour:
             z = v.z
             if z < depth_end or z > 0:

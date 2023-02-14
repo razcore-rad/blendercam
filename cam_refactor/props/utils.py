@@ -1,11 +1,11 @@
 # from functools import reduce
 from itertools import chain, count, islice, repeat, tee
-from math import ceil, copysign, isclose
+from math import ceil, copysign, isclose, sqrt
 from typing import Any, Iterator
 
 import bpy
-from mathutils import Vector
 import numpy as np
+from mathutils import Vector
 
 PRECISION = 5
 
@@ -128,7 +128,15 @@ def transpose(it: Iterator) -> Iterator:
     return zip(*it, strict=True)
 
 
-def get_fit_circle_2d_residual(xy: Iterator) -> float:
+def get_fit_circle_2d(vectors: Iterator[Vector], tolerance=1e-5) -> tuple[Vector, float]:
+    result = Vector(), 0
+    xy = transpose(v.xy for v in vectors)
     x = np.array(iter_next(xy))
     y = np.array(iter_next(xy))
-    return np.linalg.lstsq(np.array([x, y, np.ones(len(x))]).T, x**2 + y**2, rcond=None)[1][0]
+    c, residu, *_ = np.linalg.lstsq(np.array([x, y, np.ones(len(x))]).T, x**2 + y**2, rcond=None)
+    if residu < tolerance:
+        xc = c[0] / 2
+        yc = c[1] / 2
+        d = 2 * sqrt(c[2] + xc**2 + yc**2)
+        result = Vector((xc, yc)), d
+    return result

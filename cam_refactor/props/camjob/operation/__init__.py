@@ -139,7 +139,7 @@ class Operation(bpy.types.PropertyGroup):
         return f"{self.cutter_type.lower()}_cutter"
 
     @property
-    def cutter(self) -> str:
+    def cutter(self) -> bpy.types.PropertyGroup:
         return getattr(self, self.cutter_propname)
 
     @property
