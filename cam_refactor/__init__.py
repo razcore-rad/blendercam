@@ -17,7 +17,14 @@
 #
 # ***** END GPL LICENCE BLOCK *****
 
+import ensurepip
 import importlib
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+import bpy
 
 mods = {".handlers", ".ops", ".props", ".ui"}
 
@@ -37,7 +44,24 @@ bl_info = {
 }
 
 
+def ensure_modules() -> None:
+    addons_path = Path(bpy.utils.script_path_user()) / "addons"
+    requirements_path = addons_path / "cam_refactor" / "requirements.txt"
+    try:
+        with open(requirements_path) as r:
+            for line in r.readlines():
+                importlib.import_module(re.match(r"^\w*", line).group(0))
+    except ModuleNotFoundError:
+        ensurepip.bootstrap(upgrade=True, user=True)
+        print(subprocess.check_output(
+            [sys.executable, "-m", "pip", "install", "--user", "--update", "-r", requirements_path]
+        ))
+    except IndexError:
+        pass
+
+
 def register() -> None:
+    ensure_modules()
     for mod in mods:
         globals()[mod.lstrip(".")].register()
 
