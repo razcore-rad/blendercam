@@ -142,6 +142,7 @@ class CurveToPath(SourceMixin, bpy.types.PropertyGroup):
 
 
 class Drill(SourceMixin, bpy.types.PropertyGroup):
+    # TODO: draw in viewport skipped shapes/points with an X or something like that.
     method_type: bpy.props.EnumProperty(
         name="Method",
         items=[
