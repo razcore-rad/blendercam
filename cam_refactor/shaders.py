@@ -46,5 +46,8 @@ def draw_stock() -> None:
     gpu.state.line_width_set(2)
     batch = batch_for_shader(SHADER, "LINES", {"pos": coords}, indices=STOCK_INDICES)
     SHADER.uniform_float("color", (1, 1, 1, 1))
+    gpu.state.depth_test_set('LESS_EQUAL')
+    gpu.state.depth_mask_set(True)
     batch.draw(SHADER)
+    gpu.state.depth_mask_set(False)
     gpu.state.line_width_set(1)
