@@ -1,25 +1,33 @@
-import importlib
 from functools import reduce
 
 import bpy
 
-mods = {".ops", ".props"}
+from . import ops, props
 
-globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod, __package__)) for mod in mods})
 
 UNITS = {"MIN": "/ min"}
 
 
 def get_enum_item_icon(items: [(str, str, str, str, int)], item_type: str) -> str:
-    return reduce(lambda acc, item: item[-2] if item_type == item[0] and len(item) == 5 else acc, items, "NONE")
+    return reduce(
+        lambda acc, item: item[-2] if item_type == item[0] and len(item) == 5 else acc,
+        items,
+        "NONE",
+    )
 
 
 class CAM_UL_List(bpy.types.UIList):
-    def draw_item(self, _context, layout, _data, item, icon, _active_data, _active_propname):
+    def draw_item(
+        self, _context, layout, _data, item, icon, _active_data, _active_propname
+    ):
         if self.layout_type in {"DEFAULT", "COMPACT"}:
             if item.data is not None:
-                layout.row().prop(item.data, "name", text="", emboss=False, icon_value=icon)
-                layout.row(align=True).prop(item.data, "hide_viewport", text="", emboss=False)
+                layout.row().prop(
+                    item.data, "name", text="", emboss=False, icon_value=icon
+                )
+                layout.row(align=True).prop(
+                    item.data, "hide_viewport", text="", emboss=False
+                )
             else:
                 layout.row().prop(item, "name", text="", emboss=False, icon_value=icon)
         elif self.layout_type in {"GRID"}:
@@ -29,6 +37,7 @@ class CAM_UL_List(bpy.types.UIList):
 
 class PresetPanel:
     bl_label = "Presets"
+    bl_category = "CAM"
     path_menu = bpy.types.Menu.path_menu
 
     @classmethod
@@ -80,8 +89,6 @@ class CAM_PT_PanelBase(bpy.types.Panel):
 
 
 class CAM_PT_PanelJobsOperationSubPanel(CAM_PT_PanelBase):
-    bl_options = set()
-
     @classmethod
     def poll(cls, context: bpy.types.Context) -> bool:
         result = False
@@ -118,7 +125,15 @@ class CAM_PT_Panel(CAM_PT_PanelBase):
 
         layout = self.layout
         row = layout.row()
-        row.template_list("CAM_UL_List", list_id, dataptr, propname, dataptr, active_propname, rows=rows)
+        row.template_list(
+            "CAM_UL_List",
+            list_id,
+            dataptr,
+            propname,
+            dataptr,
+            active_propname,
+            rows=rows,
+        )
 
         col = row.column(align=True)
         pg = col.operator(ops.CAM_OT_Action.bl_idname, icon="ADD", text="")
@@ -146,7 +161,9 @@ class CAM_PT_PanelJobs(CAM_PT_Panel):
 
     def draw(self, context: bpy.types.Context) -> None:
         scene = context.scene
-        self.draw_list_row("CAM_UL_ListJobs", scene, "cam_jobs", "cam_job_active_index", "JOB")
+        self.draw_list_row(
+            "CAM_UL_ListJobs", scene, "cam_jobs", "cam_job_active_index", "JOB"
+        )
         try:
             cam_job = scene.cam_job
 
@@ -185,7 +202,13 @@ class CAM_PT_PanelJobsOperations(CAM_PT_Panel):
     def draw(self, context: bpy.types.Context) -> None:
         scene = context.scene
         cam_job = scene.cam_job
-        self.draw_list_row("CAM_UL_ListOperations", cam_job, "operations", "operation_active_index", "OPERATION")
+        self.draw_list_row(
+            "CAM_UL_ListOperations",
+            cam_job,
+            "operations",
+            "operation_active_index",
+            "OPERATION",
+        )
         try:
             operation = cam_job.operation
             strategy = operation.strategy
@@ -198,7 +221,9 @@ class CAM_PT_PanelJobsOperations(CAM_PT_Panel):
             col.row().prop(
                 strategy,
                 strategy.source_propname,
-                icon=get_enum_item_icon(strategy.source_type_items, strategy.source_type),
+                icon=get_enum_item_icon(
+                    strategy.source_type_items, strategy.source_type
+                ),
             )
             self.draw_property_group(strategy, layout=col)
         except IndexError:
@@ -277,7 +302,11 @@ class CAM_PT_PanelJobsStock(CAM_PT_PanelBase):
         layout = self.layout
         layout.row().prop(stock, "type", expand=True)
         row = layout.row(align=True)
-        for propname in (pn for pn in props.utils.get_propnames(stock) if pn.startswith(stock.type.lower())):
+        for propname in (
+            pn
+            for pn in props.utils.get_propnames(stock)
+            if pn.startswith(stock.type.lower())
+        ):
             row.column().prop(stock, propname)
 
 
@@ -301,14 +330,22 @@ class CAM_PT_PanelJobsMachine(CAM_PT_PanelBase):
         box.prop(machine, "post_processor_enum")
         box.prop(post_processor, "use_custom_locations")
         if post_processor.use_custom_locations:
-            self.draw_property_group(post_processor.custom_locations, layout=box.column(align=True))
+            self.draw_property_group(
+                post_processor.custom_locations, layout=box.column(align=True)
+            )
         self.draw_property_group(post_processor, layout=box.column(align=True))
 
         box = layout.box()
         box.prop(machine, "axes")
 
-        self.draw_property_group(machine.feed_rate, layout=layout.box().column(align=True), label_text=UNITS["MIN"])
-        self.draw_property_group(machine.spindle_rpm, layout=layout.box().column(align=True))
+        self.draw_property_group(
+            machine.feed_rate,
+            layout=layout.box().column(align=True),
+            label_text=UNITS["MIN"],
+        )
+        self.draw_property_group(
+            machine.spindle_rpm, layout=layout.box().column(align=True)
+        )
 
 
 CLASSES = [

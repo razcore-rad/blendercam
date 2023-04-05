@@ -1,20 +1,24 @@
-import importlib
 import math
 
 import bpy
 
-mods = {"...utils"}
-
-globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod, __package__)) for mod in mods})
+from ... import utils
 
 
 class Feed(bpy.types.PropertyGroup):
     EXCLUDE_PROPNAMES = {"name", "rate"}
 
     rate: bpy.props.FloatProperty(name="Feed Rate", default=1, min=1e-1, unit="LENGTH")
-    plunge_speed: bpy.props.FloatProperty(name="Plunge Speed", default=5e-1, min=5e-2, max=1, subtype="PERCENTAGE")
+    plunge_speed: bpy.props.FloatProperty(
+        name="Plunge Speed", default=5e-1, min=5e-2, max=1, subtype="PERCENTAGE"
+    )
     plunge_angle: bpy.props.FloatProperty(
-        name="Plunge Angle", default=math.pi / 6, min=0, max=math.pi / 2, subtype="ANGLE", unit="ROTATION"
+        name="Plunge Angle",
+        default=math.pi / 6,
+        min=0,
+        max=math.pi / 2,
+        subtype="ANGLE",
+        unit="ROTATION",
     )
 
 
@@ -22,14 +26,26 @@ class Movement(bpy.types.PropertyGroup):
     EXCLUDE_PROPNAMES = {"name"}
 
     free_height: bpy.props.FloatProperty(
-        name="Free Movement Height", min=1e-5, default=5e-3, precision=utils.PRECISION, unit="LENGTH"
+        name="Free Movement Height",
+        min=1e-5,
+        default=5e-3,
+        precision=utils.PRECISION,
+        unit="LENGTH",
     )
     type: bpy.props.EnumProperty(
         name="Movement Type",
         items=[
             ("CLIMB", "Climb", "Cutter rotates with the direction of the feed"),
-            ("CONVENTIONAL", "Conventional", "Cutter rotates against the direction of the feed"),
-            ("MEANDER", "Meander", "Cutting is done both with and against the rotation of the spindle"),
+            (
+                "CONVENTIONAL",
+                "Conventional",
+                "Cutter rotates against the direction of the feed",
+            ),
+            (
+                "MEANDER",
+                "Meander",
+                "Cutting is done both with and against the rotation of the spindle",
+            ),
         ],
     )
     vertical_angle: bpy.props.FloatProperty(

@@ -26,9 +26,15 @@ from pathlib import Path
 
 import bpy
 
+
 mods = {".handlers", ".ops", ".props", ".ui"}
 
-globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod, __package__)) for mod in mods})
+globals().update(
+    {
+        mod.lstrip("."): importlib.reload(importlib.import_module(mod, __package__))
+        for mod in mods
+    }
+)
 
 bl_info = {
     "name": "CNC G-Code Tools",
@@ -50,12 +56,24 @@ def ensure_modules() -> None:
     try:
         with open(requirements_path) as r:
             for line in r.readlines():
-                importlib.import_module(re.match(r"^\w*", line).group(0))
+                if (m := re.match(r"^\w*", line)) is not None:
+                    importlib.import_module(m.group(0))
     except ModuleNotFoundError:
         ensurepip.bootstrap(upgrade=True, user=True)
-        print(subprocess.check_output(
-            [sys.executable, "-m", "pip", "install", "--user", "--update", "-r", requirements_path]
-        ))
+        print(
+            subprocess.check_output(
+                [
+                    sys.executable,
+                    "-m",
+                    "pip",
+                    "install",
+                    "--user",
+                    "--update",
+                    "-r",
+                    requirements_path,
+                ]
+            )
+        )
     except IndexError:
         pass
 
@@ -67,5 +85,8 @@ def register() -> None:
 
 
 def unregister() -> None:
-    for mod in mods:
+    for mod in reversed(list(mods)):
         globals()[mod.lstrip(".")].unregister()
+
+    for mod in sorted(filter(lambda m: m.startswith(__name__), sys.modules)):
+        del sys.modules[mod]

@@ -1,16 +1,14 @@
-import importlib
 from collections import namedtuple
 from functools import reduce
 
 import bpy
 
-mods = {".shaders"}
-
-globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod, __package__)) for mod in mods})
+from . import shaders
 
 
-HandlerItem = namedtuple("HandlerItem", ("handler", "args", "region_type", "draw_type"), defaults=3 * (None,))
+HandlerItem = namedtuple("HandlerItem", ("handler", "args", "region_type", "draw_type"))
 
+SUFFIX = {"types": "add", "app": "append"}
 
 HANDLERS_ADD = {
     "types.SpaceView3D.draw_handler_{}": [
@@ -22,15 +20,15 @@ handlers_rem = {}
 
 
 def register() -> None:
-    suffix = {"types": "add", "app": "append"}
-    for key, handlers in HANDLERS_ADD.items():
+    for key, handler_items in HANDLERS_ADD.items():
         *keys, last_key = key.split(".")
-        func_add = getattr(reduce(getattr, keys, bpy), last_key.format(suffix[keys[0]]))
-        for handler_item in handlers:
-            handlers_rem.setdefault(key, []).append(
-                [handler if (handler := func_add(*handler_item)) is not None else handler_item.func]
-                + [handler_item.region_type if handler_item.region_type is not None else []]
-            )
+        func_add = getattr(reduce(getattr, keys, bpy), last_key.format(SUFFIX[keys[0]]))
+        for handler_item in handler_items:
+            handler = func_add(*handler_item)
+            item = [
+                handler_item.handler if handler is None else handler,
+            ] + ([] if handler_item.region_type is None else [handler_item.region_type])
+            handlers_rem.setdefault(key, []).append(item)
 
 
 def unregister() -> None:

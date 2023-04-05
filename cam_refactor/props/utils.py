@@ -1,4 +1,3 @@
-# from functools import reduce
 from itertools import chain, count, islice, repeat, tee
 from math import ceil, copysign, isclose, sqrt
 from typing import Any, Iterator
@@ -6,6 +5,7 @@ from typing import Any, Iterator
 import bpy
 import numpy as np
 from mathutils import Vector
+
 
 PRECISION = 5
 
@@ -16,7 +16,13 @@ def get_propnames(pg: bpy.types.PropertyGroup, use_exclude_propnames=True):
     exclude_propnames = ["rna_type"]
     if use_exclude_propnames:
         exclude_propnames += getattr(pg, "EXCLUDE_PROPNAMES", set())
-    return sorted({propname for propname in pg.rna_type.properties.keys() if propname not in exclude_propnames})
+    return sorted(
+        {
+            propname
+            for propname in pg.rna_type.properties.keys()
+            if propname not in exclude_propnames
+        }
+    )
 
 
 def copy(context: bpy.types.Context, from_prop: bpy.types.Property, to_prop: bpy.types.Property, depth=0) -> None:
@@ -29,11 +35,15 @@ def copy(context: bpy.types.Context, from_prop: bpy.types.Property, to_prop: bpy
                 continue
 
             from_subprop = getattr(from_prop, propname)
-            if any(isinstance(from_subprop, t) for t in [bpy.types.PropertyGroup, bpy.types.bpy_prop_collection]):
+            if any(
+                isinstance(from_subprop, t)
+                for t in [bpy.types.PropertyGroup, bpy.types.bpy_prop_collection]
+            ):
                 copy(context, from_subprop, getattr(to_prop, propname), depth + 1)
             elif hasattr(to_prop, propname):
                 if propname == "data" and any(
-                    isinstance(from_subprop, t) for t in [bpy.types.Collection, bpy.types.Object]
+                    isinstance(from_subprop, t)
+                    for t in [bpy.types.Collection, bpy.types.Object]
                 ):
                     from_subprop = from_subprop.copy()
                     link = noop
@@ -61,7 +71,9 @@ def copy(context: bpy.types.Context, from_prop: bpy.types.Property, to_prop: bpy
 def poll_object_source(strategy: bpy.types.Property, obj: bpy.types.Object) -> bool:
     context = bpy.context
     curve = getattr(strategy, "curve", None)
-    obj_is_cam_object = obj in [op.data for cj in context.scene.cam_jobs for op in cj.operations]
+    obj_is_cam_object = obj in [
+        op.data for cj in context.scene.cam_jobs for op in cj.operations
+    ]
     operation = context.scene.cam_job.operation
     return (
         obj.type in ["CURVE"]
@@ -75,7 +87,11 @@ def poll_object_source(strategy: bpy.types.Property, obj: bpy.types.Object) -> b
 
 def poll_curve_object_source(strategy: bpy.types.Property, obj: bpy.types.Object) -> bool:
     context = bpy.context
-    return obj.type == "CURVE" and obj.name in context.view_layer.objects and obj not in strategy.source
+    return (
+        obj.type == "CURVE"
+        and obj.name in context.view_layer.objects
+        and obj not in strategy.source
+    )
 
 
 def poll_curve_limit(_work_area: bpy.types.Property, obj: bpy.types.Object) -> bool:
@@ -95,7 +111,10 @@ def poll_curve_limit(_work_area: bpy.types.Property, obj: bpy.types.Object) -> b
 def get_bound_box(vectors: Iterator[Vector]) -> (Vector, Vector):
     result = (Vector(), Vector())
     if len(vectors) > 0:
-        result = tuple(Vector(f(cs) for cs in zip(*ps)) for f, ps in zip((min, max), tee(vectors)))
+        result = tuple(
+            Vector(f(cs) for cs in zip(*ps))
+            for f, ps in zip((min, max), tee(vectors))
+        )
     return result
 
 
@@ -129,11 +148,13 @@ def transpose(it: Iterator) -> Iterator:
 
 
 def get_fit_circle_2d(vectors: Iterator[Vector], tolerance=1e-5) -> tuple[Vector, float]:
-    result = Vector(), 0
+    result = Vector(), 0.0
     xy = transpose(v.xy for v in vectors)
     x = np.array(iter_next(xy))
     y = np.array(iter_next(xy))
-    c, residu, *_ = np.linalg.lstsq(np.array([x, y, np.ones(len(x))]).T, x**2 + y**2, rcond=None)
+    c, residu, *_ = np.linalg.lstsq(
+        np.array([x, y, np.ones(len(x))]).T, x**2 + y**2, rcond=None
+    )
     if residu < tolerance:
         xc = c[0] / 2
         yc = c[1] / 2

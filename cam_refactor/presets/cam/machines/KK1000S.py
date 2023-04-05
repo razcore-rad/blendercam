@@ -1,5 +1,6 @@
 import bpy
 
+
 machine = bpy.context.scene.cam_job.machine
 
 machine.post_processor_enum = "MACH3"

@@ -1,11 +1,7 @@
-import importlib
-
 import bl_operators
 import bpy
 
-mods = {".props"}
-
-globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod, __package__)) for mod in mods})
+from . import props
 
 
 class CAM_OT_AddPresetMachine(bl_operators.presets.AddPresetBase, bpy.types.Operator):
@@ -95,7 +91,8 @@ class CAM_OT_Action(bpy.types.Operator):
     def __init__(self):
         super().__init__()
         self.execute_funcs = {
-            id: getattr(self, f"execute_{id.split('_')[0].lower()}", self.execute_todo) for id, *_ in self.type_items
+            id: getattr(self, f"execute_{id.split('_')[0].lower()}", self.execute_todo)
+            for id, *_ in self.type_items
         }
 
     @classmethod
@@ -120,7 +117,7 @@ class CAM_OT_Action(bpy.types.Operator):
             partial_result, msg = operation.execute_compute(context)
             msg != "" and self.report({"ERROR"}, msg)
             result.update(partial_result)
-        result_item, = result = props.utils.reduce_cancelled_or_finished(result)
+        (result_item,) = result = props.utils.reduce_cancelled_or_finished(result)
         if result_item == "CANCELLED":
             self.report({"ERROR"}, f"CAM Job {cam_job.data.name} canceled")
         return result
@@ -149,7 +146,9 @@ class CAM_OT_Action(bpy.types.Operator):
     def execute_move(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> {str}:
         propscol = getattr(dataptr, propname)
         active_index = getattr(dataptr, active_propname)
-        new_active_index = max(0, min(active_index + self.move_direction, len(propscol) - 1))
+        new_active_index = max(
+            0, min(active_index + self.move_direction, len(propscol) - 1)
+        )
         propscol.move(active_index, new_active_index)
         setattr(dataptr, active_propname, new_active_index)
         return {"FINISHED"}

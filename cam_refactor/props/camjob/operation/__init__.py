@@ -1,12 +1,9 @@
-import importlib
-
 import bmesh
 import bpy
 from mathutils import Vector
 
-mods = {".cutter", ".feedmovementspindle", ".strategy", ".workarea", "...utils"}
-
-globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod, __package__)) for mod in mods})
+from . import cutter, feedmovementspindle, strategy, workarea
+from ... import utils
 
 
 def get_cutter_types(operation: bpy.types.PropertyGroup, _context: bpy.types.Context) -> [(str, str, str)]:
@@ -54,14 +51,21 @@ def update_strategy(operation: bpy.types.PropertyGroup, context: bpy.types.Conte
 
 
 class Operation(bpy.types.PropertyGroup):
-    EXCLUDE_PROPNAMES = {"data", "previous_strategy_type", "previous_cutter_type", "use_modifiers"}
+    EXCLUDE_PROPNAMES = {
+        "data",
+        "previous_strategy_type",
+        "previous_cutter_type",
+        "use_modifiers",
+    }
     NAME = "CAMOperation"
 
     data: bpy.props.PointerProperty(type=bpy.types.Object)
     use_modifiers: bpy.props.BoolProperty(default=True)
 
     previous_cutter_type: bpy.props.StringProperty(default="CYLINDER")
-    cutter_type: bpy.props.EnumProperty(name="Type", items=get_cutter_types, default=5, update=update_cutter)
+    cutter_type: bpy.props.EnumProperty(
+        name="Type", items=get_cutter_types, default=5, update=update_cutter
+    )
     ball_cutter: bpy.props.PointerProperty(type=cutter.Mill)
     ball_cone_cutter: bpy.props.PointerProperty(type=cutter.ConeMill)
     bull_cutter: bpy.props.PointerProperty(type=cutter.Mill)
@@ -110,7 +114,10 @@ class Operation(bpy.types.PropertyGroup):
         ),
     ]
     strategy_type: bpy.props.EnumProperty(
-        name="Strategy", items=strategy_type_items, default="PROFILE", update=update_strategy
+        name="Strategy",
+        items=strategy_type_items,
+        default="PROFILE",
+        update=update_strategy,
     )
     block_strategy: bpy.props.PointerProperty(type=strategy.Block)
     circles_strategy: bpy.props.PointerProperty(type=strategy.Circles)
@@ -123,7 +130,9 @@ class Operation(bpy.types.PropertyGroup):
     pocket_strategy: bpy.props.PointerProperty(type=strategy.Pocket)
     profile_strategy: bpy.props.PointerProperty(type=strategy.Profile)
     spiral_strategy: bpy.props.PointerProperty(type=strategy.Spiral)
-    waterline_roughing_strategy: bpy.props.PointerProperty(type=strategy.WaterlineRoughing)
+    waterline_roughing_strategy: bpy.props.PointerProperty(
+        type=strategy.WaterlineRoughing
+    )
 
     feed: bpy.props.PointerProperty(type=feedmovementspindle.Feed)
     movement: bpy.props.PointerProperty(type=feedmovementspindle.Movement)

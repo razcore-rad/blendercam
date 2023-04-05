@@ -1,5 +1,6 @@
 import bpy
 
+
 operation = bpy.context.scene.cam_job.operation
 
 operation.cutter_type = "CYLINDER"

@@ -1,11 +1,9 @@
-import importlib
+import abc
 import math
 
 import bpy
 
-mods = {"...utils"}
-
-globals().update({mod.lstrip("."): importlib.reload(importlib.import_module(mod, __package__)) for mod in mods})
+from ... import utils
 
 
 class CutterMixin:
@@ -14,8 +12,16 @@ class CutterMixin:
     id: bpy.props.IntProperty(name="ID", default=1, min=1, max=10)
     description: bpy.props.StringProperty(name="Description")
     diameter: bpy.props.FloatProperty(
-        name="Diameter", default=3e-3, min=1 / 10**utils.PRECISION, max=1e-1, precision=utils.PRECISION, unit="LENGTH"
+        name="Diameter",
+        default=3e-3,
+        min=1 / 10**utils.PRECISION,
+        max=1e-1,
+        precision=utils.PRECISION,
+        unit="LENGTH",
     )
+
+    def get_radius(self, _depth: float) -> float:
+        return self.diameter / 2.0
 
 
 class FlutesMixin:
@@ -39,4 +45,7 @@ class Mill(CutterMixin, FlutesMixin, LengthMixin, bpy.types.PropertyGroup):
 
 
 class ConeMill(CutterMixin, LengthMixin, bpy.types.PropertyGroup):
-    angle: bpy.props.FloatProperty(name="Angle", default=math.pi / 4, min=math.pi / 180, max=math.pi / 2)
+    angle: bpy.props.FloatProperty(
+        name="Angle", default=math.pi / 4, min=math.pi / 180, max=math.pi / 2
+    )
+

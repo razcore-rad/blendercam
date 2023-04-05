@@ -29,7 +29,10 @@ def draw_stock() -> None:
     if len(context.scene.cam_jobs) == 0 or len(context.scene.cam_job.operations) == 0:
         return
 
-    stock_bound_box_min, stock_bound_box_max = context.scene.cam_job.get_stock_bound_box(context)
+    (
+        stock_bound_box_min,
+        stock_bound_box_max,
+    ) = context.scene.cam_job.get_stock_bound_box(context)
     coords = [
         # bottom
         Vector((stock_bound_box_min.x, stock_bound_box_min.y, stock_bound_box_min.z)),
@@ -46,7 +49,7 @@ def draw_stock() -> None:
     gpu.state.line_width_set(2)
     batch = batch_for_shader(SHADER, "LINES", {"pos": coords}, indices=STOCK_INDICES)
     SHADER.uniform_float("color", (1, 1, 1, 1))
-    gpu.state.depth_test_set('LESS_EQUAL')
+    gpu.state.depth_test_set("LESS_EQUAL")
     gpu.state.depth_mask_set(True)
     batch.draw(SHADER)
     gpu.state.depth_mask_set(False)
