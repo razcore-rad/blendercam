@@ -1,7 +1,7 @@
 from itertools import chain
 from math import isclose, tau
 from typing import Iterator
-from shapely import get_coordinates, union_all, Polygon
+from shapely import get_coordinates, force_3d, union_all, Polygon
 
 import bpy
 from mathutils import Vector
@@ -14,45 +14,15 @@ BUFFER_RESOLUTION = 64
 MAP_SPLINE_POINTS = {"POLY": "points", "NURBS": "points", "BEZIER": "bezier_points"}
 
 
+def get_layers(z: float, layer_size: float, depth_end: float) -> list[float]:
+    return list(utils.seq(z - layer_size, depth_end, -layer_size)) + [depth_end]
+
+
 def update_object_source(
     strategy: bpy.types.PropertyGroup, context: bpy.types.Context
 ) -> None:
     if isinstance(strategy, Drill):
         context.scene.cam_job.operation.work_area.depth_end_type = "CUSTOM"
-
-
-def get_drill_tsp_center(
-    source: Iterator[bpy.types.Object],
-    depsgraph: bpy.types.Depsgraph,
-    cutter_diameter: float,
-    tolerance=1e-5,
-) -> set[Vector]:
-    result = set()
-    for obj in source:
-        obj_data = obj.data
-        for index in range(len(obj.data.splines)):
-            temp_obj = obj.evaluated_get(depsgraph).copy()
-            temp_obj.data = temp_obj.data.copy()
-            for temp_spline in chain(
-                temp_obj.data.splines[:index], temp_obj.data.splines[index + 1 :]
-            ):
-                temp_obj.data.splines.remove(temp_spline)
-            obj.data = temp_obj.data
-            temp_mesh = obj.to_mesh()
-            obj.data = obj_data
-            if len(temp_mesh.vertices) > 0:
-                vectors = [temp_obj.matrix_world @ v.co for v in temp_mesh.vertices]
-                _, diameter = utils.get_fit_circle_2d(vectors, tolerance)
-                if cutter_diameter <= diameter:
-                    vector_mean = sum(vectors, Vector()) / len(vectors)
-                    result.add(vector_mean.freeze())
-            obj.to_mesh_clear()
-            temp_obj.to_mesh_clear()
-            bpy.data.curves.remove(temp_obj.data)
-    return result
-
-
-TSP_FUNCS = {"CENTER": get_drill_tsp_center}
 
 
 class DistanceAlongPathsMixin:
@@ -225,26 +195,42 @@ class CurveToPath(SourceMixin, bpy.types.PropertyGroup):
 
 
 class Drill(SourceMixin, bpy.types.PropertyGroup):
-    # TODO: draw in viewport skipped shapes/points with an X or something like that.
-    method_type: bpy.props.EnumProperty(
-        name="Method",
-        items=[
-            (
-                "CENTER",
-                "Center",
-                "Position is at the center of disjoint mesh or curve islands",
-                "PROP_OFF",
-                0,
-            )
-        ],
-    )
+    def get_tsp_center(
+        self,
+        depsgraph: bpy.types.Depsgraph,
+        cutter_diameter: float,
+        tolerance=10 ** (-utils.PRECISION),
+    ) -> set[Vector]:
+        result = set()
+        for obj in self.source:
+            obj_data = obj.data
+            for index in range(len(obj.data.splines)):
+                temp_obj = obj.evaluated_get(depsgraph).copy()
+                temp_obj.data = temp_obj.data.copy()
+                for temp_spline in chain(
+                    temp_obj.data.splines[:index], temp_obj.data.splines[index + 1 :]
+                ):
+                    temp_obj.data.splines.remove(temp_spline)
+                obj.data = temp_obj.data
+                temp_mesh = obj.to_mesh()
+                obj.data = obj_data
+                if len(temp_mesh.vertices) > 0:
+                    vectors = [temp_obj.matrix_world @ v.co for v in temp_mesh.vertices]
+                    _, diameter = utils.get_fit_circle_2d(vectors, tolerance)
+                    if cutter_diameter <= diameter:
+                        vector_mean = sum(vectors, Vector()) / len(vectors)
+                        result.add(vector_mean.freeze())
+                obj.to_mesh_clear()
+                temp_obj.to_mesh_clear()
+                bpy.data.curves.remove(temp_obj.data)
+        return result
 
     def execute_compute(
         self, context: bpy.types.Context, operation: bpy.types.PropertyGroup
     ) -> ({str}, str, Iterator[Vector]):
         result_execute, result_msgs, result_vectors = set(), [], []
         depth_end = operation.get_depth_end(context)
-        bound_box_min, *_ = operation.get_bound_box(context)
+        bound_box_min, _ = operation.get_bound_box(context)
         cutter_diameter = operation.cutter.diameter
         if depth_end > 0 or bound_box_min.z > 0:
             return (
@@ -260,28 +246,22 @@ class Drill(SourceMixin, bpy.types.PropertyGroup):
         layer_size = operation.work_area.layer_size
         is_layer_size_zero = isclose(layer_size, 0)
         depsgraph = context.evaluated_depsgraph_get()
-        tour = tsp.run(
-            TSP_FUNCS[self.method_type](self.source, depsgraph, cutter_diameter)
-        )
-        for i, v in tour:
-            z = v.z
-            if z < depth_end or z > 0:
+        for i, v in tsp.run(self.get_tsp_center(depsgraph, cutter_diameter)):
+            if v.z < depth_end or v.z > 0:
                 result_execute.add("CANCELLED")
                 result_msgs.append(f"Drill `{operation.data.name}` skipping {v}")
                 continue
 
-            layers = list(utils.seq(z - layer_size, depth_end, -layer_size)) + [
-                depth_end
-            ]
-            layers = (
-                [free_height, depth_end, free_height]
-                if is_layer_size_zero
-                else chain([free_height], utils.intersperse(layers, v.z), [free_height])
+            layers = get_layers(v.z, layer_size, depth_end)
+            layers = chain(
+                [free_height],
+                layers if is_layer_size_zero else utils.intersperse(layers, v.z),
+                [free_height],
             )
             result_vectors.extend(Vector((v.x, v.y, z)) for z in layers)
             result_execute.add("FINISHED")
 
-        if len(tour) == 0:
+        if "CANCELLED" in result_execute:
             result_msgs.append(
                 f"Drill {operation.data.name} skipped because source"
                 " data has no valid points"
@@ -344,7 +324,11 @@ class Profile(SourceMixin, bpy.types.PropertyGroup):
         result_execute, result_msgs, result_vectors = set(), [], []
 
         polygons = []
-        uncertainty = 1 / 10 ** (utils.PRECISION + 1)
+        uncertainty = 10 ** -(utils.PRECISION + 1)
+        # TODO
+        #  - [ ] implementation for CURVE objects because they don't have `calc_loop_triangles()`
+        #  - [ ] complete layering (see below)
+        #  - [ ] bridges & auto-bridges
         for obj in self.get_evaluated_source(context.evaluated_depsgraph_get()):
             obj.data.calc_loop_triangles()
             vectors = (
@@ -361,7 +345,26 @@ class Profile(SourceMixin, bpy.types.PropertyGroup):
             operation.cutter.get_radius(operation.get_depth_end(context)),
             resolution=BUFFER_RESOLUTION,
         )
-        result_vectors = [Vector(list(cs) + [0.0]) for cs in get_coordinates(geometry)]
+        geometry = [geometry] if geometry.geom_type == "Polygon" else geometry.geoms
+        # coords = chain(
+        #     *([p.exterior.coords] + [i.coords for i in p.interiors] for p in geometry)
+        # )
+
+        _, bound_box_max = operation.get_bound_box(context)
+        depth_end = operation.get_depth_end(context)
+        layer_size = operation.work_area.layer_size
+        layers = get_layers(bound_box_max.z, layer_size, depth_end)
+        # result = []
+        # for p in geometry:
+        #     for layer in layers:
+        #         g = force_3d(p, layer)
+        #         result.append([g.exterior.coords] + [i.coords for i in g.interiors])
+        # print(result)
+        # for layer in get_layers(0, layer_size, depth_end):
+        # print([force_3d(g, layer) for g in geometry])
+        # print([force_3d(c, layer) for c in coords])
+
+        result_vectors = [Vector(list(cs) + [l]) for l in layers for cs in get_coordinates(geometry)]
         result_execute.add("FINISHED")
 
         return (

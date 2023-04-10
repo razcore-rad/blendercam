@@ -1,23 +1,6 @@
 import bpy
 
-from . import strategy
 from ... import utils
-
-
-def get_depth_end_type_items(workarea: bpy.types.PropertyGroup, context: bpy.types.Context) -> [(str, str, str)]:
-    result = []
-    if isinstance(context.scene.cam_job.operation.strategy, strategy.Drill):
-        method_type = context.scene.cam_job.operation.strategy.method_type
-        result.append(
-            ("CUSTOM", "Custom", "")
-            if method_type != "SEGMENTS"
-            else ("VARIABLE", "Variable", "")
-        )
-    else:
-        result.extend(
-            (("CUSTOM", "Custom", ""), ("SOURCE", "Source", ""), ("STOCK", "Stock", ""))
-        )
-    return result
 
 
 class WorkArea(bpy.types.PropertyGroup):
@@ -28,7 +11,12 @@ class WorkArea(bpy.types.PropertyGroup):
         name="Depth End", default=-1e-3, max=0, precision=utils.PRECISION, unit="LENGTH"
     )
     depth_end_type: bpy.props.EnumProperty(
-        name="Depth End", items=get_depth_end_type_items
+        name="Depth End",
+        items=(
+            ("CUSTOM", "Custom", ""),
+            ("SOURCE", "Source", ""),
+            ("STOCK", "Stock", ""),
+        ),
     )
     layer_size: bpy.props.FloatProperty(
         name="Layer Size", default=0, min=0, precision=utils.PRECISION, unit="LENGTH"

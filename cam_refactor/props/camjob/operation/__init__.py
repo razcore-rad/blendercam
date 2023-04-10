@@ -184,14 +184,19 @@ class Operation(bpy.types.PropertyGroup):
         if self.work_area.depth_end_type == "CUSTOM":
             result = self.work_area.depth_end
         elif self.work_area.depth_end_type == "STOCK":
-            (stock_bound_box_min,) = context.scene.cam_job.get_stock_bound_box(context)
+            stock_bound_box_min, _ = context.scene.cam_job.get_stock_bound_box(context)
             result = stock_bound_box_min.z
         return result
 
     def add_data(self, context: bpy.types.Context) -> None:
         if self.data is not None:
+            if self.data.name not in context.view_layer.objects:
+                context.scene.cam_job.data.objects.link(self.data)
             return
+
         self.data = bpy.data.objects.new(self.NAME, bpy.data.meshes.new(self.NAME))
+        self.data.lock_location = 3 * [True]
+        self.data.lock_rotation = 3 * [True]
         context.scene.cam_job.data.objects.link(self.data)
 
     def remove_data(self) -> None:
@@ -205,6 +210,7 @@ class Operation(bpy.types.PropertyGroup):
         if result == {"CANCELLED"}:
             return result, msg
 
+        context.view_layer.objects.active = self.data
         bpy.ops.object.mode_set(mode="OBJECT")
         bpy.ops.object.select_all(action="DESELECT")
         self.data.select_set(True)

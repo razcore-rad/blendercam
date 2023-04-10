@@ -12,7 +12,7 @@ PRECISION = 5
 REDUCE_MAP = {True: {"FINISHED"}, False: {"CANCELLED"}}
 
 
-def get_propnames(pg: bpy.types.PropertyGroup, use_exclude_propnames=True):
+def get_propnames(pg: bpy.types.PropertyGroup, use_exclude_propnames=True) -> list[str]:
     exclude_propnames = ["rna_type"]
     if use_exclude_propnames:
         exclude_propnames += getattr(pg, "EXCLUDE_PROPNAMES", set())
@@ -25,7 +25,12 @@ def get_propnames(pg: bpy.types.PropertyGroup, use_exclude_propnames=True):
     )
 
 
-def copy(context: bpy.types.Context, from_prop: bpy.types.Property, to_prop: bpy.types.Property, depth=0) -> None:
+def copy(
+    context: bpy.types.Context,
+    from_prop: bpy.types.Property,
+    to_prop: bpy.types.Property,
+    depth=0,
+) -> None:
     def noop(*args, **kwargs) -> None:
         pass
 
@@ -85,7 +90,9 @@ def poll_object_source(strategy: bpy.types.Property, obj: bpy.types.Object) -> b
     )
 
 
-def poll_curve_object_source(strategy: bpy.types.Property, obj: bpy.types.Object) -> bool:
+def poll_curve_object_source(
+    strategy: bpy.types.Property, obj: bpy.types.Object
+) -> bool:
     context = bpy.context
     return (
         obj.type == "CURVE"
@@ -112,8 +119,7 @@ def get_bound_box(vectors: Iterator[Vector]) -> (Vector, Vector):
     result = (Vector(), Vector())
     if len(vectors) > 0:
         result = tuple(
-            Vector(f(cs) for cs in zip(*ps))
-            for f, ps in zip((min, max), tee(vectors))
+            Vector(f(cs) for cs in zip(*ps)) for f, ps in zip((min, max), tee(vectors))
         )
     return result
 
@@ -147,7 +153,9 @@ def transpose(it: Iterator) -> Iterator:
     return zip(*it, strict=True)
 
 
-def get_fit_circle_2d(vectors: Iterator[Vector], tolerance=1e-5) -> tuple[Vector, float]:
+def get_fit_circle_2d(
+    vectors: Iterator[Vector], tolerance=1e-5
+) -> tuple[Vector, float]:
     result = Vector(), 0.0
     xy = transpose(v.xy for v in vectors)
     x = np.array(iter_next(xy))
