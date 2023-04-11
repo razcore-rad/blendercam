@@ -122,6 +122,7 @@ class Operation(bpy.types.PropertyGroup):
     block_strategy: bpy.props.PointerProperty(type=strategy.Block)
     circles_strategy: bpy.props.PointerProperty(type=strategy.Circles)
     cross_strategy: bpy.props.PointerProperty(type=strategy.Cross)
+    carve_project_strategy: bpy.props.PointerProperty(type=strategy.CarveProject)
     curve_to_path_strategy: bpy.props.PointerProperty(type=strategy.CurveToPath)
     drill_strategy: bpy.props.PointerProperty(type=strategy.Drill)
     medial_axis_strategy: bpy.props.PointerProperty(type=strategy.MedialAxis)

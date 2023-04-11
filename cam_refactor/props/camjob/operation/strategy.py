@@ -1,7 +1,7 @@
 from itertools import chain
 from math import isclose, tau
 from typing import Iterator
-from shapely import get_coordinates, force_3d, union_all, Polygon
+from shapely import force_3d, union_all, Polygon
 
 import bpy
 from mathutils import Vector
@@ -10,7 +10,7 @@ from . import tsp
 from ... import utils
 
 
-BUFFER_RESOLUTION = 64
+BUFFER_RESOLUTION = 4
 MAP_SPLINE_POINTS = {"POLY": "points", "NURBS": "points", "BEZIER": "bezier_points"}
 
 
@@ -195,6 +195,17 @@ class CurveToPath(SourceMixin, bpy.types.PropertyGroup):
 
 
 class Drill(SourceMixin, bpy.types.PropertyGroup):
+    source_type_items = [
+        ("OBJECT", "Object", "Object data source.", "OUTLINER_OB_CURVE", 0),
+        (
+            "COLLECTION",
+            "Collection",
+            "Collection data source",
+            "OUTLINER_COLLECTION",
+            1,
+        ),
+    ]
+
     def get_tsp_center(
         self,
         depsgraph: bpy.types.Depsgraph,
@@ -208,7 +219,7 @@ class Drill(SourceMixin, bpy.types.PropertyGroup):
                 temp_obj = obj.evaluated_get(depsgraph).copy()
                 temp_obj.data = temp_obj.data.copy()
                 for temp_spline in chain(
-                    temp_obj.data.splines[:index], temp_obj.data.splines[index + 1 :]
+                    temp_obj.data.splines[:index], temp_obj.data.splines[index + 1:]
                 ):
                     temp_obj.data.splines.remove(temp_spline)
                 obj.data = temp_obj.data
@@ -227,7 +238,7 @@ class Drill(SourceMixin, bpy.types.PropertyGroup):
 
     def execute_compute(
         self, context: bpy.types.Context, operation: bpy.types.PropertyGroup
-    ) -> ({str}, str, Iterator[Vector]):
+    ) -> ({str}, str, Iterator):
         result_execute, result_msgs, result_vectors = set(), [], []
         depth_end = operation.get_depth_end(context)
         bound_box_min, _ = operation.get_bound_box(context)
@@ -258,7 +269,7 @@ class Drill(SourceMixin, bpy.types.PropertyGroup):
                 layers if is_layer_size_zero else utils.intersperse(layers, v.z),
                 [free_height],
             )
-            result_vectors.extend(Vector((v.x, v.y, z)) for z in layers)
+            result_vectors.extend((v.x, v.y, z) for z in layers)
             result_execute.add("FINISHED")
 
         if "CANCELLED" in result_execute:
@@ -307,6 +318,7 @@ class Profile(SourceMixin, bpy.types.PropertyGroup):
             ("OUTSIDE", "Outside", "Outside"),
         ],
     )
+    cut_type_sign = {"INSIDE": -1, "OUTSIDE": 1}
     do_merge: bpy.props.BoolProperty(name="Merge Outlines", default=True)
     outlines_count: bpy.props.IntProperty(name="Outlines Count", default=0)
     offset: bpy.props.IntProperty(name="Offset", default=0)
@@ -320,14 +332,13 @@ class Profile(SourceMixin, bpy.types.PropertyGroup):
 
     def execute_compute(
         self, context: bpy.types.Context, operation: bpy.types.PropertyGroup
-    ):
+    ) -> ({str}, str, Iterator):
         result_execute, result_msgs, result_vectors = set(), [], []
 
         polygons = []
         uncertainty = 10 ** -(utils.PRECISION + 1)
         # TODO
         #  - [ ] implementation for CURVE objects because they don't have `calc_loop_triangles()`
-        #  - [ ] complete layering (see below)
         #  - [ ] bridges & auto-bridges
         for obj in self.get_evaluated_source(context.evaluated_depsgraph_get()):
             obj.data.calc_loop_triangles()
@@ -341,32 +352,38 @@ class Profile(SourceMixin, bpy.types.PropertyGroup):
                 for vs in vectors
                 if len(vs) == 3 and (p := Polygon(vs)).is_valid
             ]
-        geometry = union_all(polygons).buffer(
-            operation.cutter.get_radius(operation.get_depth_end(context)),
-            resolution=BUFFER_RESOLUTION,
-        )
+        geometry = union_all(polygons)
+        cut_type = operation.strategy.cut_type
+        if cut_type != "ON_LINE":
+            geometry = geometry.buffer(
+                self.cut_type_sign[cut_type] * operation.cutter.get_radius(operation.get_depth_end(context)),
+                resolution=BUFFER_RESOLUTION,
+            )
         geometry = [geometry] if geometry.geom_type == "Polygon" else geometry.geoms
-        # coords = chain(
-        #     *([p.exterior.coords] + [i.coords for i in p.interiors] for p in geometry)
-        # )
-
+        geometry = chain(*([g.exterior] + list(g.interiors) for g in geometry))
         _, bound_box_max = operation.get_bound_box(context)
         depth_end = operation.get_depth_end(context)
         layer_size = operation.work_area.layer_size
         layers = get_layers(bound_box_max.z, layer_size, depth_end)
-        # result = []
-        # for p in geometry:
-        #     for layer in layers:
-        #         g = force_3d(p, layer)
-        #         result.append([g.exterior.coords] + [i.coords for i in g.interiors])
-        # print(result)
-        # for layer in get_layers(0, layer_size, depth_end):
-        # print([force_3d(g, layer) for g in geometry])
-        # print([force_3d(c, layer) for c in coords])
-
-        result_vectors = [Vector(list(cs) + [l]) for l in layers for cs in get_coordinates(geometry)]
+        geometry = [[force_3d(g, z) for z in layers] for g in geometry]
+        if len(geometry) == 1:
+            result_vectors = [cs for gs in geometry for g in gs for cs in g.coords]
+        else:
+            free_height = operation.movement.free_height
+            for gs1, gs2 in zip(geometry[:-1], geometry[1:]):
+                c1 = gs1[0].coords[-1]
+                c2 = gs2[0].coords[0]
+                result_vectors.extend(
+                    chain(
+                        (cs for g in gs1 for cs in g.coords),
+                        [
+                            (c1[0], c1[1], free_height),
+                            (c2[0], c2[1], free_height),
+                        ],
+                    )
+                )
+            result_vectors.extend(cs for g in gs2 for cs in g.coords)
         result_execute.add("FINISHED")
-
         return (
             utils.reduce_cancelled_or_finished(result_execute),
             "\n".join(result_msgs),
