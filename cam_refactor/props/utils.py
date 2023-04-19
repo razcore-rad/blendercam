@@ -8,8 +8,11 @@ from mathutils import Vector
 
 
 PRECISION = 5
-
 REDUCE_MAP = {True: {"FINISHED"}, False: {"CANCELLED"}}
+
+
+def noop(*args, **kwargs) -> None:
+    pass
 
 
 def get_propnames(pg: bpy.types.PropertyGroup, use_exclude_propnames=True) -> list[str]:
@@ -31,9 +34,6 @@ def copy(
     to_prop: bpy.types.Property,
     depth=0,
 ) -> None:
-    def noop(*args, **kwargs) -> None:
-        pass
-
     if isinstance(from_prop, bpy.types.PropertyGroup):
         for propname in get_propnames(to_prop, use_exclude_propnames=False):
             if not hasattr(from_prop, propname):
@@ -76,9 +76,7 @@ def copy(
 def poll_object_source(strategy: bpy.types.Property, obj: bpy.types.Object) -> bool:
     context = bpy.context
     curve = getattr(strategy, "curve", None)
-    obj_is_cam_object = obj in [
-        op.data for cj in context.scene.cam_jobs for op in cj.operations
-    ]
+    obj_is_cam_object = obj in [cj.object for cj in context.scene.cam_jobs]
     operation = context.scene.cam_job.operation
     return (
         obj.type == "CURVE"
@@ -122,6 +120,10 @@ def get_bound_box(vectors: Iterator[Vector]) -> (Vector, Vector):
             Vector(f(cs) for cs in zip(*ps)) for f, ps in zip((min, max), tee(vectors))
         )
     return result
+
+
+def clamp(x: float, bottom: float, top: float) -> float:
+    return max(bottom, min(x, top))
 
 
 def sign(x: float) -> float:

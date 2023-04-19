@@ -21,7 +21,7 @@ class CAM_UL_List(bpy.types.UIList):
         self, _context, layout, _data, item, icon, _active_data, _active_propname
     ):
         if self.layout_type in {"DEFAULT", "COMPACT"}:
-            if item.data is not None:
+            if hasattr(item, "data") and item.data is not None:
                 layout.row().prop(
                     item.data, "name", text="", emboss=False, icon_value=icon
                 )
@@ -29,6 +29,7 @@ class CAM_UL_List(bpy.types.UIList):
                     item.data, "hide_viewport", text="", emboss=False
                 )
             else:
+                # print("ui:", item, item.name)
                 layout.row().prop(item, "name", text="", emboss=False, icon_value=icon)
         elif self.layout_type in {"GRID"}:
             layout.alignment = "CENTER"
@@ -67,7 +68,11 @@ class CAM_PT_PanelBase(bpy.types.Panel):
         self.layout.use_property_decorate = False
 
     def draw_property_group(
-        self, pg: bpy.types.PropertyGroup, *, layout: bpy.types.UILayout = None, label_text=None
+        self,
+        pg: bpy.types.PropertyGroup,
+        *,
+        layout: bpy.types.UILayout = None,
+        label_text=None,
     ) -> None:
         if layout is None:
             layout = self.layout.box().column(align=True)
@@ -119,7 +124,9 @@ class CAM_PT_CutterPresets(PresetPanel, bpy.types.Panel):
 
 
 class CAM_PT_Panel(CAM_PT_PanelBase):
-    def draw_list_row(self, list_id: str, dataptr, propname: str, active_propname: str, suffix: str) -> None:
+    def draw_list_row(
+        self, list_id: str, dataptr, propname: str, active_propname: str, suffix: str
+    ) -> None:
         list_is_sortable = len(getattr(dataptr, propname)) > 1
         rows = 5 if list_is_sortable else 3
 

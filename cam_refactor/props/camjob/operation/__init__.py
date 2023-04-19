@@ -1,12 +1,14 @@
-import bmesh
 import bpy
 from mathutils import Vector
+from typing import Iterator
 
 from . import cutter, feedmovementspindle, strategy, workarea
 from ... import utils
 
 
-def get_cutter_types(operation: bpy.types.PropertyGroup, _context: bpy.types.Context) -> [(str, str, str)]:
+def get_cutter_types(
+    operation: bpy.types.PropertyGroup, _context: bpy.types.Context
+) -> list[tuple[str, str, str]]:
     result = []
     try:
         result.extend(
@@ -38,12 +40,16 @@ def get_cutter_types(operation: bpy.types.PropertyGroup, _context: bpy.types.Con
     return result
 
 
-def update_cutter(operation: bpy.types.PropertyGroup, context: bpy.types.Context) -> None:
+def update_cutter(
+    operation: bpy.types.PropertyGroup, context: bpy.types.Context
+) -> None:
     utils.copy(context, operation.previous_cutter, operation.cutter)
     operation.previous_cutter_type = operation.cutter_type
 
 
-def update_strategy(operation: bpy.types.PropertyGroup, context: bpy.types.Context) -> None:
+def update_strategy(
+    operation: bpy.types.PropertyGroup, context: bpy.types.Context
+) -> None:
     utils.copy(context, operation.previous_strategy, operation.strategy)
     if operation.cutter_type == "":
         operation.cutter_type = "CYLINDER"
@@ -52,14 +58,14 @@ def update_strategy(operation: bpy.types.PropertyGroup, context: bpy.types.Conte
 
 class Operation(bpy.types.PropertyGroup):
     EXCLUDE_PROPNAMES = {
-        "data",
+        # "data",
         "previous_strategy_type",
         "previous_cutter_type",
         "use_modifiers",
     }
     NAME = "CAMOperation"
 
-    data: bpy.props.PointerProperty(type=bpy.types.Object)
+    # data: bpy.props.PointerProperty(type=bpy.types.Object)
     use_modifiers: bpy.props.BoolProperty(default=True)
 
     previous_cutter_type: bpy.props.StringProperty(default="CYLINDER")
@@ -94,14 +100,17 @@ class Operation(bpy.types.PropertyGroup):
             "MEDIAL_AXIS",
             "Medial axis",
             (
-                "Medial axis, must be used with V or ball cutter, for engraving various width"
-                " shapes with a single stroke"
+                "Medial axis, must be used with V or ball cutter, for engraving"
+                " various width shapes with a single stroke"
             ),
         ),
         (
             "OUTLINE_FILL",
             "Outline Fill",
-            "Detect outline and fill it with paths as pocket then sample these paths on the 3D surface",
+            (
+                "Detect outline and fill it with paths as pocket then sample"
+                " these paths on the 3D surface"
+            ),
         ),
         ("PARALLEL", "Parallel", "Parallel lines at any angle"),
         ("POCKET", "Pocket", "Pocket"),
@@ -189,43 +198,13 @@ class Operation(bpy.types.PropertyGroup):
             result = stock_bound_box_min.z
         return result
 
-    def add_data(self, context: bpy.types.Context) -> None:
-        if self.data is not None:
-            if self.data.name not in context.view_layer.objects:
-                context.scene.cam_job.data.objects.link(self.data)
-            return
-
-        self.data = bpy.data.objects.new(self.NAME, bpy.data.meshes.new(self.NAME))
-        self.data.lock_location = 3 * [True]
-        self.data.lock_rotation = 3 * [True]
-        context.scene.cam_job.data.objects.link(self.data)
-
-    def remove_data(self) -> None:
-        if self.data is None:
-            return
-        bpy.data.meshes.remove(self.data.data)
-
-    def execute_compute(self, context: bpy.types.Context) -> ({str}, str):
-        self.add_data(context)
+    def execute_compute(
+        self, context: bpy.types.Context
+    ) -> tuple[set[str], str, Iterator[Vector]]:
         result, msg, vectors = self.strategy.execute_compute(context, self)
         if result == {"CANCELLED"}:
-            return result, msg
+            vectors = ()
+        return result, msg, vectors
 
-        context.view_layer.objects.active = self.data
-        bpy.ops.object.mode_set(mode="OBJECT")
-        bpy.ops.object.select_all(action="DESELECT")
-        self.data.select_set(True)
-        bpy.ops.object.location_clear(clear_delta=True)
-        bpy.ops.object.rotation_clear(clear_delta=True)
-        bpy.ops.object.scale_clear(clear_delta=True)
-
-        bm = bmesh.new()
-        for v in vectors:
-            bm.verts.new(v)
-        bm.verts.index_update()
-        for pair in zip(bm.verts[:-1], bm.verts[1:]):
-            bm.edges.new(pair)
-        bm.edges.index_update()
-        bm.to_mesh(self.data.data)
-        bm.free()
-        return result, msg
+    def add_data(self, context: bpy.types.Context) -> None:
+        self.name = self.NAME

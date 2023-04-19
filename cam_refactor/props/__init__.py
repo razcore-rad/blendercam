@@ -1,6 +1,6 @@
 import bpy
 
-from . import camjob
+from . import camjob, utils
 
 
 CLASSES = [

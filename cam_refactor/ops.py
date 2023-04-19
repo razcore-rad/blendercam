@@ -99,30 +99,34 @@ class CAM_OT_Action(bpy.types.Operator):
     def poll(cls, context: bpy.types.Context) -> bool:
         return context.scene is not None
 
-    def execute_todo(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> {str}:
+    def execute_todo(
+        self, context: bpy.types.Context, dataptr, propname: str, active_propname: str
+    ) -> set[str]:
         self.report({"INFO"}, f"{self.bl_idname}:{self.type}:NOT_IMPLTEMENTED_YET")
         return {"FINISHED"}
 
-    def execute_add(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> {str}:
+    def execute_add(
+        self, context: bpy.types.Context, dataptr, propname: str, active_propname: str
+    ) -> set[str]:
         propscol = getattr(dataptr, propname)
         item = propscol.add()
-        item.add_data(context)
+        getattr(item, "add_data", props.utils.noop)(context)
         setattr(dataptr, active_propname, len(propscol) - 1)
         return {"FINISHED"}
 
-    def execute_compute(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> {str}:
-        result = set()
-        cam_job = context.scene.cam_job
-        for operation in cam_job.operations:
-            partial_result, msg = operation.execute_compute(context)
-            msg != "" and self.report({"ERROR"}, msg)
-            result.update(partial_result)
-        (result_item,) = result = props.utils.reduce_cancelled_or_finished(result)
-        if result_item == "CANCELLED":
-            self.report({"ERROR"}, f"CAM Job {cam_job.data.name} canceled")
-        return result
+    def execute_compute(
+        self, context: bpy.types.Context, dataptr, propname: str, active_propname: str
+    ) -> set[str]:
+        return context.scene.cam_job.execute_compute(context, self.report)
 
-    def execute_duplicate(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> {str}:
+    def execute_export(
+        self, context: bpy.types.Context, dataptr, propname: str, active_propname: str
+    ) -> set[str]:
+        return context.scene.cam_job.execute_export()
+
+    def execute_duplicate(
+        self, context: bpy.types.Context, dataptr, propname: str, active_propname: str
+    ) -> set[str]:
         result = {"FINISHED"}
         propscol = getattr(dataptr, propname)
         if len(propscol) == 0:
@@ -132,18 +136,22 @@ class CAM_OT_Action(bpy.types.Operator):
         setattr(dataptr, active_propname, active_index + 1)
         return result
 
-    def execute_remove(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> {str}:
+    def execute_remove(
+        self, context: bpy.types.Context, dataptr, propname: str, active_propname: str
+    ) -> set[str]:
         try:
             propscol = getattr(dataptr, propname)
             item = propscol[getattr(dataptr, active_propname)]
-            item.remove_data()
+            getattr(item, "remove_data", props.utils.noop)()
             propscol.remove(getattr(dataptr, active_propname))
             setattr(dataptr, active_propname, getattr(dataptr, active_propname) - 1)
         except IndexError:
             pass
         return {"FINISHED"}
 
-    def execute_move(self, context: bpy.types.Context, dataptr, propname: str, active_propname: str) -> {str}:
+    def execute_move(
+        self, context: bpy.types.Context, dataptr, propname: str, active_propname: str
+    ) -> set[str]:
         propscol = getattr(dataptr, propname)
         active_index = getattr(dataptr, active_propname)
         new_active_index = max(
@@ -153,7 +161,7 @@ class CAM_OT_Action(bpy.types.Operator):
         setattr(dataptr, active_propname, new_active_index)
         return {"FINISHED"}
 
-    def execute(self, context: bpy.types.Context) -> {str}:
+    def execute(self, context: bpy.types.Context) -> set[str]:
         scene = context.scene
         args = {
             "JOB": (context, scene, "cam_jobs", "cam_job_active_index"),

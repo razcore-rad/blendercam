@@ -25,8 +25,8 @@ class Feed(bpy.types.PropertyGroup):
 class Movement(bpy.types.PropertyGroup):
     EXCLUDE_PROPNAMES = {"name"}
 
-    free_height: bpy.props.FloatProperty(
-        name="Free Movement Height",
+    rapid_height: bpy.props.FloatProperty(
+        name="Rapid Height",
         min=1e-5,
         default=5e-3,
         precision=utils.PRECISION,
@@ -48,16 +48,16 @@ class Movement(bpy.types.PropertyGroup):
             ),
         ],
     )
-    vertical_angle: bpy.props.FloatProperty(
-        name="Vertical Angle",
-        description="Convert path above this angle to a vertical path for cutter protection",
-        default=math.pi / 45,
-        min=0,
-        max=math.pi / 2,
-        precision=0,
-        subtype="ANGLE",
-        unit="ROTATION",
-    )
+    # vertical_angle: bpy.props.FloatProperty(
+    #     name="Vertical Angle",
+    #     description="Convert path above this angle to a vertical path for cutter protection",
+    #     default=math.pi / 45,
+    #     min=0,
+    #     max=math.pi / 2,
+    #     precision=0,
+    #     subtype="ANGLE",
+    #     unit="ROTATION",
+    # )
 
 
 class Spindle(bpy.types.PropertyGroup):

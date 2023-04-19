@@ -223,7 +223,7 @@ class Drill(SourceMixin, bpy.types.PropertyGroup):
                 temp_obj = obj.evaluated_get(depsgraph).copy()
                 temp_obj.data = temp_obj.data.copy()
                 for temp_spline in chain(
-                    temp_obj.data.splines[:index], temp_obj.data.splines[index + 1:]
+                    temp_obj.data.splines[:index], temp_obj.data.splines[index + 1 :]
                 ):
                     temp_obj.data.splines.remove(temp_spline)
                 obj.data = temp_obj.data
@@ -242,7 +242,7 @@ class Drill(SourceMixin, bpy.types.PropertyGroup):
 
     def execute_compute(
         self, context: bpy.types.Context, operation: bpy.types.PropertyGroup
-    ) -> ({str}, str, Iterator):
+    ) -> tuple[set[str], str, Iterator[Vector]]:
         result_execute, result_msgs, result_vectors = set(), [], []
         depth_end = operation.get_depth_end(context)
         bound_box_min, _ = operation.get_bound_box(context)
@@ -251,34 +251,34 @@ class Drill(SourceMixin, bpy.types.PropertyGroup):
             return (
                 {"CANCELLED"},
                 (
-                    f"Drill `{operation.data.name}` can't be computed."
+                    f"Drill `{operation.name}` can't be computed."
                     " See Depth End and check Bound Box Z < 0"
                 ),
                 result_vectors,
             )
 
-        free_height = operation.movement.free_height
+        rapid_height = operation.movement.rapid_height
         layer_size = operation.work_area.layer_size
         is_layer_size_zero = isclose(layer_size, 0)
         depsgraph = context.evaluated_depsgraph_get()
         for i, v in tsp.run(self.get_tsp_center(depsgraph, cutter_diameter)):
             if v.z < depth_end or v.z > 0:
                 result_execute.add("CANCELLED")
-                result_msgs.append(f"Drill `{operation.data.name}` skipping {v}")
+                result_msgs.append(f"Drill `{operation.name}` skipping {v}")
                 continue
 
             layers = get_layers(v.z, layer_size, depth_end)
             layers = chain(
-                [free_height],
+                [rapid_height],
                 layers if is_layer_size_zero else utils.intersperse(layers, v.z),
-                [free_height],
+                [rapid_height],
             )
             result_vectors.extend((v.x, v.y, z) for z in layers)
             result_execute.add("FINISHED")
 
         if "CANCELLED" in result_execute:
             result_msgs.append(
-                f"Drill {operation.data.name} skipped because source"
+                f"Drill {operation.name} skipped because source"
                 " data has no valid points"
             )
 
@@ -342,7 +342,8 @@ class Profile(SourceMixin, bpy.types.PropertyGroup):
         polygons = []
         uncertainty = 10 ** -(utils.PRECISION + 1)
         # TODO
-        #  - [ ] implementation for CURVE objects because they don't have `calc_loop_triangles()`
+        #  - [ ] implementation for CURVE objects because they don't have
+        #        `calc_loop_triangles()`
         #  - [ ] bridges & auto-bridges
         for obj in self.get_evaluated_source(context.evaluated_depsgraph_get()):
             obj.data.calc_loop_triangles()
@@ -360,7 +361,8 @@ class Profile(SourceMixin, bpy.types.PropertyGroup):
         cut_type = operation.strategy.cut_type
         if cut_type != "ON_LINE":
             geometry = geometry.buffer(
-                self.cut_type_sign[cut_type] * operation.cutter.get_radius(operation.get_depth_end(context)),
+                self.cut_type_sign[cut_type]
+                * operation.cutter.get_radius(operation.get_depth_end(context)),
                 resolution=BUFFER_RESOLUTION,
             )
         geometry = [geometry] if geometry.geom_type == "Polygon" else geometry.geoms
@@ -373,7 +375,7 @@ class Profile(SourceMixin, bpy.types.PropertyGroup):
         if len(geometry) == 1:
             result_vectors = [cs for gs in geometry for g in gs for cs in g.coords]
         else:
-            free_height = operation.movement.free_height
+            rapid_height = operation.movement.rapid_height
             for gs1, gs2 in zip(geometry[:-1], geometry[1:]):
                 c1 = gs1[0].coords[-1]
                 c2 = gs2[0].coords[0]
@@ -381,8 +383,8 @@ class Profile(SourceMixin, bpy.types.PropertyGroup):
                     chain(
                         (cs for g in gs1 for cs in g.coords),
                         [
-                            (c1[0], c1[1], free_height),
-                            (c2[0], c2[1], free_height),
+                            (c1[0], c1[1], rapid_height),
+                            (c2[0], c2[1], rapid_height),
                         ],
                     )
                 )
