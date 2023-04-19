@@ -206,6 +206,10 @@ class Drill(SourceMixin, bpy.types.PropertyGroup):
         ),
     ]
 
+    @property
+    def source(self) -> [bpy.types.Object]:
+        return [o for o in super().source if o.type == "CURVE"]
+
     def get_tsp_center(
         self,
         depsgraph: bpy.types.Depsgraph,

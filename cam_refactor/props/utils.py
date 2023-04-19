@@ -81,7 +81,7 @@ def poll_object_source(strategy: bpy.types.Property, obj: bpy.types.Object) -> b
     ]
     operation = context.scene.cam_job.operation
     return (
-        obj.type in ["CURVE"]
+        obj.type == "CURVE"
         if operation.strategy_type == "DRILL"
         else obj.type in ["CURVE", "MESH"]
         and obj.name in context.view_layer.objects
