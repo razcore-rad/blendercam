@@ -4,6 +4,14 @@ from typing import Any, Iterator
 
 import bpy
 import numpy as np
+from bpy.types import (
+    bpy_prop_collection,
+    Collection,
+    Context,
+    Object,
+    Property,
+    PropertyGroup,
+)
 from mathutils import Vector
 
 
@@ -15,7 +23,7 @@ def noop(*args, **kwargs) -> None:
     pass
 
 
-def get_propnames(pg: bpy.types.PropertyGroup, use_exclude_propnames=True) -> list[str]:
+def get_propnames(pg: PropertyGroup, use_exclude_propnames=True) -> list[str]:
     exclude_propnames = ["rna_type"]
     if use_exclude_propnames:
         exclude_propnames += getattr(pg, "EXCLUDE_PROPNAMES", set())
@@ -29,12 +37,12 @@ def get_propnames(pg: bpy.types.PropertyGroup, use_exclude_propnames=True) -> li
 
 
 def copy(
-    context: bpy.types.Context,
-    from_prop: bpy.types.Property,
-    to_prop: bpy.types.Property,
+    context: Context,
+    from_prop: Property,
+    to_prop: Property,
     depth=0,
 ) -> None:
-    if isinstance(from_prop, bpy.types.PropertyGroup):
+    if isinstance(from_prop, PropertyGroup):
         for propname in get_propnames(to_prop, use_exclude_propnames=False):
             if not hasattr(from_prop, propname):
                 continue
@@ -42,22 +50,21 @@ def copy(
             from_subprop = getattr(from_prop, propname)
             if any(
                 isinstance(from_subprop, t)
-                for t in [bpy.types.PropertyGroup, bpy.types.bpy_prop_collection]
+                for t in [PropertyGroup, bpy_prop_collection]
             ):
                 copy(context, from_subprop, getattr(to_prop, propname), depth + 1)
             elif hasattr(to_prop, propname):
                 if propname == "data" and any(
-                    isinstance(from_subprop, t)
-                    for t in [bpy.types.Collection, bpy.types.Object]
+                    isinstance(from_subprop, t) for t in [Collection, Object]
                 ):
                     from_subprop = from_subprop.copy()
                     link = noop
-                    if isinstance(from_subprop, bpy.types.Collection):
+                    if isinstance(from_subprop, Collection):
                         link = context.collection.children.link
                         context.scene.cam_job_active_index += 1
                         for obj in from_subprop.objects:
                             from_subprop.objects.unlink(obj)
-                    elif isinstance(from_subprop, bpy.types.Object):
+                    elif isinstance(from_subprop, Object):
                         from_subprop.data = from_subprop.data.copy()
                         link = context.scene.cam_job.data.objects.link
                     link(from_subprop)
@@ -67,13 +74,13 @@ def copy(
                 except TypeError:
                     pass
 
-    elif isinstance(from_prop, bpy.types.bpy_prop_collection):
+    elif isinstance(from_prop, bpy_prop_collection):
         to_prop.clear()
         for from_subprop in from_prop.values():
             copy(context, from_subprop, to_prop.add(), depth + 1)
 
 
-def poll_object_source(strategy: bpy.types.Property, obj: bpy.types.Object) -> bool:
+def poll_object_source(strategy: Property, obj: Object) -> bool:
     context = bpy.context
     curve = getattr(strategy, "curve", None)
     obj_is_cam_object = obj in [cj.object for cj in context.scene.cam_jobs]
@@ -88,9 +95,7 @@ def poll_object_source(strategy: bpy.types.Property, obj: bpy.types.Object) -> b
     )
 
 
-def poll_curve_object_source(
-    strategy: bpy.types.Property, obj: bpy.types.Object
-) -> bool:
+def poll_curve_object_source(strategy: Property, obj: Object) -> bool:
     context = bpy.context
     return (
         obj.type == "CURVE"
@@ -99,7 +104,7 @@ def poll_curve_object_source(
     )
 
 
-def poll_curve_limit(_work_area: bpy.types.Property, obj: bpy.types.Object) -> bool:
+def poll_curve_limit(_work_area: Property, obj: Object) -> bool:
     result = False
     scene = bpy.context.scene
     try:

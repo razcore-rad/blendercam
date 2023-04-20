@@ -1,18 +1,19 @@
 import math
 
-import bpy
+from bpy.props import EnumProperty, FloatProperty, IntProperty
+from bpy.types import PropertyGroup
 
 from ... import utils
 
 
-class Feed(bpy.types.PropertyGroup):
+class Feed(PropertyGroup):
     EXCLUDE_PROPNAMES = {"name", "rate"}
 
-    rate: bpy.props.FloatProperty(name="Feed Rate", default=1, min=1e-1, unit="LENGTH")
-    plunge_speed: bpy.props.FloatProperty(
-        name="Plunge Speed", default=5e-1, min=5e-2, max=1, subtype="PERCENTAGE"
+    rate: FloatProperty(name="Feed Rate", default=1, min=1e-1, unit="LENGTH")
+    plunge_scale: FloatProperty(
+        name="Plunge Scale", default=5e-1, min=5e-2, max=1, subtype="PERCENTAGE"
     )
-    plunge_angle: bpy.props.FloatProperty(
+    plunge_angle: FloatProperty(
         name="Plunge Angle",
         default=math.pi / 6,
         min=0,
@@ -22,17 +23,17 @@ class Feed(bpy.types.PropertyGroup):
     )
 
 
-class Movement(bpy.types.PropertyGroup):
+class Movement(PropertyGroup):
     EXCLUDE_PROPNAMES = {"name"}
 
-    rapid_height: bpy.props.FloatProperty(
+    rapid_height: FloatProperty(
         name="Rapid Height",
         min=1e-5,
         default=5e-3,
         precision=utils.PRECISION,
         unit="LENGTH",
     )
-    type: bpy.props.EnumProperty(
+    type: EnumProperty(
         name="Movement Type",
         items=[
             ("CLIMB", "Climb", "Cutter rotates with the direction of the feed"),
@@ -48,7 +49,7 @@ class Movement(bpy.types.PropertyGroup):
             ),
         ],
     )
-    # vertical_angle: bpy.props.FloatProperty(
+    # vertical_angle: FloatProperty(
     #     name="Vertical Angle",
     #     description="Convert path above this angle to a vertical path for cutter protection",
     #     default=math.pi / 45,
@@ -60,10 +61,10 @@ class Movement(bpy.types.PropertyGroup):
     # )
 
 
-class Spindle(bpy.types.PropertyGroup):
+class Spindle(PropertyGroup):
     EXCLUDE_PROPNAMES = {"name"}
 
-    direction_type: bpy.props.EnumProperty(
+    direction_type: EnumProperty(
         name="Spindle Direction",
         items=[
             ("CLOCKWISE", "Clockwise", "", "LOOP_FORWARDS", 0),
@@ -71,4 +72,4 @@ class Spindle(bpy.types.PropertyGroup):
         ],
     )
 
-    rpm: bpy.props.IntProperty(name="Spindle RPM", default=12000)
+    rpm: IntProperty(name="Spindle RPM", default=12000)

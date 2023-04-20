@@ -1,9 +1,14 @@
-import bpy
+from bpy.props import FloatVectorProperty
+from bpy.types import PropertyGroup
 
 
-class CustomLocations(bpy.types.PropertyGroup):
+class CustomLocations(PropertyGroup):
     EXCLUDE_PROPNAMES = {"name"}
 
-    end: bpy.props.FloatVectorProperty(name="End", default=(0, 0, 0), min=0, subtype="XYZ_LENGTH")
-    start: bpy.props.FloatVectorProperty(name="Start", default=(0, 0, 0), min=0, subtype="XYZ_LENGTH")
-    tool_change: bpy.props.FloatVectorProperty(name="Tool Change", default=(0, 0, 0), min=0, subtype="XYZ_LENGTH")
+    end: FloatVectorProperty(name="End", default=(0, 0, 0), min=0, subtype="XYZ_LENGTH")
+    start: FloatVectorProperty(
+        name="Start", default=(0, 0, 0), min=0, subtype="XYZ_LENGTH"
+    )
+    tool_change: FloatVectorProperty(
+        name="Tool Change", default=(0, 0, 0), min=0, subtype="XYZ_LENGTH"
+    )

@@ -19,7 +19,8 @@
 #
 # ***** END GPL LICENCE BLOCK *****
 
-# here is the strategy functionality of Blender CAM. The functions here are called with operators defined in ops.py.
+# here is the strategy functionality of Blender CAM. The functions here
+# are called with operators defined in ops.py.
 
 import math
 import sys

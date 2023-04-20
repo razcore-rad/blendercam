@@ -1,14 +1,18 @@
-import bpy
+from bpy.props import (
+    BoolProperty,
+    EnumProperty,
+    PointerProperty,
+    StringProperty,
+)
+from bpy.types import Context, Object, PropertyGroup
 from mathutils import Vector
-from typing import Iterator
 
 from . import cutter, feedmovementspindle, strategy, workarea
 from ... import utils
+from ...types import ComputeResult, ShortEnumItems
 
 
-def get_cutter_types(
-    operation: bpy.types.PropertyGroup, _context: bpy.types.Context
-) -> list[tuple[str, str, str]]:
+def get_cutter_types(operation: PropertyGroup, _context: Context) -> ShortEnumItems:
     result = []
     try:
         result.extend(
@@ -40,23 +44,19 @@ def get_cutter_types(
     return result
 
 
-def update_cutter(
-    operation: bpy.types.PropertyGroup, context: bpy.types.Context
-) -> None:
+def update_cutter(operation: PropertyGroup, context: Context) -> None:
     utils.copy(context, operation.previous_cutter, operation.cutter)
     operation.previous_cutter_type = operation.cutter_type
 
 
-def update_strategy(
-    operation: bpy.types.PropertyGroup, context: bpy.types.Context
-) -> None:
+def update_strategy(operation: PropertyGroup, context: Context) -> None:
     utils.copy(context, operation.previous_strategy, operation.strategy)
     if operation.cutter_type == "":
         operation.cutter_type = "CYLINDER"
     operation.previous_strategy_type = operation.strategy_type
 
 
-class Operation(bpy.types.PropertyGroup):
+class Operation(PropertyGroup):
     EXCLUDE_PROPNAMES = {
         # "data",
         "previous_strategy_type",
@@ -65,26 +65,26 @@ class Operation(bpy.types.PropertyGroup):
     }
     NAME = "CAMOperation"
 
-    # data: bpy.props.PointerProperty(type=bpy.types.Object)
-    use_modifiers: bpy.props.BoolProperty(default=True)
+    # data: PointerProperty(type=Object)
+    use_modifiers: BoolProperty(default=True)
 
-    previous_cutter_type: bpy.props.StringProperty(default="CYLINDER")
-    cutter_type: bpy.props.EnumProperty(
+    previous_cutter_type: StringProperty(default="CYLINDER")
+    cutter_type: EnumProperty(
         name="Type", items=get_cutter_types, default=5, update=update_cutter
     )
-    ball_cutter: bpy.props.PointerProperty(type=cutter.Mill)
-    ball_cone_cutter: bpy.props.PointerProperty(type=cutter.ConeMill)
-    bull_cutter: bpy.props.PointerProperty(type=cutter.Mill)
-    bull_cone_cutter: bpy.props.PointerProperty(type=cutter.ConeMill)
-    cone_cutter: bpy.props.PointerProperty(type=cutter.ConeMill)
-    cylinder_cutter: bpy.props.PointerProperty(type=cutter.Mill)
-    cylinder_cone_cutter: bpy.props.PointerProperty(type=cutter.ConeMill)
-    drill_cutter: bpy.props.PointerProperty(type=cutter.Drill)
-    v_carve_cutter: bpy.props.PointerProperty(type=cutter.ConeMill)
-    laser_cutter: bpy.props.PointerProperty(type=cutter.Simple)
-    plasma_cutter: bpy.props.PointerProperty(type=cutter.Simple)
+    ball_cutter: PointerProperty(type=cutter.Mill)
+    ball_cone_cutter: PointerProperty(type=cutter.ConeMill)
+    bull_cutter: PointerProperty(type=cutter.Mill)
+    bull_cone_cutter: PointerProperty(type=cutter.ConeMill)
+    cone_cutter: PointerProperty(type=cutter.ConeMill)
+    cylinder_cutter: PointerProperty(type=cutter.Mill)
+    cylinder_cone_cutter: PointerProperty(type=cutter.ConeMill)
+    drill_cutter: PointerProperty(type=cutter.Drill)
+    v_carve_cutter: PointerProperty(type=cutter.ConeMill)
+    laser_cutter: PointerProperty(type=cutter.Simple)
+    plasma_cutter: PointerProperty(type=cutter.Simple)
 
-    previous_strategy_type: bpy.props.StringProperty(default="PROFILE")
+    previous_strategy_type: StringProperty(default="PROFILE")
     strategy_type_items = [
         ("BLOCK", "Block", "Block path"),
         (
@@ -122,35 +122,33 @@ class Operation(bpy.types.PropertyGroup):
             "Roughing below ZERO. Z is always below ZERO",
         ),
     ]
-    strategy_type: bpy.props.EnumProperty(
+    strategy_type: EnumProperty(
         name="Strategy",
         items=strategy_type_items,
         default="PROFILE",
         update=update_strategy,
     )
-    block_strategy: bpy.props.PointerProperty(type=strategy.Block)
-    circles_strategy: bpy.props.PointerProperty(type=strategy.Circles)
-    cross_strategy: bpy.props.PointerProperty(type=strategy.Cross)
-    carve_project_strategy: bpy.props.PointerProperty(type=strategy.CarveProject)
-    curve_to_path_strategy: bpy.props.PointerProperty(type=strategy.CurveToPath)
-    drill_strategy: bpy.props.PointerProperty(type=strategy.Drill)
-    medial_axis_strategy: bpy.props.PointerProperty(type=strategy.MedialAxis)
-    outline_fill_strategy: bpy.props.PointerProperty(type=strategy.OutlineFill)
-    parallel_strategy: bpy.props.PointerProperty(type=strategy.Parallel)
-    pocket_strategy: bpy.props.PointerProperty(type=strategy.Pocket)
-    profile_strategy: bpy.props.PointerProperty(type=strategy.Profile)
-    spiral_strategy: bpy.props.PointerProperty(type=strategy.Spiral)
-    waterline_roughing_strategy: bpy.props.PointerProperty(
-        type=strategy.WaterlineRoughing
-    )
+    block_strategy: PointerProperty(type=strategy.Block)
+    circles_strategy: PointerProperty(type=strategy.Circles)
+    cross_strategy: PointerProperty(type=strategy.Cross)
+    carve_project_strategy: PointerProperty(type=strategy.CarveProject)
+    curve_to_path_strategy: PointerProperty(type=strategy.CurveToPath)
+    drill_strategy: PointerProperty(type=strategy.Drill)
+    medial_axis_strategy: PointerProperty(type=strategy.MedialAxis)
+    outline_fill_strategy: PointerProperty(type=strategy.OutlineFill)
+    parallel_strategy: PointerProperty(type=strategy.Parallel)
+    pocket_strategy: PointerProperty(type=strategy.Pocket)
+    profile_strategy: PointerProperty(type=strategy.Profile)
+    spiral_strategy: PointerProperty(type=strategy.Spiral)
+    waterline_roughing_strategy: PointerProperty(type=strategy.WaterlineRoughing)
 
-    feed: bpy.props.PointerProperty(type=feedmovementspindle.Feed)
-    movement: bpy.props.PointerProperty(type=feedmovementspindle.Movement)
-    spindle: bpy.props.PointerProperty(type=feedmovementspindle.Spindle)
-    work_area: bpy.props.PointerProperty(type=workarea.WorkArea)
+    feed: PointerProperty(type=feedmovementspindle.Feed)
+    movement: PointerProperty(type=feedmovementspindle.Movement)
+    spindle: PointerProperty(type=feedmovementspindle.Spindle)
+    work_area: PointerProperty(type=workarea.WorkArea)
 
     @property
-    def previous_cutter(self) -> bpy.types.PropertyGroup:
+    def previous_cutter(self) -> PropertyGroup:
         return getattr(self, f"{self.previous_cutter_type.lower()}_cutter")
 
     @property
@@ -158,7 +156,7 @@ class Operation(bpy.types.PropertyGroup):
         return f"{self.cutter_type.lower()}_cutter"
 
     @property
-    def cutter(self) -> bpy.types.PropertyGroup:
+    def cutter(self) -> PropertyGroup:
         return getattr(self, self.cutter_propname)
 
     @property
@@ -166,15 +164,15 @@ class Operation(bpy.types.PropertyGroup):
         return f"{self.strategy_type.lower()}_strategy"
 
     @property
-    def previous_strategy(self) -> bpy.types.PropertyGroup:
+    def previous_strategy(self) -> PropertyGroup:
         return getattr(self, f"{self.previous_strategy_type.lower()}_strategy")
 
     @property
-    def strategy(self) -> bpy.types.PropertyGroup:
+    def strategy(self) -> PropertyGroup:
         return getattr(self, self.strategy_propname)
 
-    def get_bound_box(self, context: bpy.types.Context) -> (Vector, Vector):
-        def get_vectors(source: list[bpy.types.Object]) -> [Vector]:
+    def get_bound_box(self, context: Context) -> (Vector, Vector):
+        def get_vectors(source: list[Object]) -> [Vector]:
             result = []
             for obj in source:
                 for v in obj.to_mesh().vertices:
@@ -189,7 +187,7 @@ class Operation(bpy.types.PropertyGroup):
             result = utils.get_bound_box(get_vectors(source))
         return result
 
-    def get_depth_end(self, context: bpy.types.Context) -> float:
+    def get_depth_end(self, context: Context) -> float:
         result = 0
         if self.work_area.depth_end_type == "CUSTOM":
             result = self.work_area.depth_end
@@ -198,13 +196,8 @@ class Operation(bpy.types.PropertyGroup):
             result = stock_bound_box_min.z
         return result
 
-    def execute_compute(
-        self, context: bpy.types.Context
-    ) -> tuple[set[str], str, Iterator[Vector]]:
-        result, msg, vectors = self.strategy.execute_compute(context, self)
-        if result == {"CANCELLED"}:
-            vectors = ()
-        return result, msg, vectors
+    def execute_compute(self, context: Context) -> ComputeResult:
+        return self.strategy.execute_compute(context, self)
 
-    def add_data(self, context: bpy.types.Context) -> None:
+    def add_data(self, context: Context) -> None:
         self.name = self.NAME

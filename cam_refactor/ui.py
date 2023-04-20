@@ -1,6 +1,7 @@
 from functools import reduce
 
 import bpy
+from bpy.types import Context, Menu, Panel, PropertyGroup, UIList, UILayout
 
 from . import ops, props
 
@@ -16,7 +17,7 @@ def get_enum_item_icon(items: [(str, str, str, str, int)], item_type: str) -> st
     )
 
 
-class CAM_UL_List(bpy.types.UIList):
+class CAM_UL_List(UIList):
     def draw_item(
         self, _context, layout, _data, item, icon, _active_data, _active_propname
     ):
@@ -39,10 +40,10 @@ class CAM_UL_List(bpy.types.UIList):
 class PresetPanel:
     bl_label = "Presets"
     bl_category = "CAM"
-    path_menu = bpy.types.Menu.path_menu
+    path_menu = Menu.path_menu
 
     @classmethod
-    def draw_panel_header(cls, layout: bpy.types.UILayout) -> None:
+    def draw_panel_header(cls, layout: UILayout) -> None:
         layout.emboss = "NONE"
         layout.popover(panel=cls.__name__, icon="PRESET", text="")
 
@@ -51,14 +52,14 @@ class PresetPanel:
         text = text or cls.bl_label
         layout.popover(panel=cls.__name__, icon="PRESET", text=text)
 
-    def draw(self, context: bpy.types.Context) -> None:
+    def draw(self, context: Context) -> None:
         layout = self.layout
         layout.emboss = "PULLDOWN_MENU"
         layout.operator_context = "EXEC_DEFAULT"
-        bpy.types.Menu.draw_preset(self, context)
+        Menu.draw_preset(self, context)
 
 
-class CAM_PT_PanelBase(bpy.types.Panel):
+class CAM_PT_PanelBase(Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = "CAM"
@@ -69,9 +70,9 @@ class CAM_PT_PanelBase(bpy.types.Panel):
 
     def draw_property_group(
         self,
-        pg: bpy.types.PropertyGroup,
+        pg: PropertyGroup,
         *,
-        layout: bpy.types.UILayout = None,
+        layout: UILayout = None,
         label_text=None,
     ) -> None:
         if layout is None:
@@ -79,7 +80,7 @@ class CAM_PT_PanelBase(bpy.types.Panel):
             layout.use_property_split = True
 
         for propname in props.utils.get_propnames(pg):
-            if isinstance(getattr(pg, propname), bpy.types.PropertyGroup):
+            if isinstance(getattr(pg, propname), PropertyGroup):
                 continue
 
             row = layout.row(align=True)
@@ -95,7 +96,7 @@ class CAM_PT_PanelBase(bpy.types.Panel):
 
 class CAM_PT_PanelJobsOperationSubPanel(CAM_PT_PanelBase):
     @classmethod
-    def poll(cls, context: bpy.types.Context) -> bool:
+    def poll(cls, context: Context) -> bool:
         result = False
         try:
             strategy = context.scene.cam_job.operation.strategy
@@ -105,7 +106,7 @@ class CAM_PT_PanelJobsOperationSubPanel(CAM_PT_PanelBase):
         return result
 
 
-class CAM_PT_MachinePresets(PresetPanel, bpy.types.Panel):
+class CAM_PT_MachinePresets(PresetPanel, Panel):
     bl_space_type = CAM_PT_PanelBase.bl_space_type
     bl_region_type = CAM_PT_PanelBase.bl_region_type
     bl_label = "Machine Presets"
@@ -114,7 +115,7 @@ class CAM_PT_MachinePresets(PresetPanel, bpy.types.Panel):
     preset_add_operator = "cam.preset_add_machine"
 
 
-class CAM_PT_CutterPresets(PresetPanel, bpy.types.Panel):
+class CAM_PT_CutterPresets(PresetPanel, Panel):
     bl_space_type = CAM_PT_PanelBase.bl_space_type
     bl_region_type = CAM_PT_PanelBase.bl_region_type
     bl_label = "Cutter Presets"
@@ -166,7 +167,7 @@ class CAM_PT_Panel(CAM_PT_PanelBase):
 class CAM_PT_PanelJobs(CAM_PT_Panel):
     bl_label = "CAM Jobs"
 
-    def draw(self, context: bpy.types.Context) -> None:
+    def draw(self, context: Context) -> None:
         scene = context.scene
         self.draw_list_row(
             "CAM_UL_ListJobs", scene, "cam_jobs", "cam_job_active_index", "JOB"
@@ -203,10 +204,10 @@ class CAM_PT_PanelJobsOperations(CAM_PT_Panel):
     bl_parent_id = "CAM_PT_PanelJobs"
 
     @classmethod
-    def poll(cls, context: bpy.types.Context) -> bool:
+    def poll(cls, context: Context) -> bool:
         return len(context.scene.cam_jobs) > 0
 
-    def draw(self, context: bpy.types.Context) -> None:
+    def draw(self, context: Context) -> None:
         scene = context.scene
         cam_job = scene.cam_job
         self.draw_list_row(
@@ -241,10 +242,10 @@ class CAM_PT_PanelJobsOperationCutter(CAM_PT_PanelJobsOperationSubPanel):
     bl_label = "Cutter"
     bl_parent_id = "CAM_PT_PanelJobsOperations"
 
-    def draw_header_preset(self, _context: bpy.types.Context) -> None:
+    def draw_header_preset(self, _context: Context) -> None:
         CAM_PT_CutterPresets.draw_panel_header(self.layout)
 
-    def draw(self, context: bpy.types.Context) -> None:
+    def draw(self, context: Context) -> None:
         operation = context.scene.cam_job.operation
         cutter = operation.cutter
         col = self.layout.box().column(align=True)
@@ -260,7 +261,7 @@ class CAM_PT_PanelJobsOperationFeedMovementSpindle(CAM_PT_PanelJobsOperationSubP
     bl_label = "Feed, Movement & Spindle"
     bl_parent_id = "CAM_PT_PanelJobsOperations"
 
-    def draw(self, context: bpy.types.Context) -> None:
+    def draw(self, context: Context) -> None:
         operation = context.scene.cam_job.operation
         self.draw_property_group(operation.movement)
         self.draw_property_group(operation.spindle)
@@ -278,7 +279,7 @@ class CAM_PT_PanelJobsOperationWorkArea(CAM_PT_PanelJobsOperationSubPanel):
     bl_label = "Work Area"
     bl_parent_id = "CAM_PT_PanelJobsOperations"
 
-    def draw(self, context: bpy.types.Context) -> None:
+    def draw(self, context: Context) -> None:
         operation = context.scene.cam_job.operation
         work_area = operation.work_area
 
@@ -300,10 +301,10 @@ class CAM_PT_PanelJobsStock(CAM_PT_PanelBase):
     bl_parent_id = "CAM_PT_PanelJobs"
 
     @classmethod
-    def poll(cls, context: bpy.types.Context) -> bool:
+    def poll(cls, context: Context) -> bool:
         return len(context.scene.cam_jobs) > 0
 
-    def draw(self, context: bpy.types.Context) -> None:
+    def draw(self, context: Context) -> None:
         stock = context.scene.cam_job.stock
 
         layout = self.layout
@@ -322,13 +323,13 @@ class CAM_PT_PanelJobsMachine(CAM_PT_PanelBase):
     bl_parent_id = "CAM_PT_PanelJobs"
 
     @classmethod
-    def poll(cls, context: bpy.types.Context) -> bool:
+    def poll(cls, context: Context) -> bool:
         return len(context.scene.cam_jobs) > 0
 
-    def draw_header_preset(self, _context: bpy.types.Context) -> None:
+    def draw_header_preset(self, _context: Context) -> None:
         CAM_PT_MachinePresets.draw_panel_header(self.layout)
 
-    def draw(self, context: bpy.types.Context) -> None:
+    def draw(self, context: Context) -> None:
         machine = context.scene.cam_job.machine
         post_processor = machine.post_processor
 

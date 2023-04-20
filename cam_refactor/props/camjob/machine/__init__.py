@@ -1,22 +1,23 @@
-import bpy
+from bpy.props import EnumProperty, IntProperty, PointerProperty, StringProperty
+from bpy.types import Context, PropertyGroup
 
 from . import feedrate, postprocessor, spindlerpm
 from ... import utils
 
 
-def update_post_processor(machine: bpy.types.PropertyGroup, context: bpy.types.Context) -> None:
+def update_post_processor(machine: PropertyGroup, context: Context) -> None:
     utils.copy(context, machine.previous_post_processor, machine.post_processor)
     machine.previous_post_processor_enum = machine.post_processor_enum
 
 
-class Machine(bpy.types.PropertyGroup):
+class Machine(PropertyGroup):
     EXCLUDE_PROPNAMES = {"name", "post_processor_enum", "previous_post_processor_enum"}
 
-    feed_rate: bpy.props.PointerProperty(type=feedrate.FeedRate)
-    spindle_rpm: bpy.props.PointerProperty(type=spindlerpm.SpindleRPM)
-    axes: bpy.props.IntProperty(name="Axes", default=3, min=3, max=5)
-    previous_post_processor_enum: bpy.props.StringProperty(default="GRBL")
-    post_processor_enum: bpy.props.EnumProperty(
+    feed_rate: PointerProperty(type=feedrate.FeedRate)
+    spindle_rpm: PointerProperty(type=spindlerpm.SpindleRPM)
+    axes: IntProperty(name="Axes", default=3, min=3, max=5)
+    previous_post_processor_enum: StringProperty(default="GRBL")
+    post_processor_enum: EnumProperty(
         name="Post Processor",
         default="GRBL",
         items=[
@@ -47,13 +48,13 @@ class Machine(bpy.types.PropertyGroup):
         ],
         update=update_post_processor,
     )
-    grbl_post_processor: bpy.props.PointerProperty(type=postprocessor.Base)
-    iso_post_processor: bpy.props.PointerProperty(type=postprocessor.Base)
-    linux_cnc_post_processor: bpy.props.PointerProperty(type=postprocessor.LinuxCNC)
-    mach3_post_processor: bpy.props.PointerProperty(type=postprocessor.Base)
+    grbl_post_processor: PointerProperty(type=postprocessor.Base)
+    iso_post_processor: PointerProperty(type=postprocessor.Base)
+    linux_cnc_post_processor: PointerProperty(type=postprocessor.LinuxCNC)
+    mach3_post_processor: PointerProperty(type=postprocessor.Base)
 
     @property
-    def previous_post_processor(self) -> bpy.types.PropertyGroup:
+    def previous_post_processor(self) -> PropertyGroup:
         return getattr(
             self, f"{self.previous_post_processor_enum.lower()}_post_processor"
         )
@@ -63,5 +64,5 @@ class Machine(bpy.types.PropertyGroup):
         return f"{self.post_processor_enum.lower()}_post_processor"
 
     @property
-    def post_processor(self) -> bpy.types.PropertyGroup:
+    def post_processor(self) -> PropertyGroup:
         return getattr(self, self.post_processor_propname)

@@ -7,7 +7,6 @@ def distance(v1: Vector, v2: Vector) -> float:
 
 
 def length(tour: [Vector]) -> float:
-    """The tour length computed from distances between each pair of consecutive points"""
     return sum(distance(tour[i], tour[i - 1]) for i in range(len(tour)))
 
 
@@ -15,7 +14,9 @@ def get_nearest_neighbor(points: Iterator[Vector], origin: Vector) -> Vector:
     return min(points, key=lambda p: distance(p, origin))
 
 
-def sorted_nearest_neighbor(points: {Vector}, start=None) -> [(int, Vector)]:
+def sorted_nearest_neighbor(
+    points: set[Vector], start=None
+) -> list[tuple[int, Vector]]:
     start = next(iter(points)) if start is None else start
     i = 0
     result = [(i, start)]
@@ -28,7 +29,7 @@ def sorted_nearest_neighbor(points: {Vector}, start=None) -> [(int, Vector)]:
     return result
 
 
-def run(points: {Vector}, start=Vector()) -> [Vector]:
+def run(points: set[Vector], start=Vector()) -> list[Vector]:
     if len(points) == 0:
         return []
     start = get_nearest_neighbor(points, start.freeze())

@@ -1,13 +1,21 @@
 from itertools import chain
 from math import isclose, tau
-from typing import Iterator
 from shapely import force_3d, union_all, Polygon
 
 import bpy
+from bpy.props import (
+    BoolProperty,
+    EnumProperty,
+    FloatProperty,
+    IntProperty,
+    PointerProperty,
+)
+from bpy.types import Collection, Context, Depsgraph, PropertyGroup, Object
 from mathutils import Vector
 
 from . import tsp
 from ... import utils
+from ...types import ComputeResult
 
 
 BUFFER_RESOLUTION = 4
@@ -18,15 +26,13 @@ def get_layers(z: float, layer_size: float, depth_end: float) -> list[float]:
     return list(utils.seq(z - layer_size, depth_end, -layer_size)) + [depth_end]
 
 
-def update_object_source(
-    strategy: bpy.types.PropertyGroup, context: bpy.types.Context
-) -> None:
+def update_object_source(strategy: PropertyGroup, context: Context) -> None:
     if isinstance(strategy, Drill):
         context.scene.cam_job.operation.work_area.depth_end_type = "CUSTOM"
 
 
 class DistanceAlongPathsMixin:
-    distance_along_paths: bpy.props.FloatProperty(
+    distance_along_paths: FloatProperty(
         name="Distance Along Paths",
         default=2e-4,
         min=1e-5,
@@ -37,7 +43,7 @@ class DistanceAlongPathsMixin:
 
 
 class DistanceBetweenPathsMixin:
-    distance_between_paths: bpy.props.FloatProperty(
+    distance_between_paths: FloatProperty(
         name="Distance Between Paths",
         default=1e-3,
         min=1e-5,
@@ -48,7 +54,7 @@ class DistanceBetweenPathsMixin:
 
 
 class PathsAngleMixin:
-    paths_angle: bpy.props.FloatProperty(
+    paths_angle: FloatProperty(
         name="Paths Angle",
         default=0,
         min=-tau,
@@ -78,23 +84,21 @@ class SourceMixin:
             1,
         ),
     ]
-    source_type: bpy.props.EnumProperty(items=source_type_items, name="Source Type")
-    object_source: bpy.props.PointerProperty(
-        type=bpy.types.Object,
+    source_type: EnumProperty(items=source_type_items, name="Source Type")
+    object_source: PointerProperty(
+        type=Object,
         name="Source",
         poll=utils.poll_object_source,
         update=update_object_source,
     )
-    collection_source: bpy.props.PointerProperty(
-        type=bpy.types.Collection, name="Source"
-    )
+    collection_source: PointerProperty(type=Collection, name="Source")
 
     @property
     def source_propname(self) -> str:
         return f"{self.source_type.lower()}_source"
 
     @property
-    def source(self) -> [bpy.types.Object]:
+    def source(self) -> list[Object]:
         result = getattr(self, self.source_propname)
         if self.source_type in ["OBJECT", "CURVE_OBJECT"]:
             result = [result] if result is not None else []
@@ -106,12 +110,10 @@ class SourceMixin:
             )
         return result
 
-    def get_evaluated_source(
-        self, depsgraph: bpy.types.Depsgraph
-    ) -> [bpy.types.Object]:
+    def get_evaluated_source(self, depsgraph: Depsgraph) -> list[Object]:
         return [o.evaluated_get(depsgraph) for o in self.source]
 
-    def is_source(self, obj: bpy.types.Object) -> bool:
+    def is_source(self, obj: Object) -> bool:
         collection_source = (
             [] if self.collection_source is None else self.collection_source
         )
@@ -122,18 +124,18 @@ class Block(
     DistanceAlongPathsMixin,
     DistanceBetweenPathsMixin,
     SourceMixin,
-    bpy.types.PropertyGroup,
+    PropertyGroup,
 ):
     pass
 
 
-class CarveProject(DistanceAlongPathsMixin, SourceMixin, bpy.types.PropertyGroup):
+class CarveProject(DistanceAlongPathsMixin, SourceMixin, PropertyGroup):
     ICON_MAP = {"curve": "OUTLINER_OB_CURVE"}
 
-    curve: bpy.props.PointerProperty(
-        name="Curve", type=bpy.types.Object, poll=utils.poll_curve_object_source
+    curve: PointerProperty(
+        name="Curve", type=Object, poll=utils.poll_curve_object_source
     )
-    depth: bpy.props.FloatProperty(
+    depth: FloatProperty(
         name="Depth", default=1e-3, unit="LENGTH", precision=utils.PRECISION
     )
 
@@ -142,7 +144,7 @@ class Circles(
     DistanceAlongPathsMixin,
     DistanceBetweenPathsMixin,
     SourceMixin,
-    bpy.types.PropertyGroup,
+    PropertyGroup,
 ):
     pass
 
@@ -152,12 +154,12 @@ class Cross(
     DistanceBetweenPathsMixin,
     PathsAngleMixin,
     SourceMixin,
-    bpy.types.PropertyGroup,
+    PropertyGroup,
 ):
     pass
 
 
-class CurveToPath(SourceMixin, bpy.types.PropertyGroup):
+class CurveToPath(SourceMixin, PropertyGroup):
     EXCLUDE_PROPNAMES = {
         "name",
         "source_type",
@@ -182,19 +184,19 @@ class CurveToPath(SourceMixin, bpy.types.PropertyGroup):
             1,
         ),
     ]
-    source_type: bpy.props.EnumProperty(items=source_type_items, name="Source Type")
-    curve_object_source: bpy.props.PointerProperty(
-        type=bpy.types.Object, name="Source", poll=utils.poll_curve_object_source
+    source_type: EnumProperty(items=source_type_items, name="Source Type")
+    curve_object_source: PointerProperty(
+        type=Object, name="Source", poll=utils.poll_curve_object_source
     )
 
-    def is_source(self, obj: bpy.types.Object) -> bool:
+    def is_source(self, obj: Object) -> bool:
         collection_source = (
             [] if self.collection_source is None else self.collection_source
         )
         return obj == self.curve_object_source or obj in collection_source
 
 
-class Drill(SourceMixin, bpy.types.PropertyGroup):
+class Drill(SourceMixin, PropertyGroup):
     source_type_items = [
         ("OBJECT", "Object", "Object data source.", "OUTLINER_OB_CURVE", 0),
         (
@@ -207,12 +209,12 @@ class Drill(SourceMixin, bpy.types.PropertyGroup):
     ]
 
     @property
-    def source(self) -> [bpy.types.Object]:
+    def source(self) -> [Object]:
         return [o for o in super().source if o.type == "CURVE"]
 
     def get_tsp_center(
         self,
-        depsgraph: bpy.types.Depsgraph,
+        depsgraph: Depsgraph,
         cutter_diameter: float,
         tolerance=10 ** (-utils.PRECISION),
     ) -> set[Vector]:
@@ -223,7 +225,7 @@ class Drill(SourceMixin, bpy.types.PropertyGroup):
                 temp_obj = obj.evaluated_get(depsgraph).copy()
                 temp_obj.data = temp_obj.data.copy()
                 for temp_spline in chain(
-                    temp_obj.data.splines[:index], temp_obj.data.splines[index + 1 :]
+                    temp_obj.data.splines[:index], temp_obj.data.splines[index + 1:]
                 ):
                     temp_obj.data.splines.remove(temp_spline)
                 obj.data = temp_obj.data
@@ -241,8 +243,8 @@ class Drill(SourceMixin, bpy.types.PropertyGroup):
         return result
 
     def execute_compute(
-        self, context: bpy.types.Context, operation: bpy.types.PropertyGroup
-    ) -> tuple[set[str], str, Iterator[Vector]]:
+        self, context: Context, operation: PropertyGroup
+    ) -> ComputeResult:
         result_execute, result_msgs, result_vectors = set(), [], []
         depth_end = operation.get_depth_end(context)
         bound_box_min, _ = operation.get_bound_box(context)
@@ -282,39 +284,39 @@ class Drill(SourceMixin, bpy.types.PropertyGroup):
                 " data has no valid points"
             )
 
-        return (
+        return ComputeResult(
             utils.reduce_cancelled_or_finished(result_execute),
             "\n".join(result_msgs),
             result_vectors,
         )
 
 
-class MedialAxis(SourceMixin, bpy.types.PropertyGroup):
-    threshold: bpy.props.FloatProperty(
+class MedialAxis(SourceMixin, PropertyGroup):
+    threshold: FloatProperty(
         name="Threshold", default=1e-3, unit="LENGTH", precision=utils.PRECISION
     )
-    subdivision: bpy.props.FloatProperty(
+    subdivision: FloatProperty(
         name="Subdivision", default=2e-4, unit="LENGTH", precision=utils.PRECISION
     )
-    do_clean_finish: bpy.props.BoolProperty(name="Clean Finish", default=True)
-    do_generate_mesh: bpy.props.BoolProperty(name="Generate Mesh", default=True)
+    do_clean_finish: BoolProperty(name="Clean Finish", default=True)
+    do_generate_mesh: BoolProperty(name="Generate Mesh", default=True)
 
 
 class OutlineFill(
     DistanceAlongPathsMixin,
     DistanceBetweenPathsMixin,
     SourceMixin,
-    bpy.types.PropertyGroup,
+    PropertyGroup,
 ):
     pass
 
 
-class Pocket(DistanceBetweenPathsMixin, SourceMixin, bpy.types.PropertyGroup):
+class Pocket(DistanceBetweenPathsMixin, SourceMixin, PropertyGroup):
     pass
 
 
-class Profile(SourceMixin, bpy.types.PropertyGroup):
-    cut_type: bpy.props.EnumProperty(
+class Profile(SourceMixin, PropertyGroup):
+    cut_type: EnumProperty(
         name="Cut",
         items=[
             ("ON_LINE", "On Line", "On line"),
@@ -323,10 +325,10 @@ class Profile(SourceMixin, bpy.types.PropertyGroup):
         ],
     )
     cut_type_sign = {"INSIDE": -1, "OUTSIDE": 1}
-    do_merge: bpy.props.BoolProperty(name="Merge Outlines", default=True)
-    outlines_count: bpy.props.IntProperty(name="Outlines Count", default=0)
-    offset: bpy.props.IntProperty(name="Offset", default=0)
-    style_type: bpy.props.EnumProperty(
+    do_merge: BoolProperty(name="Merge Outlines", default=True)
+    outlines_count: IntProperty(name="Outlines Count", default=0)
+    offset: IntProperty(name="Offset", default=0)
+    style_type: EnumProperty(
         name="Style",
         items=[
             ("CONVENTIONAL", "Conventional", "Conventional rounded"),
@@ -335,10 +337,9 @@ class Profile(SourceMixin, bpy.types.PropertyGroup):
     )
 
     def execute_compute(
-        self, context: bpy.types.Context, operation: bpy.types.PropertyGroup
-    ) -> ({str}, str, Iterator):
-        result_execute, result_msgs, result_vectors = set(), [], []
-
+        self, context: Context, operation: PropertyGroup
+    ) -> ComputeResult:
+        result_execute, result_vectors = set(), []
         polygons = []
         uncertainty = 10 ** -(utils.PRECISION + 1)
         # TODO
@@ -389,10 +390,11 @@ class Profile(SourceMixin, bpy.types.PropertyGroup):
                     )
                 )
             result_vectors.extend(cs for g in gs2 for cs in g.coords)
+
         result_execute.add("FINISHED")
-        return (
+        return ComputeResult(
             utils.reduce_cancelled_or_finished(result_execute),
-            "\n".join(result_msgs),
+            "",
             result_vectors,
         )
 
@@ -402,7 +404,7 @@ class Parallel(
     DistanceBetweenPathsMixin,
     PathsAngleMixin,
     SourceMixin,
-    bpy.types.PropertyGroup,
+    PropertyGroup,
 ):
     pass
 
@@ -411,15 +413,13 @@ class Spiral(
     DistanceAlongPathsMixin,
     DistanceBetweenPathsMixin,
     SourceMixin,
-    bpy.types.PropertyGroup,
+    PropertyGroup,
 ):
     pass
 
 
-class WaterlineRoughing(
-    DistanceBetweenPathsMixin, SourceMixin, bpy.types.PropertyGroup
-):
-    distance_between_slices: bpy.props.FloatProperty(
+class WaterlineRoughing(DistanceBetweenPathsMixin, SourceMixin, PropertyGroup):
+    distance_between_slices: FloatProperty(
         name="Distance Between Slices",
         default=1e-3,
         min=1e-5,
@@ -427,6 +427,4 @@ class WaterlineRoughing(
         precision=utils.PRECISION,
         unit="LENGTH",
     )
-    fill_between_slices: bpy.props.BoolProperty(
-        name="Fill Between Slices", default=True
-    )
+    fill_between_slices: BoolProperty(name="Fill Between Slices", default=True)

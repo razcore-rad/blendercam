@@ -1,4 +1,4 @@
-from pathlib import Path
+from pathlib import PurePath
 from typing import TypeVar
 
 from .props.utils import PRECISION, clamp
@@ -13,7 +13,7 @@ Self = TypeVar("Self", bound="G")
 class G:
     def __init__(
         self,
-        out_file_path: Path,
+        out_file_path: str | PurePath,
         *,
         rapid_height=0.0,
         is_si=True,

@@ -1,10 +1,11 @@
 import bl_operators
 import bpy
+from bpy.types import Context, Operator
 
 from . import props
 
 
-class CAM_OT_AddPresetMachine(bl_operators.presets.AddPresetBase, bpy.types.Operator):
+class CAM_OT_AddPresetMachine(bl_operators.presets.AddPresetBase, Operator):
     """Add or remove a CAM Machine Preset"""
 
     bl_idname = "cam.preset_add_machine"
@@ -28,7 +29,7 @@ class CAM_OT_AddPresetMachine(bl_operators.presets.AddPresetBase, bpy.types.Oper
     ]
 
 
-class CAM_OT_AddPresetCutter(bl_operators.presets.AddPresetBase, bpy.types.Operator):
+class CAM_OT_AddPresetCutter(bl_operators.presets.AddPresetBase, Operator):
     """Add or remove a CAM Cutter Preset"""
 
     bl_idname = "cam.preset_add_cutter"
@@ -68,7 +69,7 @@ class CAM_OT_AddPresetCutter(bl_operators.presets.AddPresetBase, bpy.types.Opera
         return result
 
 
-class CAM_OT_Action(bpy.types.Operator):
+class CAM_OT_Action(Operator):
     bl_idname = "cam.action"
     bl_label = "CAM Action"
     bl_options = {"UNDO"}
@@ -96,17 +97,17 @@ class CAM_OT_Action(bpy.types.Operator):
         }
 
     @classmethod
-    def poll(cls, context: bpy.types.Context) -> bool:
+    def poll(cls, context: Context) -> bool:
         return context.scene is not None
 
     def execute_todo(
-        self, context: bpy.types.Context, dataptr, propname: str, active_propname: str
+        self, context: Context, dataptr, propname: str, active_propname: str
     ) -> set[str]:
         self.report({"INFO"}, f"{self.bl_idname}:{self.type}:NOT_IMPLTEMENTED_YET")
         return {"FINISHED"}
 
     def execute_add(
-        self, context: bpy.types.Context, dataptr, propname: str, active_propname: str
+        self, context: Context, dataptr, propname: str, active_propname: str
     ) -> set[str]:
         propscol = getattr(dataptr, propname)
         item = propscol.add()
@@ -115,17 +116,17 @@ class CAM_OT_Action(bpy.types.Operator):
         return {"FINISHED"}
 
     def execute_compute(
-        self, context: bpy.types.Context, dataptr, propname: str, active_propname: str
+        self, context: Context, dataptr, propname: str, active_propname: str
     ) -> set[str]:
         return context.scene.cam_job.execute_compute(context, self.report)
 
     def execute_export(
-        self, context: bpy.types.Context, dataptr, propname: str, active_propname: str
+        self, context: Context, dataptr, propname: str, active_propname: str
     ) -> set[str]:
         return context.scene.cam_job.execute_export()
 
     def execute_duplicate(
-        self, context: bpy.types.Context, dataptr, propname: str, active_propname: str
+        self, context: Context, dataptr, propname: str, active_propname: str
     ) -> set[str]:
         result = {"FINISHED"}
         propscol = getattr(dataptr, propname)
@@ -137,7 +138,7 @@ class CAM_OT_Action(bpy.types.Operator):
         return result
 
     def execute_remove(
-        self, context: bpy.types.Context, dataptr, propname: str, active_propname: str
+        self, context: Context, dataptr, propname: str, active_propname: str
     ) -> set[str]:
         try:
             propscol = getattr(dataptr, propname)
@@ -150,7 +151,7 @@ class CAM_OT_Action(bpy.types.Operator):
         return {"FINISHED"}
 
     def execute_move(
-        self, context: bpy.types.Context, dataptr, propname: str, active_propname: str
+        self, context: Context, dataptr, propname: str, active_propname: str
     ) -> set[str]:
         propscol = getattr(dataptr, propname)
         active_index = getattr(dataptr, active_propname)
@@ -161,7 +162,7 @@ class CAM_OT_Action(bpy.types.Operator):
         setattr(dataptr, active_propname, new_active_index)
         return {"FINISHED"}
 
-    def execute(self, context: bpy.types.Context) -> set[str]:
+    def execute(self, context: Context) -> set[str]:
         scene = context.scene
         args = {
             "JOB": (context, scene, "cam_jobs", "cam_job_active_index"),
