@@ -2,7 +2,7 @@ from bpy.props import EnumProperty, IntProperty, PointerProperty, StringProperty
 from bpy.types import Context, PropertyGroup
 
 from . import feedrate, postprocessor, spindlerpm
-from ... import utils
+from .... import utils
 
 
 def update_post_processor(machine: PropertyGroup, context: Context) -> None:

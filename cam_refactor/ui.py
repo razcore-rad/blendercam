@@ -3,7 +3,7 @@ from functools import reduce
 import bpy
 from bpy.types import Context, Menu, Panel, PropertyGroup, UIList, UILayout
 
-from . import ops, props
+from . import ops, utils
 
 
 UNITS = {"MIN": "/ min"}
@@ -79,7 +79,7 @@ class CAM_PT_PanelBase(Panel):
             layout = self.layout.box().column(align=True)
             layout.use_property_split = True
 
-        for propname in props.utils.get_propnames(pg):
+        for propname in utils.get_propnames(pg):
             if isinstance(getattr(pg, propname), PropertyGroup):
                 continue
 
@@ -311,9 +311,7 @@ class CAM_PT_PanelJobsStock(CAM_PT_PanelBase):
         layout.row().prop(stock, "type", expand=True)
         row = layout.row(align=True)
         for propname in (
-            pn
-            for pn in props.utils.get_propnames(stock)
-            if pn.startswith(stock.type.lower())
+            pn for pn in utils.get_propnames(stock) if pn.startswith(stock.type.lower())
         ):
             row.column().prop(stock, propname)
 

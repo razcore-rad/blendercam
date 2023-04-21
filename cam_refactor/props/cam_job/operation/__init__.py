@@ -8,8 +8,8 @@ from bpy.types import Context, Object, PropertyGroup
 from mathutils import Vector
 
 from . import cutter, feedmovementspindle, strategy, workarea
-from ... import utils
-from ...types import ComputeResult, ShortEnumItems
+from .... import utils
+from ....types import ComputeResult, ShortEnumItems
 
 
 def get_cutter_types(operation: PropertyGroup, _context: Context) -> ShortEnumItems:
@@ -181,8 +181,7 @@ class Operation(PropertyGroup):
             return result
 
         result = (Vector(), Vector())
-        depsgraph = context.evaluated_depsgraph_get()
-        source = self.strategy.get_evaluated_source(depsgraph)
+        source = self.strategy.get_evaluated_source(context)
         if len(source) > 0:
             result = utils.get_bound_box(get_vectors(source))
         return result

@@ -10,12 +10,12 @@ from bpy.props import (
     IntProperty,
     PointerProperty,
 )
-from bpy.types import Collection, Context, Depsgraph, PropertyGroup, Object
+from bpy.types import Collection, Context, PropertyGroup, Object
 from mathutils import Vector
 
 from . import tsp
-from ... import utils
-from ...types import ComputeResult
+from .... import utils
+from ....types import ComputeResult
 
 
 BUFFER_RESOLUTION = 4
@@ -110,7 +110,15 @@ class SourceMixin:
             )
         return result
 
-    def get_evaluated_source(self, depsgraph: Depsgraph) -> list[Object]:
+    def get_source_valid_features(
+        self,
+        context: Context,
+        operation: PropertyGroup,
+    ) -> dict:
+        raise NotImplementedError()
+
+    def get_evaluated_source(self, context: Context) -> list[Object]:
+        depsgraph = context.evaluated_depsgraph_get()
         return [o.evaluated_get(depsgraph) for o in self.source]
 
     def is_source(self, obj: Object) -> bool:
@@ -212,13 +220,14 @@ class Drill(SourceMixin, PropertyGroup):
     def source(self) -> [Object]:
         return [o for o in super().source if o.type == "CURVE"]
 
-    def get_tsp_center(
+    def get_source_valid_features(
         self,
-        depsgraph: Depsgraph,
-        cutter_diameter: float,
-        tolerance=10 ** (-utils.PRECISION),
-    ) -> set[Vector]:
-        result = set()
+        context: Context,
+        operation: PropertyGroup,
+    ) -> dict:
+        result = {"center": [], "bound_box": []}
+        tolerance = 10 ** (-utils.PRECISION)
+        depsgraph = context.evaluated_depsgraph_get()
         for obj in self.source:
             obj_data = obj.data
             for index in range(len(obj.data.splines)):
@@ -234,9 +243,10 @@ class Drill(SourceMixin, PropertyGroup):
                 if len(temp_mesh.vertices) > 0:
                     vectors = [temp_obj.matrix_world @ v.co for v in temp_mesh.vertices]
                     _, diameter = utils.get_fit_circle_2d(vectors, tolerance)
-                    if cutter_diameter <= diameter:
+                    if operation.cutter.diameter <= diameter:
                         vector_mean = sum(vectors, Vector()) / len(vectors)
-                        result.add(vector_mean.freeze())
+                        result["center"].append(vector_mean.freeze())
+                        result["bound_box"].append(utils.get_bound_box(vectors))
                 obj.to_mesh_clear()
                 temp_obj.to_mesh_clear()
                 bpy.data.curves.remove(temp_obj.data)
@@ -248,7 +258,6 @@ class Drill(SourceMixin, PropertyGroup):
         result_execute, result_msgs, result_vectors = set(), [], []
         depth_end = operation.get_depth_end(context)
         bound_box_min, _ = operation.get_bound_box(context)
-        cutter_diameter = operation.cutter.diameter
         if depth_end > 0 or bound_box_min.z > 0:
             return (
                 {"CANCELLED"},
@@ -262,8 +271,8 @@ class Drill(SourceMixin, PropertyGroup):
         rapid_height = operation.movement.rapid_height
         layer_size = operation.work_area.layer_size
         is_layer_size_zero = isclose(layer_size, 0)
-        depsgraph = context.evaluated_depsgraph_get()
-        for i, v in tsp.run(self.get_tsp_center(depsgraph, cutter_diameter)):
+        source_valid_features = self.get_source_valid_features(context, operation)
+        for i, v in tsp.run(source_valid_features["center"]):
             if v.z < depth_end or v.z > 0:
                 result_execute.add("CANCELLED")
                 result_msgs.append(f"Drill `{operation.name}` skipping {v}")
@@ -346,7 +355,7 @@ class Profile(SourceMixin, PropertyGroup):
         #  - [ ] implementation for CURVE objects because they don't have
         #        `calc_loop_triangles()`
         #  - [ ] bridges & auto-bridges
-        for obj in self.get_evaluated_source(context.evaluated_depsgraph_get()):
+        for obj in self.get_evaluated_source(context):
             obj.data.calc_loop_triangles()
             vectors = (
                 [(obj.matrix_world @ obj.data.vertices[i].co).xy for i in t.vertices]

@@ -1,7 +1,7 @@
 from pathlib import PurePath
 from typing import TypeVar
 
-from .props.utils import PRECISION, clamp
+from .utils import PRECISION, clamp
 
 
 LF = "\n"

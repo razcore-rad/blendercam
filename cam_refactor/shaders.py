@@ -1,7 +1,18 @@
 import bpy
+import bmesh
 import gpu
 from gpu_extras.batch import batch_for_shader
 from mathutils import Vector
+
+
+def gen_unit_circle_vectors() -> list[Vector]:
+    bm = bmesh.new()
+    result = [
+        v.co.copy()
+        for v in bmesh.ops.create_circle(bm, segments=12, radius=0.5)["verts"]
+    ]
+    bm.free()
+    return result
 
 
 STOCK_INDICES = [
@@ -23,6 +34,9 @@ STOCK_INDICES = [
 ]
 
 SHADER = gpu.shader.from_builtin("3D_UNIFORM_COLOR")
+
+
+UNIT_CIRCLE_VECTORS = gen_unit_circle_vectors()
 
 
 def draw_stock() -> None:
@@ -48,10 +62,30 @@ def draw_stock() -> None:
     ]
 
     gpu.state.line_width_set(2)
-    batch = batch_for_shader(SHADER, "LINES", {"pos": coords}, indices=STOCK_INDICES)
-    SHADER.uniform_float("color", (1, 1, 1, 1))
     gpu.state.depth_test_set("LESS_EQUAL")
     gpu.state.depth_mask_set(True)
+    SHADER.uniform_float("color", (1, 1, 1, 1))
+    batch = batch_for_shader(SHADER, "LINES", {"pos": coords}, indices=STOCK_INDICES)
     batch.draw(SHADER)
     gpu.state.depth_mask_set(False)
+    gpu.state.line_width_set(1)
+
+
+def draw_valid_drill() -> None:
+    context = bpy.context
+    if len(context.scene.cam_jobs) == 0 or len(context.scene.cam_job.operations) == 0:
+        return
+
+    # Temporary select drill operation
+    operation = context.scene.cam_job.operation
+    strategy = operation.strategy
+
+    gpu.state.line_width_set(2)
+    SHADER.uniform_float("color", (1, 1, 1, 1))
+    svf = strategy.get_source_valid_features(context, operation)
+    for center, (bb_min, bb_max) in zip(svf["center"], svf["bound_box"]):
+        scale = 0.1 * (bb_max - bb_min)
+        coords = [v * scale + center for v in UNIT_CIRCLE_VECTORS]
+        batch = batch_for_shader(SHADER, "LINE_LOOP", {"pos": coords})
+        batch.draw(SHADER)
     gpu.state.line_width_set(1)

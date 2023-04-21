@@ -2,7 +2,7 @@ import bl_operators
 import bpy
 from bpy.types import Context, Operator
 
-from . import props
+from . import props, utils
 
 
 class CAM_OT_AddPresetMachine(bl_operators.presets.AddPresetBase, Operator):
@@ -40,7 +40,7 @@ class CAM_OT_AddPresetCutter(bl_operators.presets.AddPresetBase, Operator):
     preset_defines = ["operation = bpy.context.scene.cam_job.operation"]
 
     @property
-    def preset_values(self) -> [str]:
+    def preset_values(self) -> list[str]:
         result = [
             "operation.cutter_type",
             "operation.cutter.id",
@@ -50,16 +50,16 @@ class CAM_OT_AddPresetCutter(bl_operators.presets.AddPresetBase, Operator):
 
         operation = bpy.context.scene.cam_job.operation
 
-        if isinstance(operation.cutter, props.camjob.operation.cutter.Mill):
+        if isinstance(operation.cutter, props.cam_job.operation.cutter.Mill):
             result.extend(
                 [
                     "operation.cutter.flutes",
                     "operation.cutter.length",
                 ]
             )
-        elif isinstance(operation.cutter, props.camjob.operation.cutter.Drill):
+        elif isinstance(operation.cutter, props.cam_job.operation.cutter.Drill):
             result.extend(["operation.cutter.length"])
-        elif isinstance(operation.cutter, props.camjob.operation.cutter.ConeMill):
+        elif isinstance(operation.cutter, props.cam_job.operation.cutter.ConeMill):
             result.extend(
                 [
                     "operation.cutter.length",
@@ -111,7 +111,7 @@ class CAM_OT_Action(Operator):
     ) -> set[str]:
         propscol = getattr(dataptr, propname)
         item = propscol.add()
-        getattr(item, "add_data", props.utils.noop)(context)
+        getattr(item, "add_data", utils.noop)(context)
         setattr(dataptr, active_propname, len(propscol) - 1)
         return {"FINISHED"}
 
@@ -133,7 +133,7 @@ class CAM_OT_Action(Operator):
         if len(propscol) == 0:
             return result
         active_index = getattr(dataptr, active_propname)
-        props.utils.copy(context, propscol[active_index], propscol.add())
+        utils.copy(context, propscol[active_index], propscol.add())
         setattr(dataptr, active_propname, active_index + 1)
         return result
 
@@ -143,7 +143,7 @@ class CAM_OT_Action(Operator):
         try:
             propscol = getattr(dataptr, propname)
             item = propscol[getattr(dataptr, active_propname)]
-            getattr(item, "remove_data", props.utils.noop)()
+            getattr(item, "remove_data", utils.noop)()
             propscol.remove(getattr(dataptr, active_propname))
             setattr(dataptr, active_propname, getattr(dataptr, active_propname) - 1)
         except IndexError:

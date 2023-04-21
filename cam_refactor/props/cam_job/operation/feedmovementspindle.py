@@ -3,7 +3,7 @@ import math
 from bpy.props import EnumProperty, FloatProperty, IntProperty
 from bpy.types import PropertyGroup
 
-from ... import utils
+from .... import utils
 
 
 class Feed(PropertyGroup):

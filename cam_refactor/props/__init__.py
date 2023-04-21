@@ -1,47 +1,47 @@
 import bpy
 from bpy.types import Scene
 
-from . import camjob, utils
+from . import cam_job
 
 
 CLASSES = [
-    camjob.operation.cutter.ConeMill,
-    camjob.operation.cutter.Mill,
-    camjob.operation.cutter.Drill,
-    camjob.operation.cutter.Simple,
-    camjob.operation.feedmovementspindle.Feed,
-    camjob.operation.feedmovementspindle.Movement,
-    camjob.operation.feedmovementspindle.Spindle,
-    camjob.operation.workarea.WorkArea,
-    camjob.operation.strategy.Block,
-    camjob.operation.strategy.CarveProject,
-    camjob.operation.strategy.Circles,
-    camjob.operation.strategy.Cross,
-    camjob.operation.strategy.CurveToPath,
-    camjob.operation.strategy.Drill,
-    camjob.operation.strategy.MedialAxis,
-    camjob.operation.strategy.OutlineFill,
-    camjob.operation.strategy.Pocket,
-    camjob.operation.strategy.Profile,
-    camjob.operation.strategy.Parallel,
-    camjob.operation.strategy.Spiral,
-    camjob.operation.strategy.WaterlineRoughing,
-    camjob.operation.Operation,
-    camjob.machine.feedrate.FeedRate,
-    camjob.machine.spindlerpm.SpindleRPM,
-    camjob.machine.postprocessor.customlocations.CustomLocations,
-    camjob.machine.postprocessor.Base,
-    camjob.machine.postprocessor.LinuxCNC,
-    camjob.machine.Machine,
-    camjob.stock.Stock,
-    camjob.CAMJob,
+    cam_job.operation.cutter.ConeMill,
+    cam_job.operation.cutter.Mill,
+    cam_job.operation.cutter.Drill,
+    cam_job.operation.cutter.Simple,
+    cam_job.operation.feedmovementspindle.Feed,
+    cam_job.operation.feedmovementspindle.Movement,
+    cam_job.operation.feedmovementspindle.Spindle,
+    cam_job.operation.workarea.WorkArea,
+    cam_job.operation.strategy.Block,
+    cam_job.operation.strategy.CarveProject,
+    cam_job.operation.strategy.Circles,
+    cam_job.operation.strategy.Cross,
+    cam_job.operation.strategy.CurveToPath,
+    cam_job.operation.strategy.Drill,
+    cam_job.operation.strategy.MedialAxis,
+    cam_job.operation.strategy.OutlineFill,
+    cam_job.operation.strategy.Pocket,
+    cam_job.operation.strategy.Profile,
+    cam_job.operation.strategy.Parallel,
+    cam_job.operation.strategy.Spiral,
+    cam_job.operation.strategy.WaterlineRoughing,
+    cam_job.operation.Operation,
+    cam_job.machine.feedrate.FeedRate,
+    cam_job.machine.spindlerpm.SpindleRPM,
+    cam_job.machine.postprocessor.customlocations.CustomLocations,
+    cam_job.machine.postprocessor.Base,
+    cam_job.machine.postprocessor.LinuxCNC,
+    cam_job.machine.Machine,
+    cam_job.stock.Stock,
+    cam_job.CAMJob,
 ]
 
 
 def register() -> None:
     for cls in CLASSES:
         bpy.utils.register_class(cls)
-    Scene.cam_jobs = bpy.props.CollectionProperty(type=camjob.CAMJob)
+    Scene.cam_jobs = bpy.props.CollectionProperty(type=cam_job.CAMJob)
     Scene.cam_job_active_index = bpy.props.IntProperty(default=0, min=0)
     Scene.cam_job = property(lambda self: self.cam_jobs[self.cam_job_active_index])
     # Object.cam_is_source = property(

@@ -1,7 +1,7 @@
 from bpy.props import EnumProperty, FloatProperty, PointerProperty
 from bpy.types import Context, Object, PropertyGroup
 
-from ... import utils
+from .... import utils
 
 
 def get_depth_end_types(

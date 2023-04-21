@@ -16,8 +16,7 @@ from bpy.types import Collection, Context, Object, PropertyGroup
 from mathutils import Vector
 
 from . import machine, operation, stock
-from .. import utils
-from ... import gcode
+from ... import gcode, utils
 
 
 class CAMJob(PropertyGroup):
@@ -90,7 +89,6 @@ class CAMJob(PropertyGroup):
 
     def execute_compute(self, context: Context, report: Callable) -> set[str]:
         result, vectors = set(), []
-
         for index, operation in enumerate(self.operations):
             if index == 0:
                 vectors.append(Vector((0.0, 0.0, operation.movement.rapid_height)))
