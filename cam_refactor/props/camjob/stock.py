@@ -12,8 +12,8 @@ class Stock(PropertyGroup):
     estimate_offset: FloatVectorProperty(
         name="Estimate Offset", min=0, default=(1e-3, 1e-3, 0), subtype="XYZ_LENGTH"
     )
-    custom_location: FloatVectorProperty(
-        name="Location", min=-3, max=3, default=(0, 0), size=2, subtype="XYZ_LENGTH"
+    custom_position: FloatVectorProperty(
+        name="Position", min=-3, max=3, default=(0, 0), size=2, subtype="XYZ_LENGTH"
     )
     custom_size: FloatVectorProperty(
         name="Size", min=0, default=(5e-1, 5e-1, 1e-1), subtype="XYZ_LENGTH"

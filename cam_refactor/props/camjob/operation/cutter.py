@@ -20,9 +20,6 @@ class CutterMixin:
         unit="LENGTH",
     )
 
-    def get_radius(self, _depth: float) -> float:
-        return self.diameter / 2.0
-
 
 class FlutesMixin:
     flutes: IntProperty(name="Flutes", default=2, min=1, max=10)

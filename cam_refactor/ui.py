@@ -3,6 +3,7 @@ from functools import reduce
 import bpy
 from bpy.types import Context, Menu, Panel, PropertyGroup, UIList, UILayout
 
+from .props.camjob.operation import Operation
 from . import ops, utils
 
 
@@ -30,8 +31,12 @@ class CAM_UL_List(UIList):
                     item.data, "hide_viewport", text="", emboss=False
                 )
             else:
-                # print("ui:", item, item.name)
                 layout.row().prop(item, "name", text="", emboss=False, icon_value=icon)
+                if isinstance(item, Operation):
+                    icon = "HIDE_ON" if item.is_hidden else "HIDE_OFF"
+                    layout.row(align=True).prop(
+                        item, "is_hidden", text="", emboss=False, icon=icon
+                    )
         elif self.layout_type in {"GRID"}:
             layout.alignment = "CENTER"
             layout.label(text="", icon_value=icon)
@@ -334,10 +339,10 @@ class CAM_PT_PanelJobsMachine(CAM_PT_PanelBase):
         layout = self.layout
         box = layout.box()
         box.prop(machine, "post_processor_enum")
-        box.prop(post_processor, "use_custom_locations")
-        if post_processor.use_custom_locations:
+        box.prop(post_processor, "use_custom_positions")
+        if post_processor.use_custom_positions:
             self.draw_property_group(
-                post_processor.custom_locations, layout=box.column(align=True)
+                post_processor.custom_positions, layout=box.column(align=True)
             )
         self.draw_property_group(post_processor, layout=box.column(align=True))
 

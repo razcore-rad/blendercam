@@ -1,4 +1,3 @@
-from functools import reduce
 from operator import add, sub
 from pathlib import Path
 from typing import Callable
@@ -17,6 +16,7 @@ from mathutils import Vector
 
 from . import machine, operation, stock
 from ... import gcode, utils
+from ...utils import ZERO_VECTOR
 
 
 class CAMJob(PropertyGroup):
@@ -40,10 +40,13 @@ class CAMJob(PropertyGroup):
     def get_stock_bound_box(self, context: Context) -> tuple[Vector, Vector]:
         result = (Vector(), Vector())
         if self.stock.type == "ESTIMATE":
-            bound_boxes = reduce(
-                lambda acc, o: acc + [o.get_bound_box(context)], self.operations, []
-            )
-            if sum((bb_max - bb_min).length for (bb_min, bb_max) in bound_boxes) > 0:
+            bound_boxes = (o.get_bound_box(context) for o in self.operations)
+            bound_boxes = [
+                (bb_min, bb_max)
+                for bb_min, bb_max in bound_boxes
+                if bb_max - bb_min != ZERO_VECTOR
+            ]
+            if sum((bb_max - bb_min).length for bb_min, bb_max in bound_boxes) > 0:
                 result = tuple(
                     op(Vector(f(cs) for cs in zip(*vs)), eo)
                     for (f, op, eo), vs in zip(
@@ -55,10 +58,10 @@ class CAMJob(PropertyGroup):
                     )
                 )
         elif self.stock.type == "CUSTOM":
-            result = tuple(
-                self.stock.custom_location.to_3d() + v
-                for v in (Vector(), self.stock.custom_size)
-            )
+            position = self.stock.custom_position.to_3d()
+            size = self.stock.custom_size.copy()
+            size.z *= -1
+            result = tuple(position + v for v in (Vector(), size))
         return result
 
     def add_data(self, context: Context) -> None:

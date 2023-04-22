@@ -2,7 +2,7 @@ from bpy.props import FloatVectorProperty
 from bpy.types import PropertyGroup
 
 
-class CustomLocations(PropertyGroup):
+class CustomPositions(PropertyGroup):
     EXCLUDE_PROPNAMES = {"name"}
 
     end: FloatVectorProperty(name="End", default=(0, 0, 0), min=0, subtype="XYZ_LENGTH")

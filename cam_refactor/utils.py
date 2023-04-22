@@ -15,6 +15,7 @@ from bpy.types import (
 from mathutils import Vector
 
 
+ZERO_VECTOR = Vector()
 PRECISION = 5
 REDUCE_MAP = {True: {"FINISHED"}, False: {"CANCELLED"}}
 
@@ -86,9 +87,11 @@ def poll_object_source(strategy: Property, obj: Object) -> bool:
     obj_is_cam_object = obj in [cj.object for cj in context.scene.cam_jobs]
     operation = context.scene.cam_job.operation
     return (
-        obj.type == "CURVE"
-        if operation.strategy_type == "DRILL"
-        else obj.type in ["CURVE", "MESH"]
+        (
+            obj.type == "CURVE"
+            if operation.strategy_type == "DRILL"
+            else obj.type in ["CURVE", "MESH"]
+        )
         and obj.name in context.view_layer.objects
         and obj is not curve
         and not obj_is_cam_object
@@ -167,12 +170,12 @@ def get_fit_circle_2d(
     xy = transpose(v.xy for v in vectors)
     x = np.array(iter_next(xy))
     y = np.array(iter_next(xy))
-    c, residu, *_ = np.linalg.lstsq(
+    c, *_ = np.linalg.lstsq(
         np.array([x, y, np.ones(len(x))]).T, x**2 + y**2, rcond=None
     )
-    if residu < tolerance:
-        xc = c[0] / 2
-        yc = c[1] / 2
-        d = 2 * sqrt(c[2] + xc**2 + yc**2)
-        result = Vector((xc, yc)), d
+    xc = c[0] / 2
+    yc = c[1] / 2
+    std_deviation = np.sqrt((x - xc) ** 2 + (y - yc) ** 2).std()
+    if std_deviation < tolerance:
+        result = Vector((xc, yc)), 2 * sqrt(c[2] + xc**2 + yc**2)
     return result

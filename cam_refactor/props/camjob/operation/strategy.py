@@ -1,6 +1,7 @@
 from itertools import chain
 from math import isclose, tau
 from shapely import force_3d, union_all, Polygon
+from typing import Iterator
 
 import bpy
 from bpy.props import (
@@ -110,11 +111,11 @@ class SourceMixin:
             )
         return result
 
-    def get_source_valid_features(
+    def get_feature_positions(
         self,
         context: Context,
         operation: PropertyGroup,
-    ) -> dict:
+    ) -> Iterator[Vector]:
         raise NotImplementedError()
 
     def get_evaluated_source(self, context: Context) -> list[Object]:
@@ -217,18 +218,20 @@ class Drill(SourceMixin, PropertyGroup):
     ]
 
     @property
-    def source(self) -> [Object]:
+    def source(self) -> list[Object]:
         return [o for o in super().source if o.type == "CURVE"]
 
-    def get_source_valid_features(
+    def get_feature_positions(
         self,
         context: Context,
         operation: PropertyGroup,
-    ) -> dict:
-        result = {"center": [], "bound_box": []}
-        tolerance = 10 ** (-utils.PRECISION)
+    ) -> Iterator[Vector]:
+        result = set()
         depsgraph = context.evaluated_depsgraph_get()
         for obj in self.source:
+            if obj.name not in context.view_layer.objects:
+                continue
+
             obj_data = obj.data
             for index in range(len(obj.data.splines)):
                 temp_obj = obj.evaluated_get(depsgraph).copy()
@@ -240,13 +243,16 @@ class Drill(SourceMixin, PropertyGroup):
                 obj.data = temp_obj.data
                 temp_mesh = obj.to_mesh()
                 obj.data = obj_data
-                if len(temp_mesh.vertices) > 0:
+                if temp_mesh.vertices:
                     vectors = [temp_obj.matrix_world @ v.co for v in temp_mesh.vertices]
-                    _, diameter = utils.get_fit_circle_2d(vectors, tolerance)
-                    if operation.cutter.diameter <= diameter:
-                        vector_mean = sum(vectors, Vector()) / len(vectors)
-                        result["center"].append(vector_mean.freeze())
-                        result["bound_box"].append(utils.get_bound_box(vectors))
+                    vector_mean = sum(vectors, Vector()) / len(vectors)
+                    _, diameter = utils.get_fit_circle_2d(vectors)
+                    is_valid = (
+                        operation.cutter.diameter <= diameter
+                        and operation.work_area.depth_end < vector_mean.z < 0.0
+                    )
+                    if is_valid:
+                        result.add(vector_mean.freeze())
                 obj.to_mesh_clear()
                 temp_obj.to_mesh_clear()
                 bpy.data.curves.remove(temp_obj.data)
@@ -271,8 +277,7 @@ class Drill(SourceMixin, PropertyGroup):
         rapid_height = operation.movement.rapid_height
         layer_size = operation.work_area.layer_size
         is_layer_size_zero = isclose(layer_size, 0)
-        source_valid_features = self.get_source_valid_features(context, operation)
-        for i, v in tsp.run(source_valid_features["center"]):
+        for i, v in tsp.run(self.get_feature_positions(context, operation)):
             if v.z < depth_end or v.z > 0:
                 result_execute.add("CANCELLED")
                 result_msgs.append(f"Drill `{operation.name}` skipping {v}")
@@ -371,8 +376,7 @@ class Profile(SourceMixin, PropertyGroup):
         cut_type = operation.strategy.cut_type
         if cut_type != "ON_LINE":
             geometry = geometry.buffer(
-                self.cut_type_sign[cut_type]
-                * operation.cutter.get_radius(operation.get_depth_end(context)),
+                self.cut_type_sign[cut_type] * operation.cutter.diameter / 2.0,
                 resolution=BUFFER_RESOLUTION,
             )
         geometry = [geometry] if geometry.geom_type == "Polygon" else geometry.geoms

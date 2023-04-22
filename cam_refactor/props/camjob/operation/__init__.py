@@ -65,9 +65,7 @@ class Operation(PropertyGroup):
     }
     NAME = "CAMOperation"
 
-    # data: PointerProperty(type=Object)
-    use_modifiers: BoolProperty(default=True)
-
+    is_hidden: BoolProperty(default=False)
     previous_cutter_type: StringProperty(default="CYLINDER")
     cutter_type: EnumProperty(
         name="Type", items=get_cutter_types, default=5, update=update_cutter
@@ -175,6 +173,9 @@ class Operation(PropertyGroup):
         def get_vectors(source: list[Object]) -> [Vector]:
             result = []
             for obj in source:
+                if obj.name not in context.view_layer.objects:
+                    continue
+
                 for v in obj.to_mesh().vertices:
                     result.append(obj.matrix_world @ v.co)
                 obj.to_mesh_clear()
@@ -182,7 +183,7 @@ class Operation(PropertyGroup):
 
         result = (Vector(), Vector())
         source = self.strategy.get_evaluated_source(context)
-        if len(source) > 0:
+        if source:
             result = utils.get_bound_box(get_vectors(source))
         return result
 

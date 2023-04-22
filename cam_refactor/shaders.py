@@ -1,15 +1,17 @@
 import bpy
 import bmesh
 import gpu
+from bpy.types import Context
 from gpu_extras.batch import batch_for_shader
 from mathutils import Vector
+
+from .props.camjob.operation import Operation
 
 
 def gen_unit_circle_vectors() -> list[Vector]:
     bm = bmesh.new()
     result = [
-        v.co.copy()
-        for v in bmesh.ops.create_circle(bm, segments=12, radius=0.5)["verts"]
+        v.co.copy() for v in bmesh.ops.create_circle(bm, segments=12, radius=1)["verts"]
     ]
     bm.free()
     return result
@@ -41,51 +43,56 @@ UNIT_CIRCLE_VECTORS = gen_unit_circle_vectors()
 
 def draw_stock() -> None:
     context = bpy.context
-    if len(context.scene.cam_jobs) == 0 or len(context.scene.cam_job.operations) == 0:
+    cam_job = context.scene.cam_job
+    if not (context.mode == "OBJECT" and context.scene.cam_jobs and cam_job.operations):
         return
 
-    (
-        stock_bound_box_min,
-        stock_bound_box_max,
-    ) = context.scene.cam_job.get_stock_bound_box(context)
+    bb_min, bb_max = cam_job.get_stock_bound_box(context)
     coords = [
         # bottom
-        Vector((stock_bound_box_min.x, stock_bound_box_min.y, stock_bound_box_min.z)),
-        Vector((stock_bound_box_max.x, stock_bound_box_min.y, stock_bound_box_min.z)),
-        Vector((stock_bound_box_max.x, stock_bound_box_max.y, stock_bound_box_min.z)),
-        Vector((stock_bound_box_min.x, stock_bound_box_max.y, stock_bound_box_min.z)),
+        Vector((bb_min.x, bb_min.y, bb_min.z)),
+        Vector((bb_max.x, bb_min.y, bb_min.z)),
+        Vector((bb_max.x, bb_max.y, bb_min.z)),
+        Vector((bb_min.x, bb_max.y, bb_min.z)),
         # top
-        Vector((stock_bound_box_min.x, stock_bound_box_min.y, stock_bound_box_max.z)),
-        Vector((stock_bound_box_max.x, stock_bound_box_min.y, stock_bound_box_max.z)),
-        Vector((stock_bound_box_max.x, stock_bound_box_max.y, stock_bound_box_max.z)),
-        Vector((stock_bound_box_min.x, stock_bound_box_max.y, stock_bound_box_max.z)),
+        Vector((bb_min.x, bb_min.y, bb_max.z)),
+        Vector((bb_max.x, bb_min.y, bb_max.z)),
+        Vector((bb_max.x, bb_max.y, bb_max.z)),
+        Vector((bb_min.x, bb_max.y, bb_max.z)),
     ]
 
-    gpu.state.line_width_set(2)
     gpu.state.depth_test_set("LESS_EQUAL")
-    gpu.state.depth_mask_set(True)
     SHADER.uniform_float("color", (1, 1, 1, 1))
     batch = batch_for_shader(SHADER, "LINES", {"pos": coords}, indices=STOCK_INDICES)
     batch.draw(SHADER)
-    gpu.state.depth_mask_set(False)
+
+
+def draw_drill_features(context: Context, operation: Operation) -> None:
+    gpu.state.depth_test_set("LESS_EQUAL")
+    gpu.state.line_width_set(3)
+    SHADER.uniform_float("color", (1, 1, 1, 1))
+    cutter_radius = operation.cutter.diameter / 2.0
+    positions = operation.strategy.get_feature_positions(context, operation)
+    for position in positions:
+        coords = [v * cutter_radius + position for v in UNIT_CIRCLE_VECTORS]
+        batch_for_shader(SHADER, "LINE_LOOP", {"pos": coords}).draw(SHADER)
+
+    positions = [(p.x, p.y, operation.work_area.depth_end) for p in positions]
+    batch = batch_for_shader(SHADER, "POINTS", {"pos": positions})
+    batch.draw(SHADER)
     gpu.state.line_width_set(1)
 
 
-def draw_valid_drill() -> None:
+def draw_features() -> None:
     context = bpy.context
-    if len(context.scene.cam_jobs) == 0 or len(context.scene.cam_job.operations) == 0:
+    operation = context.scene.cam_job.operation
+    if not (
+        context.mode == "OBJECT"
+        and context.scene.cam_jobs
+        and context.scene.cam_job.operations
+        and not context.scene.cam_job.operation.is_hidden
+    ):
         return
 
-    # Temporary select drill operation
-    operation = context.scene.cam_job.operation
-    strategy = operation.strategy
-
-    gpu.state.line_width_set(2)
-    SHADER.uniform_float("color", (1, 1, 1, 1))
-    svf = strategy.get_source_valid_features(context, operation)
-    for center, (bb_min, bb_max) in zip(svf["center"], svf["bound_box"]):
-        scale = 0.1 * (bb_max - bb_min)
-        coords = [v * scale + center for v in UNIT_CIRCLE_VECTORS]
-        batch = batch_for_shader(SHADER, "LINE_LOOP", {"pos": coords})
-        batch.draw(SHADER)
-    gpu.state.line_width_set(1)
+    if operation.strategy_type == "DRILL":
+        draw_drill_features(context, operation)

@@ -1,16 +1,16 @@
 from bpy.props import BoolProperty, PointerProperty, StringProperty
 from bpy.types import PropertyGroup
 
-from . import customlocations
+from .custompositions import CustomPositions
 
 
 class PostProcessorMixin(PropertyGroup):
-    EXCLUDE_PROPNAMES = {"name", "custom_locations", "use_custom_locations"}
+    EXCLUDE_PROPNAMES = {"name", "custom_positions", "use_custom_positions"}
 
-    custom_locations: PointerProperty(type=customlocations.CustomLocations)
+    custom_positions: PointerProperty(type=CustomPositions)
     g_code_footer: StringProperty(name="G-code Footer", default="", subtype="FILE_PATH")
     g_code_header: StringProperty(name="G-code Header", default="", subtype="FILE_PATH")
-    use_custom_locations: BoolProperty(name="Custom Locations", default=False)
+    use_custom_positions: BoolProperty(name="Custom Positions", default=False)
     use_tool_definitions: BoolProperty(name="Tool Definitions", default=True)
     use_tool_length_offset: BoolProperty(name="Tool Length Offset", default=False)
 
