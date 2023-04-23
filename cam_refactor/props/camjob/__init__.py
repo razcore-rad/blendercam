@@ -91,9 +91,9 @@ class CAMJob(PropertyGroup):
             bpy.data.meshes.remove(self.object.data)
 
         if self.data is not None:
-            bpy.data.collections.remove(self.data)
             if self.data.name in computed:
                 del computed[self.data.name]
+            bpy.data.collections.remove(self.data)
 
     def execute_compute(self, context: Context, report: Callable) -> set[str]:
         computed[self.data.name] = []
