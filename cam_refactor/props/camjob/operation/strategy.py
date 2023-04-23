@@ -3,7 +3,6 @@ from math import isclose, tau
 from shapely import force_3d, union_all, Polygon
 from typing import Iterator
 
-import bpy
 import bmesh
 from bpy.props import (
     BoolProperty,
@@ -256,49 +255,23 @@ class Drill(SourceMixin, PropertyGroup):
         result_execute, result_msgs, result_computed = set(), [], []
         depth_end = operation.get_depth_end(context)
         bound_box_min, _ = operation.get_bound_box(context)
-        if depth_end > 0 or bound_box_min.z > 0:
-            return (
-                {"CANCELLED"},
-                (
-                    f"Drill `{operation.name}` can't be computed."
-                    " See Depth End and check Bound Box Z < 0"
-                ),
-                result_computed,
-            )
-
         rapid_height = operation.movement.rapid_height
         layer_size = operation.work_area.layer_size
         is_layer_size_zero = isclose(layer_size, 0)
         for i, v in tsp.run(self.get_feature_positions(context, operation)):
-            if v.z < depth_end or v.z > 0:
-                result_execute.add("CANCELLED")
-                result_msgs.append(f"Drill `{operation.name}` skipping {v}")
-                continue
-
             layers = get_layers(v.z, layer_size, depth_end)
             layers = chain(
                 [rapid_height],
                 layers if is_layer_size_zero else utils.intersperse(layers, v.z),
                 [rapid_height],
             )
-            result_computed.extend(
-                {
-                    "vector": (v.x, v.y, z),
-                    "feed_rate": operation.feed.rate,
-                    "plunge_scale": operation.feed.plunge_scale,
-                    "spindle_direction": operation.spindle.direction_type,
-                    "spindle_rpm": operation.spindle.rpm,
-                }
-                for z in layers
-            )
-            result_execute.add("FINISHED")
-
-        if "CANCELLED" in result_execute:
-            result_msgs.append(
-                f"Drill {operation.name} skipped because source"
-                " data has no valid points"
-            )
-
+            result_computed.extend({"vector": (v.x, v.y, z)} for z in layers)
+        if result_computed:
+            result_computed[0]["feed_rate"] = operation.feed.rate
+            result_computed[0]["plunge_scale"] = operation.feed.plunge_scale
+            result_computed[0]["spindle_direction"] = operation.spindle.direction_type
+            result_computed[0]["spindle_rpm"] = operation.spindle.rpm
+        result_execute.add("FINISHED")
         return ComputeResult(
             utils.reduce_cancelled_or_finished(result_execute),
             "\n".join(result_msgs),

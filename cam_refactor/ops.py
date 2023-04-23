@@ -91,6 +91,7 @@ class CAM_OT_Action(Operator):
 
     def __init__(self):
         super().__init__()
+        self.computed = {}
         self.execute_funcs = {
             id: getattr(self, f"execute_{id.split('_')[0].lower()}", self.execute_todo)
             for id, *_ in self.type_items

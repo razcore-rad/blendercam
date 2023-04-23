@@ -44,17 +44,9 @@ def register() -> None:
     Scene.cam_jobs = bpy.props.CollectionProperty(type=camjob.CAMJob)
     Scene.cam_job_active_index = bpy.props.IntProperty(default=0, min=0)
     Scene.cam_job = property(lambda self: self.cam_jobs[self.cam_job_active_index])
-    # Object.cam_is_source = property(
-    #     lambda self: any(
-    #         o.strategy.is_source(self)
-    #         for c in bpy.context.scene.cam_jobs
-    #         for o in c.operations
-    #     )
-    # )
 
 
 def unregister() -> None:
-    # del Object.cam_is_source
     del Scene.cam_job
     del Scene.cam_jobs
     del Scene.cam_job_active_index

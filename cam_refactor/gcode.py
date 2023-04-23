@@ -2,7 +2,7 @@ from math import isclose
 from pathlib import PurePath
 from typing import TypeVar
 
-from .utils import PRECISION, clamp
+from .utils import PRECISION
 
 
 LF = "\n"
@@ -20,7 +20,6 @@ class G:
         self.rapid_height = max(0.0, rapid_height)
         self.position = {k: 0.0 for k in "xyz"}
         self.feed_rate = 0.0
-        self.plunge_scale = 1.0
         self.spindle_rpm = 0
         self.spindle_is_clockwise = None
         self.set_abs()
@@ -38,14 +37,8 @@ class G:
         self.out_file_descriptor.close()
 
     def abs_move(self, /, **kwargs) -> Self:
-        next_position = self.updated_position(kwargs)
-        is_rapid = (
-            kwargs.get("z", self.position["z"]) >= self.rapid_height
-            and not self.is_down_move(next_position)
-            or self.is_up_move(next_position)
-        )
-        self.position = next_position
-        cmd = "G0" if is_rapid else "G1"
+        self.position = self.updated_position(kwargs)
+        cmd = "G0" if self.is_rapid(kwargs) else "G1"
         return self.write(f"{cmd} {self.format(**kwargs)}")
 
     def dwell(self, time: float) -> Self:
@@ -72,25 +65,28 @@ class G:
         self.spindle_is_clockwise = is_clockwise
         return self.write(cmd)
 
-
-    def set_plunge_scale(self, plunge_scale: float) -> Self:
-        self.plunge_scale = clamp(plunge_scale, 0.0, 1.0)
-        return self
-
     def end(self) -> Self:
         return self.write("M2")
 
+    def is_rapid(self, position: dict) -> bool:
+        return (
+            position.get("z", self.position["z"]) >= self.rapid_height
+            and not self.is_down_move(position)
+            or self.is_up_move(position)
+        )
+
+
     def is_down_move(self, position: dict) -> bool:
         return (
-            self.position["x"] == position["x"]
-            and self.position["y"] == position["y"]
+            isclose(self.position["x"], position["x"])
+            and isclose(self.position["y"], position["y"])
             and self.position["z"] > position["z"]
         )
 
     def is_up_move(self, position: dict) -> bool:
         return (
-            self.position["x"] == position["x"]
-            and self.position["y"] == position["y"]
+            isclose(self.position["x"], position["x"])
+            and isclose(self.position["y"], position["y"])
             and self.position["z"] < position["z"]
         )
 

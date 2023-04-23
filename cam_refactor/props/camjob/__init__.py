@@ -19,6 +19,9 @@ from ... import gcode, utils
 from ...utils import ZERO_VECTOR
 
 
+computed = {}
+
+
 class CAMJob(PropertyGroup):
     NAME = "CAMJob"
 
@@ -89,13 +92,15 @@ class CAMJob(PropertyGroup):
 
         if self.data is not None:
             bpy.data.collections.remove(self.data)
+            if self.data.name in computed:
+                del computed[self.data.name]
 
     def execute_compute(self, context: Context, report: Callable) -> set[str]:
-        result, computed = set(), []
-        previous_rapid_height = 0.0
-        if self.operation:
+        computed[self.data.name] = []
+        result = set()
+        if self.operations:
             operation = self.operations[0]
-            computed.append(
+            computed[self.data.name].append(
                 {
                     "vector": (0.0, 0.0, operation.movement.rapid_height),
                     "feed_rate": operation.feed.rate,
@@ -105,11 +110,12 @@ class CAMJob(PropertyGroup):
                 }
             )
 
+        previous_rapid_height = 0.0
         for index, operation in enumerate(self.operations):
             partial_result, msg, partial_computed = operation.execute_compute(context)
             if index > 0 and partial_computed:
                 v = partial_computed[0]["vector"]
-                computed.append(
+                computed[self.data.name].append(
                     {
                         "vector": (v[0], v[1], previous_rapid_height),
                         "feed_rate": operation.feed.rate,
@@ -118,7 +124,7 @@ class CAMJob(PropertyGroup):
                         "spindle_rpm": operation.spindle.rpm,
                     }
                 )
-            computed.extend(partial_computed)
+            computed[self.data.name].extend(partial_computed)
             previous_rapid_height = operation.movement.rapid_height
             msg != "" and report({"ERROR"}, msg)
             result.update(partial_result)
@@ -137,54 +143,42 @@ class CAMJob(PropertyGroup):
             bpy.ops.object.scale_clear(clear_delta=True)
 
             bm = bmesh.new()
-            feed_rate = bm.verts.layers.float.new("feed_rate")
-            plunge_scale = bm.verts.layers.float.new("plunge_scale")
-            spindle_direction = bm.verts.layers.int.new("spindle_direction")
-            spindle_rpm = bm.verts.layers.int.new("spindle_rpm")
-            for c in computed:
-                vert = bm.verts.new(c["vector"])
-                vert[feed_rate] = c["feed_rate"]
-                vert[plunge_scale] = c["plunge_scale"]
-                vert[spindle_direction] = (
-                    0 if c["spindle_direction"] == "CLOCKWISE" else 1
-                )
-                vert[spindle_rpm] = c["spindle_rpm"]
+            for c in computed[self.data.name]:
+                bm.verts.new(c["vector"])
             bm.verts.index_update()
             for pair in zip(bm.verts[:-1], bm.verts[1:]):
                 bm.edges.new(pair)
             bm.edges.index_update()
             bm.to_mesh(self.object.data)
             bm.free()
-
         return result
 
     def execute_export(self) -> set[str]:
-        out_file_path = Path(bpy.path.abspath("//")).joinpath(f"{self.data.name}.gcode")
+        result = {"FINISHED"}
+        if self.data.name not in computed:
+            return result
+        out_file_path = Path(bpy.path.abspath("//")).joinpath(f"{self.data.name}.nc")
         with gcode.G(out_file_path) as g:
-            vertices = self.object.data.vertices
-            feed_rates = self.object.data.attributes["feed_rate"].data
-            plunge_scales = self.object.data.attributes["plunge_scale"].data
-            spindle_directions = self.object.data.attributes["spindle_direction"].data
-            spindle_rpm = self.object.data.attributes["spindle_rpm"].data
+            feed_rate = 0.0
+            plunge_scale = 1.0
+            for c in computed[self.data.name]:
+                position = {k: v * 1e3 for k, v in zip("xyz", c["vector"])}
+                if "spindle_rpm" in c:
+                    g.spindle(c["spindle_rpm"], c["spindle_direction"])
 
-            if feed_rates and plunge_scales:
-                g.feed(feed_rates[0].value * 1e3).spindle(
-                    spindle_rpm[0].value, spindle_directions[0].value == 0
-                )
+                if "plunge_scale" in c:
+                    plunge_scale = c["plunge_scale"]
 
-            for v, fr, ps, sd, sr in zip(
-                vertices, feed_rates, plunge_scales, spindle_directions, spindle_rpm
-            ):
-                g.spindle(sr.value, sd.value == 0)
-
-                position = {k: v * 1e3 for k, v in zip("xyz", v.co)}
-                feed_rate = fr.value * 1e3
-                if g.is_down_move(position):
-                    feed_rate *= ps.value
-
-                if not g.is_up_move(position):
+                if "feed_rate" in c:
+                    feed_rate = c["feed_rate"] * 1e3
                     g.feed(feed_rate)
 
+                is_down_move = g.is_down_move(position)
+                if is_down_move:
+                    g.feed(feed_rate * plunge_scale)
+
+                if not (is_down_move or g.is_up_move(position) or g.is_rapid(position)):
+                    g.feed(feed_rate)
                 g.abs_move(**position)
             g.spindle(0)
-        return {"FINISHED"}
+        return result
