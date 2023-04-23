@@ -6,6 +6,7 @@ from gpu_extras.batch import batch_for_shader
 from mathutils import Vector
 
 from .props.camjob.operation import Operation
+from .utils import noop
 
 
 def gen_unit_circle_vectors() -> list[Vector]:
@@ -16,6 +17,8 @@ def gen_unit_circle_vectors() -> list[Vector]:
     bm.free()
     return result
 
+
+UNIT_CIRCLE_VECTORS = gen_unit_circle_vectors()
 
 STOCK_INDICES = [
     # bottom
@@ -38,15 +41,16 @@ STOCK_INDICES = [
 SHADER = gpu.shader.from_builtin("3D_UNIFORM_COLOR")
 
 
-UNIT_CIRCLE_VECTORS = gen_unit_circle_vectors()
-
-
 def draw_stock() -> None:
     context = bpy.context
-    cam_job = context.scene.cam_job
-    if not (context.mode == "OBJECT" and context.scene.cam_jobs and cam_job.operations):
+    if not (
+        context.mode == "OBJECT"
+        and context.scene.cam_jobs
+        and context.scene.cam_job.operations
+    ):
         return
 
+    cam_job = context.scene.cam_job
     bb_min, bb_max = cam_job.get_stock_bound_box(context)
     coords = [
         # bottom
@@ -83,16 +87,15 @@ def draw_drill_features(context: Context, operation: Operation) -> None:
     gpu.state.line_width_set(1)
 
 
+DRAW_FEAURES_FUNCS = {"DRILL": draw_drill_features}
+
+
 def draw_features() -> None:
     context = bpy.context
-    operation = context.scene.cam_job.operation
-    if not (
-        context.mode == "OBJECT"
-        and context.scene.cam_jobs
-        and context.scene.cam_job.operations
-        and not context.scene.cam_job.operation.is_hidden
-    ):
+    if not (context.mode == "OBJECT" and context.scene.cam_jobs):
         return
 
-    if operation.strategy_type == "DRILL":
-        draw_drill_features(context, operation)
+    for operation in context.scene.cam_job.operations:
+        if operation.is_hidden:
+            continue
+        DRAW_FEAURES_FUNCS.get(operation.strategy_type, noop)(context, operation)

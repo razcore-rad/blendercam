@@ -1,18 +1,35 @@
 import math
 
+import bpy
 from bpy.props import EnumProperty, FloatProperty, IntProperty
 from bpy.types import PropertyGroup
 
 from .... import utils
 
 
+def get_movement_rapid_height(self: PropertyGroup) -> float:
+    return self.get("rapid_height", 0.005)
+
+
+def set_movement_rapid_height(self: PropertyGroup, value: float) -> None:
+    self["rapid_height"] = max(self.rapid_height_min, value)
+
+
+def update_movement_rapid_height_min() -> None:
+    context = bpy.context
+    if not (context.scene.cam_jobs and context.scene.cam_job.operations):
+        return
+    operation = context.scene.cam_job.operation
+    context.scene.cam_job.operation.movement.rapid_height_min = operation.get_depth_end(
+        context
+    )
+
+
 class Feed(PropertyGroup):
     EXCLUDE_PROPNAMES = {"name", "rate"}
 
     rate: FloatProperty(name="Feed Rate", default=1, min=1e-1, unit="LENGTH")
-    plunge_scale: FloatProperty(
-        name="Plunge Scale", default=5e-1, min=5e-2, max=1, subtype="PERCENTAGE"
-    )
+    plunge_scale: FloatProperty(name="Plunge Scale", default=5e-1, min=5e-2, max=1)
     plunge_angle: FloatProperty(
         name="Plunge Angle",
         default=math.pi / 6,
@@ -24,14 +41,15 @@ class Feed(PropertyGroup):
 
 
 class Movement(PropertyGroup):
-    EXCLUDE_PROPNAMES = {"name"}
+    EXCLUDE_PROPNAMES = {"name", "rapid_height_min"}
 
+    rapid_height_min: FloatProperty(default=0.0)
     rapid_height: FloatProperty(
         name="Rapid Height",
-        min=1e-5,
-        default=5e-3,
         precision=utils.PRECISION,
         unit="LENGTH",
+        get=get_movement_rapid_height,
+        set=set_movement_rapid_height,
     )
     type: EnumProperty(
         name="Movement Type",

@@ -4,7 +4,7 @@ from bpy.types import Context, Object, PropertyGroup
 from .... import utils
 
 
-def get_depth_end_types(
+def depth_end_type_items(
     work_area: PropertyGroup, context: Context
 ) -> list[tuple[str, str, str]]:
     result = [("CUSTOM", "Custom", "")]
@@ -23,7 +23,7 @@ class WorkArea(PropertyGroup):
     depth_end: FloatProperty(
         name="Depth End", default=-1e-3, max=0, precision=utils.PRECISION, unit="LENGTH"
     )
-    depth_end_type: EnumProperty(name="Depth End", items=get_depth_end_types)
+    depth_end_type: EnumProperty(name="Depth End", items=depth_end_type_items)
     layer_size: FloatProperty(
         name="Layer Size", default=0, min=0, precision=utils.PRECISION, unit="LENGTH"
     )

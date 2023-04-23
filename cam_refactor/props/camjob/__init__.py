@@ -91,12 +91,35 @@ class CAMJob(PropertyGroup):
             bpy.data.collections.remove(self.data)
 
     def execute_compute(self, context: Context, report: Callable) -> set[str]:
-        result, vectors = set(), []
+        result, computed = set(), []
+        previous_rapid_height = 0.0
+        if self.operation:
+            operation = self.operations[0]
+            computed.append(
+                {
+                    "vector": (0.0, 0.0, operation.movement.rapid_height),
+                    "feed_rate": operation.feed.rate,
+                    "plunge_scale": operation.feed.plunge_scale,
+                    "spindle_direction": operation.spindle.direction_type,
+                    "spindle_rpm": operation.spindle.rpm,
+                }
+            )
+
         for index, operation in enumerate(self.operations):
-            if index == 0:
-                vectors.append(Vector((0.0, 0.0, operation.movement.rapid_height)))
-            partial_result, msg, partial_vectors = operation.execute_compute(context)
-            vectors.extend(partial_vectors)
+            partial_result, msg, partial_computed = operation.execute_compute(context)
+            if index > 0 and partial_computed:
+                v = partial_computed[0]["vector"]
+                computed.append(
+                    {
+                        "vector": (v[0], v[1], previous_rapid_height),
+                        "feed_rate": operation.feed.rate,
+                        "plunge_scale": operation.feed.plunge_scale,
+                        "spindle_direction": operation.spindle.direction_type,
+                        "spindle_rpm": operation.spindle.rpm,
+                    }
+                )
+            computed.extend(partial_computed)
+            previous_rapid_height = operation.movement.rapid_height
             msg != "" and report({"ERROR"}, msg)
             result.update(partial_result)
         (result_item,) = result = utils.reduce_cancelled_or_finished(result)
@@ -114,8 +137,18 @@ class CAMJob(PropertyGroup):
             bpy.ops.object.scale_clear(clear_delta=True)
 
             bm = bmesh.new()
-            for v in vectors:
-                bm.verts.new(v)
+            feed_rate = bm.verts.layers.float.new("feed_rate")
+            plunge_scale = bm.verts.layers.float.new("plunge_scale")
+            spindle_direction = bm.verts.layers.int.new("spindle_direction")
+            spindle_rpm = bm.verts.layers.int.new("spindle_rpm")
+            for c in computed:
+                vert = bm.verts.new(c["vector"])
+                vert[feed_rate] = c["feed_rate"]
+                vert[plunge_scale] = c["plunge_scale"]
+                vert[spindle_direction] = (
+                    0 if c["spindle_direction"] == "CLOCKWISE" else 1
+                )
+                vert[spindle_rpm] = c["spindle_rpm"]
             bm.verts.index_update()
             for pair in zip(bm.verts[:-1], bm.verts[1:]):
                 bm.edges.new(pair)
@@ -128,7 +161,30 @@ class CAMJob(PropertyGroup):
     def execute_export(self) -> set[str]:
         out_file_path = Path(bpy.path.abspath("//")).joinpath(f"{self.data.name}.gcode")
         with gcode.G(out_file_path) as g:
-            g.feed(400)
-            for vertex in self.object.data.vertices:
-                g.abs_move(**{k: v * 1e3 for k, v in zip("xyz", vertex.co)})
+            vertices = self.object.data.vertices
+            feed_rates = self.object.data.attributes["feed_rate"].data
+            plunge_scales = self.object.data.attributes["plunge_scale"].data
+            spindle_directions = self.object.data.attributes["spindle_direction"].data
+            spindle_rpm = self.object.data.attributes["spindle_rpm"].data
+
+            if feed_rates and plunge_scales:
+                g.feed(feed_rates[0].value * 1e3).spindle(
+                    spindle_rpm[0].value, spindle_directions[0].value == 0
+                )
+
+            for v, fr, ps, sd, sr in zip(
+                vertices, feed_rates, plunge_scales, spindle_directions, spindle_rpm
+            ):
+                g.spindle(sr.value, sd.value == 0)
+
+                position = {k: v * 1e3 for k, v in zip("xyz", v.co)}
+                feed_rate = fr.value * 1e3
+                if g.is_down_move(position):
+                    feed_rate *= ps.value
+
+                if not g.is_up_move(position):
+                    g.feed(feed_rate)
+
+                g.abs_move(**position)
+            g.spindle(0)
         return {"FINISHED"}

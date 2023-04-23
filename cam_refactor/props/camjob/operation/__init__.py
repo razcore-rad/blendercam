@@ -12,7 +12,7 @@ from .... import utils
 from ....types import ComputeResult, ShortEnumItems
 
 
-def get_cutter_types(operation: PropertyGroup, _context: Context) -> ShortEnumItems:
+def get_cutter_types(operation: PropertyGroup, context: Context) -> ShortEnumItems:
     result = []
     try:
         result.extend(

@@ -4,6 +4,7 @@ from shapely import force_3d, union_all, Polygon
 from typing import Iterator
 
 import bpy
+import bmesh
 from bpy.props import (
     BoolProperty,
     EnumProperty,
@@ -16,6 +17,7 @@ from mathutils import Vector
 
 from . import tsp
 from .... import utils
+from ....bmesh.ops import get_islands
 from ....types import ComputeResult
 
 
@@ -227,41 +229,31 @@ class Drill(SourceMixin, PropertyGroup):
         operation: PropertyGroup,
     ) -> Iterator[Vector]:
         result = set()
-        depsgraph = context.evaluated_depsgraph_get()
-        for obj in self.source:
+        for obj in self.get_evaluated_source(context):
             if obj.name not in context.view_layer.objects:
                 continue
 
-            obj_data = obj.data
-            for index in range(len(obj.data.splines)):
-                temp_obj = obj.evaluated_get(depsgraph).copy()
-                temp_obj.data = temp_obj.data.copy()
-                for temp_spline in chain(
-                    temp_obj.data.splines[:index], temp_obj.data.splines[index + 1:]
-                ):
-                    temp_obj.data.splines.remove(temp_spline)
-                obj.data = temp_obj.data
-                temp_mesh = obj.to_mesh()
-                obj.data = obj_data
-                if temp_mesh.vertices:
-                    vectors = [temp_obj.matrix_world @ v.co for v in temp_mesh.vertices]
-                    vector_mean = sum(vectors, Vector()) / len(vectors)
-                    _, diameter = utils.get_fit_circle_2d(vectors)
-                    is_valid = (
-                        operation.cutter.diameter <= diameter
-                        and operation.work_area.depth_end < vector_mean.z < 0.0
-                    )
-                    if is_valid:
-                        result.add(vector_mean.freeze())
-                obj.to_mesh_clear()
-                temp_obj.to_mesh_clear()
-                bpy.data.curves.remove(temp_obj.data)
+            temp_mesh = obj.to_mesh()
+            bm = bmesh.new()
+            bm.from_mesh(temp_mesh)
+            for island in get_islands(bm, bm.verts)["islands"]:
+                vectors = [obj.matrix_world @ v.co for v in island]
+                vector_mean = sum(vectors, Vector()) / len(vectors)
+                _, diameter = utils.get_fit_circle_2d(vectors)
+                is_valid = (
+                    operation.cutter.diameter <= diameter
+                    and operation.work_area.depth_end < vector_mean.z < 0.0
+                )
+                if is_valid:
+                    result.add(vector_mean.freeze())
+            bm.free()
+            obj.to_mesh_clear()
         return result
 
     def execute_compute(
         self, context: Context, operation: PropertyGroup
     ) -> ComputeResult:
-        result_execute, result_msgs, result_vectors = set(), [], []
+        result_execute, result_msgs, result_computed = set(), [], []
         depth_end = operation.get_depth_end(context)
         bound_box_min, _ = operation.get_bound_box(context)
         if depth_end > 0 or bound_box_min.z > 0:
@@ -271,7 +263,7 @@ class Drill(SourceMixin, PropertyGroup):
                     f"Drill `{operation.name}` can't be computed."
                     " See Depth End and check Bound Box Z < 0"
                 ),
-                result_vectors,
+                result_computed,
             )
 
         rapid_height = operation.movement.rapid_height
@@ -289,7 +281,16 @@ class Drill(SourceMixin, PropertyGroup):
                 layers if is_layer_size_zero else utils.intersperse(layers, v.z),
                 [rapid_height],
             )
-            result_vectors.extend((v.x, v.y, z) for z in layers)
+            result_computed.extend(
+                {
+                    "vector": (v.x, v.y, z),
+                    "feed_rate": operation.feed.rate,
+                    "plunge_scale": operation.feed.plunge_scale,
+                    "spindle_direction": operation.spindle.direction_type,
+                    "spindle_rpm": operation.spindle.rpm,
+                }
+                for z in layers
+            )
             result_execute.add("FINISHED")
 
         if "CANCELLED" in result_execute:
@@ -301,7 +302,7 @@ class Drill(SourceMixin, PropertyGroup):
         return ComputeResult(
             utils.reduce_cancelled_or_finished(result_execute),
             "\n".join(result_msgs),
-            result_vectors,
+            result_computed,
         )
 
 

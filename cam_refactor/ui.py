@@ -20,7 +20,7 @@ def get_enum_item_icon(items: [(str, str, str, str, int)], item_type: str) -> st
 
 class CAM_UL_List(UIList):
     def draw_item(
-        self, _context, layout, _data, item, icon, _active_data, _active_propname
+        self, context, layout, data, item, icon, active_data, active_propname
     ):
         if self.layout_type in {"DEFAULT", "COMPACT"}:
             if hasattr(item, "data") and item.data is not None:
@@ -247,7 +247,7 @@ class CAM_PT_PanelJobsOperationCutter(CAM_PT_PanelJobsOperationSubPanel):
     bl_label = "Cutter"
     bl_parent_id = "CAM_PT_PanelJobsOperations"
 
-    def draw_header_preset(self, _context: Context) -> None:
+    def draw_header_preset(self, context: Context) -> None:
         CAM_PT_CutterPresets.draw_panel_header(self.layout)
 
     def draw(self, context: Context) -> None:
@@ -329,7 +329,7 @@ class CAM_PT_PanelJobsMachine(CAM_PT_PanelBase):
     def poll(cls, context: Context) -> bool:
         return len(context.scene.cam_jobs) > 0
 
-    def draw_header_preset(self, _context: Context) -> None:
+    def draw_header_preset(self, context: Context) -> None:
         CAM_PT_MachinePresets.draw_panel_header(self.layout)
 
     def draw(self, context: Context) -> None:

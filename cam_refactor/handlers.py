@@ -4,6 +4,7 @@ from functools import reduce
 import bpy
 
 from . import shaders
+from .props.camjob.operation.feedmovementspindle import update_movement_rapid_height_min
 
 
 HandlerItem = namedtuple("HandlerItem", ("handler", "args", "region_type", "draw_type"))
@@ -14,6 +15,7 @@ HANDLERS_ADD = {
     "types.SpaceView3D.draw_handler_{}": [
         HandlerItem(shaders.draw_stock, (), "WINDOW", "POST_VIEW"),
         HandlerItem(shaders.draw_features, (), "WINDOW", "POST_VIEW"),
+        HandlerItem(update_movement_rapid_height_min, (), "WINDOW", "POST_VIEW")
     ],
 }
 
