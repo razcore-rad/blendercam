@@ -20,6 +20,7 @@ class G:
         self.feed_rate = 0.0
         self.spindle_rpm = 0
         self.spindle_is_clockwise = None
+        self.mode = ""
         self.set_abs()
         self.set_millimeters() if is_si else self.set_inches()
 
@@ -37,7 +38,10 @@ class G:
     def abs_move(self, /, **kwargs) -> Self:
         self.position = self.updated_position(kwargs)
         cmd = "G0" if self.is_rapid(kwargs) else "G1"
-        return self.write(f"{cmd} {self.format(**kwargs)}")
+        fmt = self.format(**kwargs)
+        self.write(fmt if self.mode == cmd else f"{cmd} {fmt}")
+        self.mode = cmd
+        return self
 
     def dwell(self, time: float) -> Self:
         if isclose(time, 0.0):
@@ -59,7 +63,7 @@ class G:
         if spindle_rpm == 0:
             cmd = "M5"
         elif self.spindle_is_clockwise != is_clockwise:
-            cmd = ("M3 " if is_clockwise else "M4 ") + cmd
+            cmd += " M3" if is_clockwise else " M4"
 
         self.spindle_rpm = max(0, spindle_rpm)
         self.spindle_is_clockwise = is_clockwise

@@ -67,6 +67,7 @@ def set_scaled_prop(propname: str, value_min, value_max, self, value):
 
 
 def copy(context: Context, from_prop: Property, to_prop: Property, depth=0) -> None:
+    # FIXME: this gives a segmenation fault-error on CAMJob
     if isinstance(from_prop, PropertyGroup):
         for propname in get_propnames(to_prop, use_exclude_propnames=False):
             if not hasattr(from_prop, propname):

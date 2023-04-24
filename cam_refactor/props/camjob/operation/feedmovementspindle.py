@@ -4,7 +4,7 @@ import bpy
 from bpy.props import EnumProperty, FloatProperty, IntProperty
 from bpy.types import PropertyGroup
 
-from ....utils import PRECISION, get_scaled_prop
+from ....utils import PRECISION, get_scaled_prop, set_scaled_prop
 
 
 def set_movement_rapid_height(self: PropertyGroup, value: float) -> None:
@@ -23,7 +23,12 @@ def update_movement_rapid_height_min() -> None:
 class Feed(PropertyGroup):
     EXCLUDE_PROPNAMES = {"name", "rate"}
 
-    rate: FloatProperty(name="Feed Rate", default=1, min=1e-1, unit="LENGTH")
+    rate: FloatProperty(
+        name="Feed Rate",
+        unit="LENGTH",
+        get=lambda s: get_scaled_prop("rate", 1e0, s),
+        set=lambda s, v: set_scaled_prop("rate", 1e-1, None, s, v),
+    )
     plunge_scale: FloatProperty(name="Plunge Scale", default=5e-1, min=5e-2, max=1)
     plunge_angle: FloatProperty(
         name="Plunge Angle",
