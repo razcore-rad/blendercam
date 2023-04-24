@@ -16,7 +16,7 @@ from mathutils import Vector
 
 from . import machine, operation, stock
 from ... import gcode, utils
-from ...utils import ZERO_VECTOR
+from ...utils import LENGTH_UNIT_SCALE, ZERO_VECTOR
 
 
 class CAMJob(PropertyGroup):
@@ -64,7 +64,6 @@ class CAMJob(PropertyGroup):
                 position + v
                 for v in (Vector((0.0, 0.0, -size.z)), Vector((size.x, size.y, 0.0)))
             )
-            print(result)
         return result
 
     def add_data(self, context: Context) -> None:
@@ -168,8 +167,9 @@ class CAMJob(PropertyGroup):
             bm.free()
         return result
 
-    def execute_export(self) -> set[str]:
+    def execute_export(self, context: Context) -> set[str]:
         out_file_path = Path(bpy.path.abspath("//")).joinpath(f"{self.data.name}.nc")
+        scale_length = LENGTH_UNIT_SCALE * context.scene.unit_settings.scale_length
         with gcode.G(out_file_path) as g:
             vertices = self.object.data.vertices
             dwell = self.object.data.attributes["dwell"].data
@@ -180,7 +180,7 @@ class CAMJob(PropertyGroup):
             spindle_rpm = self.object.data.attributes["spindle_rpm"].data
 
             if feed_rates and spindle_rpm:
-                g.feed(feed_rates[0].value * 1e3).spindle(
+                g.feed(feed_rates[0].value * scale_length).spindle(
                     spindle_rpm[0].value, spindle_directions[0].value == 0
                 )
 
@@ -193,9 +193,9 @@ class CAMJob(PropertyGroup):
                 spindle_directions,
                 spindle_rpm,
             ):
-                position = {k: v * 1e3 for k, v in zip("xyz", v.co)}
-                feed_rate = fr.value * 1e3
-                g.rapid_height = rh.value * 1e3
+                position = {k: v * scale_length for k, v in zip("xyz", v.co)}
+                feed_rate = fr.value * scale_length
+                g.rapid_height = rh.value * scale_length
                 if g.is_down_move(position):
                     feed_rate *= ps.value
 

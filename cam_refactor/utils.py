@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from itertools import chain, count, islice, repeat, tee
 from math import ceil, copysign, isclose, sqrt
 from typing import Any, Iterator
@@ -18,6 +19,7 @@ from mathutils import Vector
 ZERO_VECTOR = Vector()
 PRECISION = 5
 REDUCE_MAP = {True: {"FINISHED"}, False: {"CANCELLED"}}
+LENGTH_UNIT_SCALE = 1e3
 
 
 def noop(*args, **kwargs) -> None:
@@ -37,12 +39,34 @@ def get_propnames(pg: PropertyGroup, use_exclude_propnames=True) -> list[str]:
     )
 
 
-def copy(
-    context: Context,
-    from_prop: Property,
-    to_prop: Property,
-    depth=0,
-) -> None:
+def get_scaled_prop(propname: str, default, self):
+    scale_length = bpy.context.scene.unit_settings.scale_length
+    default = (
+        [d / scale_length for d in default]
+        if isinstance(default, Sequence)
+        else default / scale_length
+    )
+    return self.get(propname, default)
+
+
+def set_scaled_prop(propname: str, value_min, value_max, self, value):
+    scale_length = bpy.context.scene.unit_settings.scale_length
+    if value_min is not None:
+        value = (
+            [max(value_min / scale_length, v) for v in value]
+            if isinstance(value, Sequence)
+            else max(value_min / scale_length, value)
+        )
+    if value_max is not None:
+        value = (
+            [min(value_max / scale_length, v) for v in value]
+            if isinstance(value, Sequence)
+            else min(value_max / scale_length, value)
+        )
+    self[propname] = value
+
+
+def copy(context: Context, from_prop: Property, to_prop: Property, depth=0) -> None:
     if isinstance(from_prop, PropertyGroup):
         for propname in get_propnames(to_prop, use_exclude_propnames=False):
             if not hasattr(from_prop, propname):
@@ -55,7 +79,7 @@ def copy(
             ):
                 copy(context, from_subprop, getattr(to_prop, propname), depth + 1)
             elif hasattr(to_prop, propname):
-                if propname == "data" and any(
+                if propname in ["data", "object"] and any(
                     isinstance(from_subprop, t) for t in [Collection, Object]
                 ):
                     from_subprop = from_subprop.copy()

@@ -4,11 +4,7 @@ import bpy
 from bpy.props import EnumProperty, FloatProperty, IntProperty
 from bpy.types import PropertyGroup
 
-from .... import utils
-
-
-def get_movement_rapid_height(self: PropertyGroup) -> float:
-    return self.get("rapid_height", 0.005)
+from ....utils import PRECISION, get_scaled_prop
 
 
 def set_movement_rapid_height(self: PropertyGroup, value: float) -> None:
@@ -45,9 +41,9 @@ class Movement(PropertyGroup):
     rapid_height_min: FloatProperty(default=0.0)
     rapid_height: FloatProperty(
         name="Rapid Height",
-        precision=utils.PRECISION,
+        precision=PRECISION,
         unit="LENGTH",
-        get=get_movement_rapid_height,
+        get=lambda s: get_scaled_prop("rapid_height", 5e-3, s),
         set=set_movement_rapid_height,
     )
     type: EnumProperty(
@@ -66,16 +62,6 @@ class Movement(PropertyGroup):
             ),
         ],
     )
-    # vertical_angle: FloatProperty(
-    #     name="Vertical Angle",
-    #     description="Convert path above this angle to a vertical path for cutter protection",
-    #     default=math.pi / 45,
-    #     min=0,
-    #     max=math.pi / 2,
-    #     precision=0,
-    #     subtype="ANGLE",
-    #     unit="ROTATION",
-    # )
 
 
 class Spindle(PropertyGroup):

@@ -1,7 +1,7 @@
 from bpy.props import EnumProperty, FloatProperty
 from bpy.types import Context, PropertyGroup
 
-from .... import utils
+from ....utils import PRECISION, get_scaled_prop, set_scaled_prop
 
 
 def depth_end_type_items(
@@ -21,11 +21,15 @@ class WorkArea(PropertyGroup):
     EXCLUDE_PROPNAMES = {"name", "depth_end_type", "depth_end", "layer_size"}
 
     depth_end: FloatProperty(
-        name="Depth End", default=-1e-3, max=0, precision=utils.PRECISION, unit="LENGTH"
+        name="Depth End",
+        precision=PRECISION,
+        unit="LENGTH",
+        get=lambda s: get_scaled_prop("depth_end", -1e-2, s),
+        set=lambda s, v: set_scaled_prop("depth_end", None, 0, s, v),
     )
     depth_end_type: EnumProperty(name="Depth End", items=depth_end_type_items)
     layer_size: FloatProperty(
-        name="Layer Size", default=0, min=0, precision=utils.PRECISION, unit="LENGTH"
+        name="Layer Size", default=0, min=0, precision=PRECISION, unit="LENGTH"
     )
     # ambient_type: EnumProperty(
     #     name="Ambient",

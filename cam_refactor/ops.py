@@ -124,7 +124,7 @@ class CAM_OT_Action(Operator):
     def execute_export(
         self, context: Context, dataptr, propname: str, active_propname: str
     ) -> set[str]:
-        return context.scene.cam_job.execute_export()
+        return context.scene.cam_job.execute_export(context)
 
     def execute_duplicate(
         self, context: Context, dataptr, propname: str, active_propname: str

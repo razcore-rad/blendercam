@@ -15,7 +15,16 @@ from bpy.types import Collection, Context, PropertyGroup, Object
 from mathutils import Vector
 
 from . import tsp
-from .... import utils
+from ....utils import (
+    PRECISION,
+    get_fit_circle_2d,
+    intersperse,
+    poll_curve_object_source,
+    poll_collection_source,
+    poll_object_source,
+    reduce_cancelled_or_finished,
+    seq,
+)
 from ....bmesh.ops import get_islands
 from ....types import ComputeResult
 
@@ -25,7 +34,7 @@ MAP_SPLINE_POINTS = {"POLY": "points", "NURBS": "points", "BEZIER": "bezier_poin
 
 
 def get_layers(z: float, layer_size: float, depth_end: float) -> list[float]:
-    return list(utils.seq(z - layer_size, depth_end, -layer_size)) + [depth_end]
+    return list(seq(z - layer_size, depth_end, -layer_size)) + [depth_end]
 
 
 def update_object_source(strategy: PropertyGroup, context: Context) -> None:
@@ -39,7 +48,7 @@ class DistanceAlongPathsMixin:
         default=2e-4,
         min=1e-5,
         max=32,
-        precision=utils.PRECISION,
+        precision=PRECISION,
         unit="LENGTH",
     )
 
@@ -50,7 +59,7 @@ class DistanceBetweenPathsMixin:
         default=1e-3,
         min=1e-5,
         max=32,
-        precision=utils.PRECISION,
+        precision=PRECISION,
         unit="LENGTH",
     )
 
@@ -90,11 +99,11 @@ class SourceMixin:
     object_source: PointerProperty(
         type=Object,
         name="Source",
-        poll=utils.poll_object_source,
+        poll=poll_object_source,
         update=update_object_source,
     )
     collection_source: PointerProperty(
-        type=Collection, name="Source", poll=utils.poll_collection_source
+        type=Collection, name="Source", poll=poll_collection_source
     )
 
     @property
@@ -144,11 +153,9 @@ class Block(
 class CarveProject(DistanceAlongPathsMixin, SourceMixin, PropertyGroup):
     ICON_MAP = {"curve": "OUTLINER_OB_CURVE"}
 
-    curve: PointerProperty(
-        name="Curve", type=Object, poll=utils.poll_curve_object_source
-    )
+    curve: PointerProperty(name="Curve", type=Object, poll=poll_curve_object_source)
     depth: FloatProperty(
-        name="Depth", default=1e-3, unit="LENGTH", precision=utils.PRECISION
+        name="Depth", default=1e-3, unit="LENGTH", precision=PRECISION
     )
 
 
@@ -198,7 +205,7 @@ class CurveToPath(SourceMixin, PropertyGroup):
     ]
     source_type: EnumProperty(items=source_type_items, name="Source Type")
     curve_object_source: PointerProperty(
-        type=Object, name="Source", poll=utils.poll_curve_object_source
+        type=Object, name="Source", poll=poll_curve_object_source
     )
 
     def is_source(self, obj: Object) -> bool:
@@ -217,6 +224,7 @@ class Drill(SourceMixin, PropertyGroup):
         operation: PropertyGroup,
     ) -> Iterator[Vector]:
         result = set()
+        tolerance = 1 / 10**PRECISION / context.scene.unit_settings.scale_length
         for obj in self.get_evaluated_source(context):
             if obj.name not in context.view_layer.objects:
                 continue
@@ -228,7 +236,7 @@ class Drill(SourceMixin, PropertyGroup):
                 vectors = [obj.matrix_world @ v.co for v in island]
                 vector_mean = sum(vectors, Vector()) / len(vectors)
                 vector_mean.z = max(v.z for v in vectors)
-                _, diameter = utils.get_fit_circle_2d((v.xy for v in vectors))
+                _, diameter = get_fit_circle_2d((v.xy for v in vectors), tolerance)
                 is_valid = (
                     operation.cutter.diameter <= diameter
                     and operation.get_depth_end(context) < vector_mean.z < 0.0
@@ -251,7 +259,7 @@ class Drill(SourceMixin, PropertyGroup):
             layers = get_layers(v.z, layer_size, depth_end)
             layers = chain(
                 [rapid_height],
-                layers if is_layer_size_zero else utils.intersperse(layers, v.z),
+                layers if is_layer_size_zero else intersperse(layers, v.z),
                 [rapid_height],
             )
             result_computed.extend(
@@ -268,7 +276,7 @@ class Drill(SourceMixin, PropertyGroup):
             )
         result_execute.add("FINISHED")
         return ComputeResult(
-            utils.reduce_cancelled_or_finished(result_execute),
+            reduce_cancelled_or_finished(result_execute),
             "\n".join(result_msgs),
             result_computed,
         )
@@ -276,10 +284,10 @@ class Drill(SourceMixin, PropertyGroup):
 
 class MedialAxis(SourceMixin, PropertyGroup):
     threshold: FloatProperty(
-        name="Threshold", default=1e-3, unit="LENGTH", precision=utils.PRECISION
+        name="Threshold", default=1e-3, unit="LENGTH", precision=PRECISION
     )
     subdivision: FloatProperty(
-        name="Subdivision", default=2e-4, unit="LENGTH", precision=utils.PRECISION
+        name="Subdivision", default=2e-4, unit="LENGTH", precision=PRECISION
     )
     do_clean_finish: BoolProperty(name="Clean Finish", default=True)
     do_generate_mesh: BoolProperty(name="Generate Mesh", default=True)
@@ -324,7 +332,7 @@ class Profile(SourceMixin, PropertyGroup):
     ) -> ComputeResult:
         result_execute, result_vectors = set(), []
         polygons = []
-        uncertainty = 10 ** -(utils.PRECISION + 1)
+        uncertainty = 10 ** -(PRECISION + 1)
         # TODO
         #  - [ ] implementation for CURVE objects because they don't have
         #        `calc_loop_triangles()`
@@ -375,7 +383,7 @@ class Profile(SourceMixin, PropertyGroup):
 
         result_execute.add("FINISHED")
         return ComputeResult(
-            utils.reduce_cancelled_or_finished(result_execute),
+            reduce_cancelled_or_finished(result_execute),
             "",
             result_vectors,
         )
@@ -406,7 +414,7 @@ class WaterlineRoughing(DistanceBetweenPathsMixin, SourceMixin, PropertyGroup):
         default=1e-3,
         min=1e-5,
         max=32,
-        precision=utils.PRECISION,
+        precision=PRECISION,
         unit="LENGTH",
     )
     fill_between_slices: BoolProperty(name="Fill Between Slices", default=True)

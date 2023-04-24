@@ -268,7 +268,13 @@ class CAM_PT_PanelJobsOperationFeedMovementSpindle(CAM_PT_PanelJobsOperationSubP
 
     def draw(self, context: Context) -> None:
         operation = context.scene.cam_job.operation
-        self.draw_property_group(operation.movement)
+        if operation.strategy_type == "DRILL":
+            layout = self.layout.box().column(align=True)
+            layout.use_property_split = True
+            row = layout.row(align=True)
+            row.prop(operation.movement, "rapid_height")
+        else:
+            self.draw_property_group(operation.movement)
         self.draw_property_group(operation.spindle)
 
         col = self.layout.box().column(align=True)

@@ -3,7 +3,7 @@ import math
 from bpy.props import FloatProperty, IntProperty, StringProperty
 from bpy.types import PropertyGroup
 
-from .... import utils
+from ....utils import PRECISION, get_scaled_prop, set_scaled_prop
 
 
 class CutterMixin:
@@ -13,11 +13,10 @@ class CutterMixin:
     description: StringProperty(name="Description")
     diameter: FloatProperty(
         name="Diameter",
-        default=3e-3,
-        min=1 / 10**utils.PRECISION,
-        max=1e-1,
-        precision=utils.PRECISION,
+        precision=PRECISION,
         unit="LENGTH",
+        get=lambda s: get_scaled_prop("diameter", 3e-3, s),
+        set=lambda s, v: set_scaled_prop("diameter", 1 / 10**PRECISION, 1e-1, s, v),
     )
 
 
@@ -26,7 +25,12 @@ class FlutesMixin:
 
 
 class LengthMixin:
-    length: FloatProperty(name="Length", default=1e-1, min=5e-2, max=100)
+    length: FloatProperty(
+        name="Length",
+        unit="LENGTH",
+        get=lambda s: get_scaled_prop("length", 1e-1, s),
+        set=lambda s, v: set_scaled_prop("length", 1e-3, 5e-1, s, v),
+    )
 
 
 class Simple(CutterMixin, PropertyGroup):
