@@ -298,7 +298,7 @@ class CAM_PT_PanelJobsOperationWorkArea(CAM_PT_PanelJobsOperationSubPanel):
             row = col.row()
             row.use_property_split = True
             row.prop(work_area, "depth_end_type", expand=True)
-        self.draw_property_group(work_area)
+        # self.draw_property_group(work_area)
 
 
 class CAM_PT_PanelJobsStock(CAM_PT_PanelBase):
@@ -339,24 +339,24 @@ class CAM_PT_PanelJobsMachine(CAM_PT_PanelBase):
         layout = self.layout
         box = layout.box()
         box.prop(machine, "post_processor_enum")
-        box.prop(post_processor, "use_custom_positions")
-        if post_processor.use_custom_positions:
-            self.draw_property_group(
-                post_processor.custom_positions, layout=box.column(align=True)
-            )
+        # box.prop(post_processor, "use_custom_positions")
+        # if post_processor.use_custom_positions:
+            # self.draw_property_group(
+                # post_processor.custom_positions, layout=box.column(align=True)
+            # )
         self.draw_property_group(post_processor, layout=box.column(align=True))
 
         box = layout.box()
         box.prop(machine, "axes")
 
-        self.draw_property_group(
-            machine.feed_rate,
-            layout=layout.box().column(align=True),
-            label_text=UNITS["MIN"],
-        )
-        self.draw_property_group(
-            machine.spindle_rpm, layout=layout.box().column(align=True)
-        )
+        # self.draw_property_group(
+        #     machine.feed_rate,
+        #     layout=layout.box().column(align=True),
+        #     label_text=UNITS["MIN"],
+        # )
+        # self.draw_property_group(
+        #     machine.spindle_rpm, layout=layout.box().column(align=True)
+        # )
 
 
 CLASSES = [

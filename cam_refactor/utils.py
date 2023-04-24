@@ -81,24 +81,23 @@ def copy(
             copy(context, from_subprop, to_prop.add(), depth + 1)
 
 
-def poll_object_source(strategy: Property, obj: Object) -> bool:
+def poll_object_source(strategy: PropertyGroup, obj: Object) -> bool:
     context = bpy.context
     curve = getattr(strategy, "curve", None)
     obj_is_cam_object = obj in [cj.object for cj in context.scene.cam_jobs]
-    operation = context.scene.cam_job.operation
     return (
-        (
-            obj.type == "CURVE"
-            if operation.strategy_type == "DRILL"
-            else obj.type in ["CURVE", "MESH"]
-        )
+        obj.type in ["CURVE", "MESH"]
         and obj.name in context.view_layer.objects
         and obj is not curve
         and not obj_is_cam_object
     )
 
 
-def poll_curve_object_source(strategy: Property, obj: Object) -> bool:
+def poll_collection_source(strategy: PropertyGroup, col: Collection) -> bool:
+    return not any(col is cj.data for cj in bpy.context.scene.cam_jobs)
+
+
+def poll_curve_object_source(strategy: PropertyGroup, obj: Object) -> bool:
     context = bpy.context
     return (
         obj.type == "CURVE"
@@ -107,18 +106,18 @@ def poll_curve_object_source(strategy: Property, obj: Object) -> bool:
     )
 
 
-def poll_curve_limit(_work_area: Property, obj: Object) -> bool:
-    result = False
-    scene = bpy.context.scene
-    try:
-        cam_job = scene.cam_jobs[scene.cam_job_active_index]
-        operation = cam_job.operations[cam_job.operation_active_index]
-        strategy = operation.strategy
-        curve = getattr(strategy, "curve", None)
-        result = poll_curve_object_source(strategy, obj) and obj is not curve
-    except IndexError:
-        pass
-    return result
+# def poll_curve_limit(_work_area: Property, obj: Object) -> bool:
+#     result = False
+#     scene = bpy.context.scene
+#     try:
+#         cam_job = scene.cam_jobs[scene.cam_job_active_index]
+#         operation = cam_job.operations[cam_job.operation_active_index]
+#         strategy = operation.strategy
+#         curve = getattr(strategy, "curve", None)
+#         result = poll_curve_object_source(strategy, obj) and obj is not curve
+#     except IndexError:
+#         pass
+#     return result
 
 
 def get_bound_box(vectors: Iterator[Vector]) -> (Vector, Vector):
@@ -167,7 +166,7 @@ def get_fit_circle_2d(
     vectors: Iterator[Vector], tolerance=1e-5
 ) -> tuple[Vector, float]:
     result = Vector(), 0.0
-    xy = transpose(v.xy for v in vectors)
+    xy = transpose(vectors)
     x = np.array(iter_next(xy))
     y = np.array(iter_next(xy))
     c, *_ = np.linalg.lstsq(

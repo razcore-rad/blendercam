@@ -81,7 +81,7 @@ def draw_drill_features(context: Context, operation: Operation) -> None:
         coords = [v * cutter_radius + position for v in UNIT_CIRCLE_VECTORS]
         batch_for_shader(SHADER, "LINE_LOOP", {"pos": coords}).draw(SHADER)
 
-    positions = [(p.x, p.y, operation.work_area.depth_end) for p in positions]
+    positions = [(p.x, p.y, operation.get_depth_end(context)) for p in positions]
     batch = batch_for_shader(SHADER, "POINTS", {"pos": positions})
     batch.draw(SHADER)
     gpu.state.line_width_set(1)

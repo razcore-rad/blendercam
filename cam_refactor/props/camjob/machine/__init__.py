@@ -1,7 +1,7 @@
 from bpy.props import EnumProperty, IntProperty, PointerProperty, StringProperty
 from bpy.types import Context, PropertyGroup
 
-from . import feedrate, postprocessor, spindlerpm
+from . import postprocessor
 from .... import utils
 
 
@@ -13,8 +13,8 @@ def update_post_processor(machine: PropertyGroup, context: Context) -> None:
 class Machine(PropertyGroup):
     EXCLUDE_PROPNAMES = {"name", "post_processor_enum", "previous_post_processor_enum"}
 
-    feed_rate: PointerProperty(type=feedrate.FeedRate)
-    spindle_rpm: PointerProperty(type=spindlerpm.SpindleRPM)
+    # feed_rate: PointerProperty(type=feedrate.FeedRate)
+    # spindle_rpm: PointerProperty(type=spindlerpm.SpindleRPM)
     axes: IntProperty(name="Axes", default=3, min=3, max=5)
     previous_post_processor_enum: StringProperty(default="GRBL")
     post_processor_enum: EnumProperty(

@@ -19,12 +19,12 @@ class CAM_OT_AddPresetMachine(bl_operators.presets.AddPresetBase, Operator):
 
     preset_values = [
         "machine.post_processor",
-        "machine.feedrate.default",
-        "machine.feedrate.min",
-        "machine.feedrate.max",
-        "machine.spindle.default",
-        "machine.spindle.min",
-        "machine.spindle.max",
+        # "machine.feedrate.default",
+        # "machine.feedrate.min",
+        # "machine.feedrate.max",
+        # "machine.spindle.default",
+        # "machine.spindle.min",
+        # "machine.spindle.max",
         "machine.axes",
     ]
 

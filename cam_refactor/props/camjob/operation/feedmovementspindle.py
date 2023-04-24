@@ -20,9 +20,8 @@ def update_movement_rapid_height_min() -> None:
     if not (context.scene.cam_jobs and context.scene.cam_job.operations):
         return
     operation = context.scene.cam_job.operation
-    context.scene.cam_job.operation.movement.rapid_height_min = operation.get_depth_end(
-        context
-    )
+    _, bb_max = operation.get_bound_box(context)
+    operation.movement.rapid_height_min = bb_max.z
 
 
 class Feed(PropertyGroup):

@@ -12,12 +12,10 @@ Self = TypeVar("Self", bound="G")
 
 
 class G:
-    def __init__(
-        self, out_file_path: str | PurePath, *, rapid_height=0.0, is_si=True
-    ) -> Self:
+    def __init__(self, out_file_path: str | PurePath, *, is_si=True) -> Self:
         self.out_file_path = out_file_path
         self.out_file_descriptor = open(self.out_file_path, "w")
-        self.rapid_height = max(0.0, rapid_height)
+        self.rapid_height = 0.0
         self.position = {k: 0.0 for k in "xyz"}
         self.feed_rate = 0.0
         self.spindle_rpm = 0
@@ -42,6 +40,8 @@ class G:
         return self.write(f"{cmd} {self.format(**kwargs)}")
 
     def dwell(self, time: float) -> Self:
+        if isclose(time, 0.0):
+            return self
         return self.write(f"G4 {self.format(p=time)}")
 
     def feed(self, feed_rate: float) -> Self:
@@ -69,12 +69,13 @@ class G:
         return self.write("M2")
 
     def is_rapid(self, position: dict) -> bool:
+        z = position.get("z", self.position["z"])
         return (
-            position.get("z", self.position["z"]) >= self.rapid_height
+            isclose(z, self.rapid_height)
+            or z > self.rapid_height
             and not self.is_down_move(position)
             or self.is_up_move(position)
         )
-
 
     def is_down_move(self, position: dict) -> bool:
         return (

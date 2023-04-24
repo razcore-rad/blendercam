@@ -93,7 +93,9 @@ class SourceMixin:
         poll=utils.poll_object_source,
         update=update_object_source,
     )
-    collection_source: PointerProperty(type=Collection, name="Source")
+    collection_source: PointerProperty(
+        type=Collection, name="Source", poll=utils.poll_collection_source
+    )
 
     @property
     def source_propname(self) -> str:
@@ -207,20 +209,7 @@ class CurveToPath(SourceMixin, PropertyGroup):
 
 
 class Drill(SourceMixin, PropertyGroup):
-    source_type_items = [
-        ("OBJECT", "Object", "Object data source.", "OUTLINER_OB_CURVE", 0),
-        (
-            "COLLECTION",
-            "Collection",
-            "Collection data source",
-            "OUTLINER_COLLECTION",
-            1,
-        ),
-    ]
-
-    @property
-    def source(self) -> list[Object]:
-        return [o for o in super().source if o.type == "CURVE"]
+    dwell: FloatProperty(name="Dwell", min=0.0)
 
     def get_feature_positions(
         self,
@@ -238,10 +227,11 @@ class Drill(SourceMixin, PropertyGroup):
             for island in get_islands(bm, bm.verts)["islands"]:
                 vectors = [obj.matrix_world @ v.co for v in island]
                 vector_mean = sum(vectors, Vector()) / len(vectors)
-                _, diameter = utils.get_fit_circle_2d(vectors)
+                vector_mean.z = max(v.z for v in vectors)
+                _, diameter = utils.get_fit_circle_2d((v.xy for v in vectors))
                 is_valid = (
                     operation.cutter.diameter <= diameter
-                    and operation.work_area.depth_end < vector_mean.z < 0.0
+                    and operation.get_depth_end(context) < vector_mean.z < 0.0
                 )
                 if is_valid:
                     result.add(vector_mean.freeze())
@@ -254,7 +244,6 @@ class Drill(SourceMixin, PropertyGroup):
     ) -> ComputeResult:
         result_execute, result_msgs, result_computed = set(), [], []
         depth_end = operation.get_depth_end(context)
-        bound_box_min, _ = operation.get_bound_box(context)
         rapid_height = operation.movement.rapid_height
         layer_size = operation.work_area.layer_size
         is_layer_size_zero = isclose(layer_size, 0)
@@ -265,12 +254,18 @@ class Drill(SourceMixin, PropertyGroup):
                 layers if is_layer_size_zero else utils.intersperse(layers, v.z),
                 [rapid_height],
             )
-            result_computed.extend({"vector": (v.x, v.y, z)} for z in layers)
-        if result_computed:
-            result_computed[0]["feed_rate"] = operation.feed.rate
-            result_computed[0]["plunge_scale"] = operation.feed.plunge_scale
-            result_computed[0]["spindle_direction"] = operation.spindle.direction_type
-            result_computed[0]["spindle_rpm"] = operation.spindle.rpm
+            result_computed.extend(
+                {
+                    "vector": (v.x, v.y, z),
+                    "rapid_height": rapid_height,
+                    "dwell": self.dwell if isclose(z, depth_end) else 0.0,
+                    "feed_rate": operation.feed.rate,
+                    "plunge_scale": operation.feed.plunge_scale,
+                    "spindle_direction": operation.spindle.direction_type,
+                    "spindle_rpm": operation.spindle.rpm,
+                }
+                for z in layers
+            )
         result_execute.add("FINISHED")
         return ComputeResult(
             utils.reduce_cancelled_or_finished(result_execute),
