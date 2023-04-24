@@ -90,7 +90,10 @@ def copy(context: Context, from_prop: Property, to_prop: Property, depth=0) -> N
                         context.scene.cam_job_active_index += 1
                         for obj in from_subprop.objects:
                             from_subprop.objects.unlink(obj)
-                    elif isinstance(from_subprop, Object):
+                    elif (
+                        isinstance(from_subprop, Object)
+                        and context.scene.cam_job.data is not None
+                    ):
                         from_subprop.data = from_subprop.data.copy()
                         link = context.scene.cam_job.data.objects.link
                     link(from_subprop)
