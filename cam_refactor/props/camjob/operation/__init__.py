@@ -58,10 +58,8 @@ def update_strategy(operation: PropertyGroup, context: Context) -> None:
 
 class Operation(PropertyGroup):
     EXCLUDE_PROPNAMES = {
-        # "data",
         "previous_strategy_type",
         "previous_cutter_type",
-        "use_modifiers",
     }
     NAME = "CAMOperation"
 
@@ -191,6 +189,9 @@ class Operation(PropertyGroup):
         result = 0
         if self.work_area.depth_end_type == "CUSTOM":
             result = self.work_area.depth_end
+        if self.work_area.depth_end_type == "SOURCE":
+            bound_box_min, _ = self.get_bound_box(context)
+            result = bound_box_min.z
         elif self.work_area.depth_end_type == "STOCK":
             stock_bound_box_min, _ = context.scene.cam_job.get_stock_bound_box(context)
             result = stock_bound_box_min.z

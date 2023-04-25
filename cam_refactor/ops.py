@@ -131,11 +131,13 @@ class CAM_OT_Action(Operator):
     ) -> set[str]:
         result = {"FINISHED"}
         propscol = getattr(dataptr, propname)
-        if len(propscol) == 0:
+        if not propscol:
             return result
         active_index = getattr(dataptr, active_propname)
-        utils.copy(context, propscol[active_index], propscol.add())
+        prop = propscol.add()
+        utils.copy(context, propscol[active_index], prop)
         setattr(dataptr, active_propname, active_index + 1)
+        prop.add_data(context)
         return result
 
     def execute_remove(

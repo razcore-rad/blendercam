@@ -18,12 +18,14 @@ from . import tsp
 from ....utils import (
     PRECISION,
     get_fit_circle_2d,
+    get_scaled_prop,
     intersperse,
     poll_curve_object_source,
     poll_collection_source,
     poll_object_source,
     reduce_cancelled_or_finished,
     seq,
+    set_scaled_prop,
 )
 from ....bmesh.ops import get_islands
 from ....types import ComputeResult
@@ -35,11 +37,6 @@ MAP_SPLINE_POINTS = {"POLY": "points", "NURBS": "points", "BEZIER": "bezier_poin
 
 def get_layers(z: float, layer_size: float, depth_end: float) -> list[float]:
     return list(seq(z - layer_size, depth_end, -layer_size)) + [depth_end]
-
-
-def update_object_source(strategy: PropertyGroup, context: Context) -> None:
-    if isinstance(strategy, Drill):
-        context.scene.cam_job.operation.work_area.depth_end_type = "CUSTOM"
 
 
 class DistanceAlongPathsMixin:
@@ -96,12 +93,7 @@ class SourceMixin:
         ),
     ]
     source_type: EnumProperty(items=source_type_items, name="Source Type")
-    object_source: PointerProperty(
-        type=Object,
-        name="Source",
-        poll=poll_object_source,
-        update=update_object_source,
-    )
+    object_source: PointerProperty(type=Object, name="Source", poll=poll_object_source)
     collection_source: PointerProperty(
         type=Collection, name="Source", poll=poll_collection_source
     )
@@ -155,7 +147,11 @@ class CarveProject(DistanceAlongPathsMixin, SourceMixin, PropertyGroup):
 
     curve: PointerProperty(name="Curve", type=Object, poll=poll_curve_object_source)
     depth: FloatProperty(
-        name="Depth", default=1e-3, unit="LENGTH", precision=PRECISION
+        name="Depth",
+        unit="LENGTH",
+        precision=PRECISION,
+        get=lambda s: get_scaled_prop("depth", 1e-3, s),
+        set=lambda s, v: set_scaled_prop("depth", None, None, s, v),
     )
 
 

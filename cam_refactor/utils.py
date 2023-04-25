@@ -67,10 +67,9 @@ def set_scaled_prop(propname: str, value_min, value_max, self, value):
 
 
 def copy(context: Context, from_prop: Property, to_prop: Property, depth=0) -> None:
-    # FIXME: this gives a segmenation fault-error on CAMJob
     if isinstance(from_prop, PropertyGroup):
         for propname in get_propnames(to_prop, use_exclude_propnames=False):
-            if not hasattr(from_prop, propname):
+            if not hasattr(from_prop, propname) or propname in ["data", "object"]:
                 continue
 
             from_subprop = getattr(from_prop, propname)
@@ -80,24 +79,6 @@ def copy(context: Context, from_prop: Property, to_prop: Property, depth=0) -> N
             ):
                 copy(context, from_subprop, getattr(to_prop, propname), depth + 1)
             elif hasattr(to_prop, propname):
-                if propname in ["data", "object"] and any(
-                    isinstance(from_subprop, t) for t in [Collection, Object]
-                ):
-                    from_subprop = from_subprop.copy()
-                    link = noop
-                    if isinstance(from_subprop, Collection):
-                        link = context.collection.children.link
-                        context.scene.cam_job_active_index += 1
-                        for obj in from_subprop.objects:
-                            from_subprop.objects.unlink(obj)
-                    elif (
-                        isinstance(from_subprop, Object)
-                        and context.scene.cam_job.data is not None
-                    ):
-                        from_subprop.data = from_subprop.data.copy()
-                        link = context.scene.cam_job.data.objects.link
-                    link(from_subprop)
-
                 try:
                     setattr(to_prop, propname, from_subprop)
                 except TypeError:
