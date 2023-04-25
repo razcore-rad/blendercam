@@ -134,7 +134,7 @@ class CAM_PT_CutterPresets(PresetPanel, Panel):
 
 class CAM_PT_Panel(CAM_PT_PanelBase):
     def draw_list(
-        self, list_id: str, dataptr, propname: str, active_propname: str, suffix: str
+        self, list_class, list_id, dataptr, propname, active_propname, suffix
     ) -> None:
         list_is_sortable = len(getattr(dataptr, propname)) > 1
         rows = 5 if list_is_sortable else 3
@@ -142,7 +142,7 @@ class CAM_PT_Panel(CAM_PT_PanelBase):
         layout = self.layout
         row = layout.row()
         row.template_list(
-            "CAM_UL_List",
+            list_class,
             list_id,
             dataptr,
             propname,
@@ -178,7 +178,12 @@ class CAM_PT_PanelJobs(CAM_PT_Panel):
     def draw(self, context: Context) -> None:
         scene = context.scene
         self.draw_list(
-            "CAM_UL_ListJobs", scene, "cam_jobs", "cam_job_active_index", "JOB"
+            "CAM_UL_List",
+            "CAM_UL_ListJobs",
+            scene,
+            "cam_jobs",
+            "cam_job_active_index",
+            "JOB",
         )
         try:
             cam_job = scene.cam_job
@@ -213,12 +218,13 @@ class CAM_PT_PanelJobsOperations(CAM_PT_Panel):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        return len(context.scene.cam_jobs) > 0
+        return context.scene.cam_jobs
 
     def draw(self, context: Context) -> None:
         scene = context.scene
         cam_job = scene.cam_job
         self.draw_list(
+            "CAM_UL_List",
             "CAM_UL_ListOperations",
             cam_job,
             "operations",
@@ -316,7 +322,7 @@ class CAM_PT_PanelJobsStock(CAM_PT_PanelBase):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        return len(context.scene.cam_jobs) > 0
+        return context.scene.cam_jobs
 
     def draw(self, context: Context) -> None:
         stock = context.scene.cam_job.stock
@@ -336,7 +342,7 @@ class CAM_PT_PanelJobsMachine(CAM_PT_PanelBase):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        return len(context.scene.cam_jobs) > 0
+        return context.scene.cam_jobs
 
     def draw_header_preset(self, context: Context) -> None:
         CAM_PT_MachinePresets.draw_panel_header(self.layout)
@@ -368,10 +374,52 @@ class CAM_PT_PanelJobsMachine(CAM_PT_PanelBase):
         # )
 
 
+class CAM_UL_ToolList(UIList):
+    def draw_item(
+        self, context, layout, data, item, icon, active_data, active_propname
+    ):
+        pass
+        # if self.layout_type in {"DEFAULT", "COMPACT"}:
+        #     if hasattr(item, "data") and item.data is not None:
+        #         layout.row().prop(
+        #             item.data, "name", text="", emboss=False, icon_value=icon
+        #         )
+        #         layout.row(align=True).prop(
+        #             item.data, "hide_viewport", text="", emboss=False
+        #         )
+        #     else:
+        #         layout.row().prop(item, "name", text="", emboss=False, icon_value=icon)
+        #         if isinstance(item, Operation):
+        #             icon = "HIDE_ON" if item.is_hidden else "HIDE_OFF"
+        #             layout.row(align=True).prop(
+        #                 item, "is_hidden", text="", emboss=False, icon=icon
+        #             )
+        # elif self.layout_type in {"GRID"}:
+        #     layout.alignment = "CENTER"
+        #     layout.label(text="", icon_value=icon)
+
+
+class CAM_PT_PanelTools(CAM_PT_Panel):
+    bl_label = "CAM Tools"
+
+    def draw(self, context: Context) -> None:
+        scene = context.scene
+        self.draw_list(
+            "CAM_UL_ToolList",
+            "CAM_UL_ListTools",
+            scene,
+            "cam_tools",
+            "cam_tool_active_index",
+            "TOOL",
+        )
+
+
 CLASSES = [
     CAM_UL_List,
+    CAM_UL_ToolList,
     CAM_PT_CutterPresets,
     CAM_PT_MachinePresets,
+    CAM_PT_PanelTools,
     CAM_PT_PanelJobs,
     CAM_PT_PanelJobsOperations,
     CAM_PT_PanelJobsOperationCutter,

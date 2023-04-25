@@ -1,8 +1,10 @@
 import bl_operators
 import bpy
+from bpy.props import EnumProperty, IntProperty
 from bpy.types import Context, Operator
 
-from . import props, utils
+# from . import props
+from .utils import copy, noop
 
 
 class CAM_OT_AddPresetMachine(bl_operators.presets.AddPresetBase, Operator):
@@ -85,9 +87,13 @@ class CAM_OT_Action(Operator):
         ("DUPLICATE_OPERATION", "Duplicate CAM operation", "Duplicate CAM operation"),
         ("REMOVE_OPERATION", "Remove CAM operation", "Remove CAM operation"),
         ("MOVE_OPERATION", "Move CAM operation", "Move CAM operation"),
+        ("ADD_TOOL", "Add CAM tool", "Add CAM tool"),
+        ("DUPLICATE_TOOL", "Duplicate CAM tool", "Duplicate CAM tool"),
+        ("REMOVE_TOOL", "Remove CAM tool", "Remove CAM tool"),
+        ("MOVE_TOOL", "Move CAM tool", "Move CAM tool"),
     ]
-    type: bpy.props.EnumProperty(items=type_items)
-    move_direction: bpy.props.IntProperty()
+    type: EnumProperty(items=type_items)
+    move_direction: IntProperty()
 
     def __init__(self):
         super().__init__()
@@ -112,7 +118,7 @@ class CAM_OT_Action(Operator):
     ) -> set[str]:
         propscol = getattr(dataptr, propname)
         item = propscol.add()
-        getattr(item, "add_data", utils.noop)(context)
+        getattr(item, "add_data", noop)(context)
         setattr(dataptr, active_propname, len(propscol) - 1)
         return {"FINISHED"}
 
@@ -135,9 +141,9 @@ class CAM_OT_Action(Operator):
             return result
         active_index = getattr(dataptr, active_propname)
         prop = propscol.add()
-        utils.copy(context, propscol[active_index], prop)
+        copy(context, propscol[active_index], prop)
         setattr(dataptr, active_propname, active_index + 1)
-        prop.add_data(context)
+        getattr(prop, "add_data", noop)(context)
         return result
 
     def execute_remove(
@@ -146,7 +152,7 @@ class CAM_OT_Action(Operator):
         try:
             propscol = getattr(dataptr, propname)
             item = propscol[getattr(dataptr, active_propname)]
-            getattr(item, "remove_data", utils.noop)()
+            getattr(item, "remove_data", noop)()
             propscol.remove(getattr(dataptr, active_propname))
             setattr(dataptr, active_propname, getattr(dataptr, active_propname) - 1)
         except IndexError:
@@ -175,6 +181,7 @@ class CAM_OT_Action(Operator):
                 "operations",
                 "operation_active_index",
             ),
+            "TOOL": (context, scene, "cam_tools", "cam_tool_active_index")
         }
         _, suffix = self.type.split("_")
         return self.execute_funcs[self.type](*args[suffix])
