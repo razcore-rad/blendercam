@@ -5,10 +5,15 @@ from . import camjob
 
 
 CLASSES = [
-    camjob.operation.cutter.ConeMill,
-    camjob.operation.cutter.Mill,
-    camjob.operation.cutter.Drill,
-    camjob.operation.cutter.Simple,
+    camjob.operation.cutter.CylinderCutter,
+    camjob.operation.cutter.BallCutter,
+    camjob.operation.cutter.BullCutter,
+    camjob.operation.cutter.ConeCutter,
+    camjob.operation.cutter.CylinderConeCutter,
+    camjob.operation.cutter.BallConeCutter,
+    camjob.operation.cutter.BullConeCutter,
+    camjob.operation.cutter.ConeConeCutter,
+    camjob.operation.cutter.SimpleCutter,
     camjob.operation.feedmovementspindle.Feed,
     camjob.operation.feedmovementspindle.Movement,
     camjob.operation.feedmovementspindle.Spindle,

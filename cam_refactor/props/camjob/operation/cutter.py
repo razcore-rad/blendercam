@@ -1,27 +1,40 @@
-import math
+from math import pi
 
 from bpy.props import FloatProperty, IntProperty, StringProperty
 from bpy.types import PropertyGroup
 
-from ....utils import PRECISION, get_scaled_prop, set_scaled_prop
+from ....utils import EPSILON, PRECISION, clamp, get_scaled_prop, set_scaled_prop
 
 
-class CutterMixin:
+def set_ball_cutter_corner_radius(self, value: float) -> None:
+    self["corner_radius"] = clamp(value, 0.0, self.radius - EPSILON)
+
+
+def set_ball_cone_cutter_corner_radius(self, value: float) -> None:
+    self["corner_radius"] = clamp(value, 0.0, self.inner_radius - EPSILON)
+
+
+def set_lower_diameter_cutter(self, value: float) -> None:
+    self["lower_diameter"] = max(value, self["upper_diameter"] - EPSILON)
+
+
+def set_upper_diameter_cutter(self, value: float) -> None:
+    self["upper_diameter"] = min(value, self["lower_diameter"] + EPSILON)
+
+
+def set_cone_cone_lower_angle(self, value: float) -> None:
+    self["lower_angle"] = clamp(value, self["upper_angle"] + EPSILON, pi - EPSILON)
+
+
+def set_cone_cone_upper_angle(self, value: float) -> None:
+    self["upper_angle"] = clamp(value, pi / 180, self["lower_angle"] - EPSILON)
+
+
+class BaseMixin:
     EXCLUDE_PROPNAMES = {"name", "description", "id"}
 
-    id: IntProperty(name="ID", default=1, min=1, max=10)
+    id: IntProperty(name="ID", default=1, min=1)
     description: StringProperty(name="Description")
-    diameter: FloatProperty(
-        name="Diameter",
-        precision=PRECISION,
-        unit="LENGTH",
-        get=lambda s: get_scaled_prop("diameter", 3e-3, s),
-        set=lambda s, v: set_scaled_prop("diameter", 1 / 10**PRECISION, 1e-1, s, v),
-    )
-
-
-class FlutesMixin:
-    flutes: IntProperty(name="Flutes", default=2, min=1, max=10)
 
 
 class LengthMixin:
@@ -29,23 +42,118 @@ class LengthMixin:
         name="Length",
         unit="LENGTH",
         get=lambda s: get_scaled_prop("length", 1e-1, s),
-        set=lambda s, v: set_scaled_prop("length", 1e-3, 5e-1, s, v),
+        set=lambda s, v: set_scaled_prop("length", 1e-3, None, s, v),
     )
 
 
-class Simple(CutterMixin, PropertyGroup):
-    pass
+class DiameterMixin:
+    diameter: FloatProperty(
+        name="Diameter",
+        precision=PRECISION,
+        unit="LENGTH",
+        get=lambda s: get_scaled_prop("diameter", 3e-3, s),
+        set=lambda s, v: set_scaled_prop("diameter", EPSILON, None, s, v),
+    )
+
+    @property
+    def radius(self) -> float:
+        return self.diameter / 2.0
 
 
-class Drill(CutterMixin, LengthMixin, PropertyGroup):
-    pass
+class Diameter2Mixin:
+    lower_diameter: FloatProperty(
+        name="Lower Diameter",
+        precision=PRECISION,
+        unit="LENGTH",
+        get=lambda s: get_scaled_prop("lower_diameter", 3e-3, s),
+        set=set_lower_diameter_cutter,
+    )
+
+    upper_diameter: FloatProperty(
+        name="Upper Diameter",
+        precision=PRECISION,
+        unit="LENGTH",
+        get=lambda s: get_scaled_prop("upper_diameter", 3e-3, s),
+        set=set_upper_diameter_cutter,
+    )
+
+    @property
+    def diameter(self) -> float:
+        return self.upper_diameter
+
+    @property
+    def lower_radius(self) -> float:
+        return self.lower_diameter / 2.0
+
+    @property
+    def upper_radius(self) -> float:
+        return self.upper_diameter / 2.0
+
+    @property
+    def radius(self) -> float:
+        return self.diameter / 2.0
 
 
-class Mill(CutterMixin, FlutesMixin, LengthMixin, PropertyGroup):
-    pass
-
-
-class ConeMill(CutterMixin, LengthMixin, PropertyGroup):
+class AngleMixin:
     angle: FloatProperty(
-        name="Angle", default=math.pi / 4, min=math.pi / 180, max=math.pi / 2
+        name="Angle", subtype="ANGLE", default=pi / 4, min=pi / 180, max=pi / 2
+    )
+
+
+class SimpleCutter(BaseMixin, DiameterMixin, PropertyGroup):
+    pass
+
+
+class CylinderCutter(BaseMixin, DiameterMixin, LengthMixin, PropertyGroup):
+    pass
+
+
+class BallCutter(BaseMixin, DiameterMixin, LengthMixin, PropertyGroup):
+    pass
+
+
+class BullCutter(BaseMixin, DiameterMixin, LengthMixin, PropertyGroup):
+    corner_radius: FloatProperty(
+        name="Corner Radius",
+        precision=PRECISION,
+        unit="LENGTH",
+        get=lambda s: get_scaled_prop("corner_radius", 1e-3, s),
+        set=set_ball_cutter_corner_radius,
+    )
+
+
+class ConeCutter(BaseMixin, DiameterMixin, AngleMixin, LengthMixin, PropertyGroup):
+    pass
+
+
+class CylinderConeCutter(
+    BaseMixin, Diameter2Mixin, AngleMixin, LengthMixin, PropertyGroup
+):
+    pass
+
+
+class BallConeCutter(BaseMixin, Diameter2Mixin, AngleMixin, LengthMixin, PropertyGroup):
+    pass
+
+
+class BullConeCutter(BaseMixin, Diameter2Mixin, AngleMixin, LengthMixin, PropertyGroup):
+    corner_radius: FloatProperty(
+        name="Corner Radius",
+        precision=PRECISION,
+        unit="LENGTH",
+        get=lambda s: get_scaled_prop("corner_radius", 1e-3, s),
+        set=set_ball_cone_cutter_corner_radius,
+    )
+
+
+class ConeConeCutter(BaseMixin, Diameter2Mixin, LengthMixin, PropertyGroup):
+    lower_angle: FloatProperty(
+        name="Lower Angle", subtype="ANGLE", default=pi / 2, min=pi / 180, max=pi / 2,
+        get=lambda s: s["lower_angle"],
+        set=set_cone_cone_lower_angle,
+    )
+    upper_angle: FloatProperty(
+        name="Upper Angle", subtype="ANGLE", default=pi / 4, min=pi / 180, max=pi / 2,
+        get=lambda s: s["upper_angle"],
+        set=set_cone_cone_upper_angle,
     )

@@ -39,34 +39,34 @@ class CAM_OT_AddPresetCutter(bl_operators.presets.AddPresetBase, Operator):
 
     preset_defines = ["operation = bpy.context.scene.cam_job.operation"]
 
-    @property
-    def preset_values(self) -> list[str]:
-        result = [
-            "operation.cutter_type",
-            "operation.cutter.id",
-            "operation.cutter.description",
-            "operation.cutter.diameter",
-        ]
+    # @property
+    # def preset_values(self) -> list[str]:
+    #     result = [
+    #         "operation.cutter_type",
+    #         "operation.cutter.id",
+    #         "operation.cutter.description",
+    #         "operation.cutter.diameter",
+    #     ]
 
-        operation = bpy.context.scene.cam_job.operation
+    #     operation = bpy.context.scene.cam_job.operation
 
-        if isinstance(operation.cutter, props.cam_job.operation.cutter.Mill):
-            result.extend(
-                [
-                    "operation.cutter.flutes",
-                    "operation.cutter.length",
-                ]
-            )
-        elif isinstance(operation.cutter, props.cam_job.operation.cutter.Drill):
-            result.extend(["operation.cutter.length"])
-        elif isinstance(operation.cutter, props.cam_job.operation.cutter.ConeMill):
-            result.extend(
-                [
-                    "operation.cutter.length",
-                    "operation.cutter.angle",
-                ]
-            )
-        return result
+    #     if isinstance(operation.cutter, props.cam_job.operation.cutter.Mill):
+    #         result.extend(
+    #             [
+    #                 "operation.cutter.flutes",
+    #                 "operation.cutter.length",
+    #             ]
+    #         )
+    #     elif isinstance(operation.cutter, props.cam_job.operation.cutter.Drill):
+    #         result.extend(["operation.cutter.length"])
+    #     elif isinstance(operation.cutter, props.cam_job.operation.cutter.ConeMill):
+    #         result.extend(
+    #             [
+    #                 "operation.cutter.length",
+    #                 "operation.cutter.angle",
+    #             ]
+    #         )
+    #     return result
 
 
 class CAM_OT_Action(Operator):

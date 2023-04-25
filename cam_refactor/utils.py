@@ -16,10 +16,11 @@ from bpy.types import (
 from mathutils import Vector
 
 
-ZERO_VECTOR = Vector()
 PRECISION = 5
-REDUCE_MAP = {True: {"FINISHED"}, False: {"CANCELLED"}}
+EPSILON = 1 / 10**PRECISION
 LENGTH_UNIT_SCALE = 1e3
+ZERO_VECTOR = Vector()
+REDUCE_MAP = {True: {"FINISHED"}, False: {"CANCELLED"}}
 
 
 def noop(*args, **kwargs) -> None:

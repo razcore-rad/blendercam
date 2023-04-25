@@ -7,41 +7,20 @@ from bpy.props import (
 from bpy.types import Context, Object, PropertyGroup
 from mathutils import Vector
 
-from . import cutter, feedmovementspindle, strategy, workarea
+from . import feedmovementspindle, strategy, workarea
+from .cutter import (
+    BallCutter,
+    BullCutter,
+    BallConeCutter,
+    BullConeCutter,
+    ConeCutter,
+    ConeConeCutter,
+    CylinderCutter,
+    CylinderConeCutter,
+    SimpleCutter,
+)
 from .... import utils
-from ....types import ComputeResult, ShortEnumItems
-
-
-def get_cutter_types(operation: PropertyGroup, context: Context) -> ShortEnumItems:
-    result = []
-    try:
-        result.extend(
-            [
-                ("BALL", "Ball", "Ball nose end mill"),
-                ("BALL_CONE", "Ball Cone", "Ball cone nose end mill"),
-                ("BULL", "Bull", "Bull nose end mill"),
-                ("BULL_CONE", "Bull Cone", "Bull cone nose end mill"),
-                ("CONE", "Cone", "Cone end mill"),
-                ("CYLINDER", "Cylinder", "Cylinder end mill"),
-                ("CYLINDER_CONE", "Cylinder Cone", "Cylinder cone end mill"),
-            ]
-        )
-
-        if operation.strategy_type in {"MEDIAL_AXIS", "PROFILE"}:
-            result.extend(
-                [
-                    None,
-                    ("V_CARVE", "V-Carve", "V-Carve end mill"),
-                    None,
-                    ("LASER", "Laser", "Laser cutter"),
-                    ("PLASMA", "Plasma", "Plasma cutter"),
-                ]
-            )
-        elif operation.strategy_type in {"DRILL"}:
-            result.extend([None, ("DRILL", "Drill", "Drill mill")])
-    except IndexError:
-        pass
-    return result
+from ....types import ComputeResult
 
 
 def update_cutter(operation: PropertyGroup, context: Context) -> None:
@@ -66,19 +45,30 @@ class Operation(PropertyGroup):
     is_hidden: BoolProperty(default=False)
     previous_cutter_type: StringProperty(default="CYLINDER")
     cutter_type: EnumProperty(
-        name="Type", items=get_cutter_types, default=5, update=update_cutter
+        name="Type",
+        items=[
+            ("CYLINDER", "Cylinder", ""),
+            ("BALL", "Ball", ""),
+            ("BULL", "Bull", ""),
+            ("CONE", "Cone", ""),
+            ("CYLINDER_CONE", "Cylinder Cone", ""),
+            ("BALL_CONE", "Ball Cone", ""),
+            ("BULL_CONE", "Bull Cone", ""),
+            ("CONE_CONE", "Cone Cone", ""),
+        ],
+        default=5,
+        update=update_cutter,
     )
-    ball_cutter: PointerProperty(type=cutter.Mill)
-    ball_cone_cutter: PointerProperty(type=cutter.ConeMill)
-    bull_cutter: PointerProperty(type=cutter.Mill)
-    bull_cone_cutter: PointerProperty(type=cutter.ConeMill)
-    cone_cutter: PointerProperty(type=cutter.ConeMill)
-    cylinder_cutter: PointerProperty(type=cutter.Mill)
-    cylinder_cone_cutter: PointerProperty(type=cutter.ConeMill)
-    drill_cutter: PointerProperty(type=cutter.Drill)
-    v_carve_cutter: PointerProperty(type=cutter.ConeMill)
-    laser_cutter: PointerProperty(type=cutter.Simple)
-    plasma_cutter: PointerProperty(type=cutter.Simple)
+    cylinder_cutter: PointerProperty(type=CylinderCutter)
+    ball_cutter: PointerProperty(type=BallCutter)
+    bull_cutter: PointerProperty(type=BullCutter)
+    cone_cutter: PointerProperty(type=ConeCutter)
+    cylinder_cone_cutter: PointerProperty(type=CylinderConeCutter)
+    ball_cone_cutter: PointerProperty(type=BallConeCutter)
+    bull_cone_cutter: PointerProperty(type=BullConeCutter)
+    cone_cone_cutter: PointerProperty(type=ConeConeCutter)
+    laser_cutter: PointerProperty(type=SimpleCutter)
+    plasma_cutter: PointerProperty(type=SimpleCutter)
 
     previous_strategy_type: StringProperty(default="PROFILE")
     strategy_type_items = [
