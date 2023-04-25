@@ -192,3 +192,7 @@ class Operation(PropertyGroup):
 
     def add_data(self, context: Context) -> None:
         self.name = self.NAME
+        if self.strategy.object_source is None:
+            self.strategy.object_source = context.object
+        if self.strategy.collection_source is None:
+            self.strategy.collection_source = context.collection

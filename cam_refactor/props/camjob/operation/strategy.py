@@ -116,11 +116,9 @@ class SourceMixin:
         return result
 
     def get_feature_positions(
-        self,
-        context: Context,
-        operation: PropertyGroup,
+        self, context: Context, operation: PropertyGroup
     ) -> Iterator[Vector]:
-        raise NotImplementedError()
+        pass
 
     def get_evaluated_source(self, context: Context) -> list[Object]:
         depsgraph = context.evaluated_depsgraph_get()
