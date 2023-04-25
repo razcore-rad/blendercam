@@ -105,7 +105,9 @@ class CAM_PT_PanelJobsOperationSubPanel(CAM_PT_PanelBase):
         result = False
         try:
             strategy = context.scene.cam_job.operation.strategy
-            result = strategy.source is not [] and getattr(strategy, "curve", True)
+            result = strategy.get_source(context) is not [] and getattr(
+                strategy, "curve", True
+            )
         except IndexError:
             pass
         return result
@@ -347,9 +349,9 @@ class CAM_PT_PanelJobsMachine(CAM_PT_PanelBase):
         box.prop(machine, "post_processor_enum")
         # box.prop(post_processor, "use_custom_positions")
         # if post_processor.use_custom_positions:
-            # self.draw_property_group(
-                # post_processor.custom_positions, layout=box.column(align=True)
-            # )
+        # self.draw_property_group(
+        # post_processor.custom_positions, layout=box.column(align=True)
+        # )
         self.draw_property_group(post_processor, layout=box.column(align=True))
 
         box = layout.box()

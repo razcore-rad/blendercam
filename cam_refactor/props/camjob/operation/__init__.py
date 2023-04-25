@@ -1,10 +1,12 @@
+from itertools import tee
+
 from bpy.props import (
     BoolProperty,
     EnumProperty,
     PointerProperty,
     StringProperty,
 )
-from bpy.types import Context, Object, PropertyGroup
+from bpy.types import Context, PropertyGroup
 from mathutils import Vector
 
 from . import feedmovementspindle, strategy, workarea
@@ -19,17 +21,17 @@ from .cutter import (
     CylinderConeCutter,
     SimpleCutter,
 )
-from .... import utils
+from ....utils import copy
 from ....types import ComputeResult
 
 
 def update_cutter(operation: PropertyGroup, context: Context) -> None:
-    utils.copy(context, operation.previous_cutter, operation.cutter)
+    copy(context, operation.previous_cutter, operation.cutter)
     operation.previous_cutter_type = operation.cutter_type
 
 
 def update_strategy(operation: PropertyGroup, context: Context) -> None:
-    utils.copy(context, operation.previous_strategy, operation.strategy)
+    copy(context, operation.previous_strategy, operation.strategy)
     if operation.cutter_type == "":
         operation.cutter_type = "CYLINDER"
     operation.previous_strategy_type = operation.strategy_type
@@ -157,22 +159,16 @@ class Operation(PropertyGroup):
     def strategy(self) -> PropertyGroup:
         return getattr(self, self.strategy_propname)
 
-    def get_bound_box(self, context: Context) -> (Vector, Vector):
-        def get_vectors(source: list[Object]) -> [Vector]:
-            result = []
-            for obj in source:
-                if obj.name not in context.view_layer.objects:
-                    continue
-
-                for v in obj.to_mesh().vertices:
-                    result.append(obj.matrix_world @ v.co)
-                obj.to_mesh_clear()
-            return result
-
-        result = (Vector(), Vector())
-        source = self.strategy.get_evaluated_source(context)
-        if source:
-            result = utils.get_bound_box(get_vectors(source))
+    def get_bound_box(self, context: Context) -> tuple[Vector, Vector]:
+        result = Vector(), Vector()
+        vectors = (
+            o.matrix_world @ Vector(c)
+            for o in self.strategy.get_source(context)
+            for c in o.bound_box
+        )
+        result = tuple(
+            Vector(f(cs) for cs in zip(*ps)) for f, ps in zip((min, max), tee(vectors))
+        )
         return result
 
     def get_depth_end(self, context: Context) -> float:

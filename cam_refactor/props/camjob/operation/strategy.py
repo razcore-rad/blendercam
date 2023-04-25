@@ -102,14 +102,22 @@ class SourceMixin:
     def source_propname(self) -> str:
         return f"{self.source_type.lower()}_source"
 
-    @property
-    def source(self) -> list[Object]:
+    def get_source(self, context: Context) -> list[Object]:
         result = getattr(self, self.source_propname)
         if self.source_type in ["OBJECT", "CURVE_OBJECT"]:
-            result = [result] if result is not None else []
+            result = (
+                [result]
+                if result is not None and result.name in context.view_layer.objects
+                else []
+            )
         elif self.source_type == "COLLECTION":
             result = (
-                [o for o in result.objects if o.type in ["CURVE", "MESH"]]
+                [
+                    o
+                    for o in result.objects
+                    if o.type in ["CURVE", "MESH"]
+                    and o.name in context.view_layer.objects
+                ]
                 if result is not None
                 else []
             )
@@ -122,7 +130,7 @@ class SourceMixin:
 
     def get_evaluated_source(self, context: Context) -> list[Object]:
         depsgraph = context.evaluated_depsgraph_get()
-        return [o.evaluated_get(depsgraph) for o in self.source]
+        return [o.evaluated_get(depsgraph) for o in self.get_source(context)]
 
     def is_source(self, obj: Object) -> bool:
         collection_source = (

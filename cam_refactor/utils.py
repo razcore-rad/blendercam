@@ -1,5 +1,5 @@
 from collections.abc import Sequence
-from itertools import chain, count, islice, repeat, tee
+from itertools import chain, count, islice, repeat
 from math import ceil, copysign, isclose, sqrt
 from typing import Any, Iterator
 
@@ -112,31 +112,8 @@ def poll_curve_object_source(strategy: PropertyGroup, obj: Object) -> bool:
     return (
         obj.type == "CURVE"
         and obj.name in context.view_layer.objects
-        and obj not in strategy.source
+        and obj not in strategy.get_source(context)
     )
-
-
-# def poll_curve_limit(_work_area: Property, obj: Object) -> bool:
-#     result = False
-#     scene = bpy.context.scene
-#     try:
-#         cam_job = scene.cam_jobs[scene.cam_job_active_index]
-#         operation = cam_job.operations[cam_job.operation_active_index]
-#         strategy = operation.strategy
-#         curve = getattr(strategy, "curve", None)
-#         result = poll_curve_object_source(strategy, obj) and obj is not curve
-#     except IndexError:
-#         pass
-#     return result
-
-
-def get_bound_box(vectors: Iterator[Vector]) -> (Vector, Vector):
-    result = (Vector(), Vector())
-    if len(vectors) > 0:
-        result = tuple(
-            Vector(f(cs) for cs in zip(*ps)) for f, ps in zip((min, max), tee(vectors))
-        )
-    return result
 
 
 def clamp(x: float, bottom: float, top: float) -> float:
