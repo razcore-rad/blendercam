@@ -4,7 +4,8 @@ import bpy
 from bpy.types import Context, Menu, Panel, PropertyGroup, UIList, UILayout
 
 from .props.camjob.operation import Operation
-from . import ops, utils
+from .ops import CAM_OT_Action
+from .utils import get_propnames
 
 
 UNITS = {"MIN": "/ min"}
@@ -84,7 +85,7 @@ class CAM_PT_PanelBase(Panel):
             layout = self.layout.box().column(align=True)
             layout.use_property_split = True
 
-        for propname in utils.get_propnames(pg):
+        for propname in get_propnames(pg):
             if isinstance(getattr(pg, propname), PropertyGroup):
                 continue
 
@@ -132,7 +133,7 @@ class CAM_PT_CutterPresets(PresetPanel, Panel):
 
 
 class CAM_PT_Panel(CAM_PT_PanelBase):
-    def draw_list_row(
+    def draw_list(
         self, list_id: str, dataptr, propname: str, active_propname: str, suffix: str
     ) -> None:
         list_is_sortable = len(getattr(dataptr, propname)) > 1
@@ -151,22 +152,22 @@ class CAM_PT_Panel(CAM_PT_PanelBase):
         )
 
         col = row.column(align=True)
-        pg = col.operator(ops.CAM_OT_Action.bl_idname, icon="ADD", text="")
+        pg = col.operator(CAM_OT_Action.bl_idname, icon="ADD", text="")
         pg.type = f"ADD_{suffix}"
 
-        pg = col.operator(ops.CAM_OT_Action.bl_idname, icon="DUPLICATE", text="")
+        pg = col.operator(CAM_OT_Action.bl_idname, icon="DUPLICATE", text="")
         pg.type = f"DUPLICATE_{suffix}"
 
-        pg = col.operator(ops.CAM_OT_Action.bl_idname, icon="REMOVE", text="")
+        pg = col.operator(CAM_OT_Action.bl_idname, icon="REMOVE", text="")
         pg.type = f"REMOVE_{suffix}"
 
         if list_is_sortable:
             col.separator()
-            pg = col.operator(ops.CAM_OT_Action.bl_idname, icon="TRIA_UP", text="")
+            pg = col.operator(CAM_OT_Action.bl_idname, icon="TRIA_UP", text="")
             pg.type = f"MOVE_{suffix}"
             pg.move_direction = -1
 
-            pg = col.operator(ops.CAM_OT_Action.bl_idname, icon="TRIA_DOWN", text="")
+            pg = col.operator(CAM_OT_Action.bl_idname, icon="TRIA_DOWN", text="")
             pg.type = f"MOVE_{suffix}"
             pg.move_direction = 1
 
@@ -176,7 +177,7 @@ class CAM_PT_PanelJobs(CAM_PT_Panel):
 
     def draw(self, context: Context) -> None:
         scene = context.scene
-        self.draw_list_row(
+        self.draw_list(
             "CAM_UL_ListJobs", scene, "cam_jobs", "cam_job_active_index", "JOB"
         )
         try:
@@ -197,10 +198,10 @@ class CAM_PT_PanelJobs(CAM_PT_Panel):
                 col.prop(cam_job, "gap")
 
             row = layout.row(align=True)
-            pg = row.operator(ops.CAM_OT_Action.bl_idname, text="Compute", icon="PLAY")
+            pg = row.operator(CAM_OT_Action.bl_idname, text="Compute", icon="PLAY")
             pg.type = "COMPUTE_JOB"
 
-            pg = row.operator(ops.CAM_OT_Action.bl_idname, text="Export", icon="EXPORT")
+            pg = row.operator(CAM_OT_Action.bl_idname, text="Export", icon="EXPORT")
             pg.type = "EXPORT_JOB"
         except IndexError:
             pass
@@ -217,7 +218,7 @@ class CAM_PT_PanelJobsOperations(CAM_PT_Panel):
     def draw(self, context: Context) -> None:
         scene = context.scene
         cam_job = scene.cam_job
-        self.draw_list_row(
+        self.draw_list(
             "CAM_UL_ListOperations",
             cam_job,
             "operations",
@@ -324,7 +325,7 @@ class CAM_PT_PanelJobsStock(CAM_PT_PanelBase):
         layout.row().prop(stock, "type", expand=True)
         row = layout.row(align=True)
         for propname in (
-            pn for pn in utils.get_propnames(stock) if pn.startswith(stock.type.lower())
+            pn for pn in get_propnames(stock) if pn.startswith(stock.type.lower())
         ):
             row.column().prop(stock, propname)
 
