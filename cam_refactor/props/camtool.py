@@ -20,7 +20,6 @@ from .camjob.operation.cutter import (
     CylinderConeCutter,
     SimpleCutter,
 )
-from ..types import MediumEnumItems
 from ..utils import ADDON_PATH, slugify, to_dict
 
 
@@ -28,7 +27,7 @@ TOOLS_LIBRARY_PATH = ADDON_PATH / "tools_library"
 DEFAULT_CAM_TOOLS_LIBRARY_ITEM = ("DEFAULT", "Default", "")
 
 
-def cam_tools_library_type_items(self, context: Context) -> MediumEnumItems:
+def cam_tools_library_type_items(context: Context) -> None:
     TOOLS_LIBRARY_PATH.mkdir(exist_ok=True)
     items = sorted(
         ((slug := slugify(p.stem)).upper(), slug.capitalize(), "")
@@ -36,7 +35,12 @@ def cam_tools_library_type_items(self, context: Context) -> MediumEnumItems:
     )
     if DEFAULT_CAM_TOOLS_LIBRARY_ITEM in items:
         items.remove(DEFAULT_CAM_TOOLS_LIBRARY_ITEM)
-    return [it + (i,) for i, it in enumerate([DEFAULT_CAM_TOOLS_LIBRARY_ITEM] + items)]
+    cam_tools_library_type_items.items = [
+        it + (i,) for i, it in enumerate([DEFAULT_CAM_TOOLS_LIBRARY_ITEM] + items)
+    ]
+
+
+cam_tools_library_type_items.items = []
 
 
 def get_cam_tools_library_type(self) -> int:
@@ -89,7 +93,7 @@ class CAMTool(PropertyGroup):
 class CAMToolsLibrary(PropertyGroup):
     type: EnumProperty(
         name="Library",
-        items=cam_tools_library_type_items,
+        items=lambda s, c: cam_tools_library_type_items.items,
         get=get_cam_tools_library_type,
         set=set_cam_tools_library_type,
     )
@@ -104,9 +108,10 @@ class CAMToolsLibrary(PropertyGroup):
     def library(self) -> str:
         return f"{slugify(self.type)}.json"
 
-    def add_library(self, name: str) -> None:
+    def add_library(self, context: Context, name: str) -> None:
         library = slugify(name)
         (TOOLS_LIBRARY_PATH / f"{library}.json").touch()
+        cam_tools_library_type_items(context)
         self.type = library.upper()
 
     def remove_library(self) -> None:

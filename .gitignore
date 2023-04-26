@@ -24,3 +24,6 @@ forceSyncWithUpstream
 .project
 
 .pydevproject
+
+# cam_refactor
+/tools_library

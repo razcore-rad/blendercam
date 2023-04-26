@@ -4,6 +4,7 @@ import bpy
 from bpy.types import Context, Menu, Panel, PropertyGroup, UIList, UILayout
 
 from .props.camjob.operation import Operation
+from .props.camtool import cam_tools_library_type_items
 from .ops import CAM_OT_Action, CAM_OT_ToolLibrary
 from .utils import get_propnames
 
@@ -401,6 +402,8 @@ class CAM_PT_PanelTools(CAM_PT_Panel):
         layout = self.layout
         row = layout.row()
         col = row.column()
+
+        cam_tools_library_type_items(context)
         col.prop(cam_tools_library, "type", text="", text_ctxt="", translate=False)
 
         row = row.row(align=True)

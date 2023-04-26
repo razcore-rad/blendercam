@@ -4,6 +4,7 @@ from bpy.props import EnumProperty, IntProperty, StringProperty
 from bpy.types import Context, Operator
 
 # from . import props
+from .props.camtool import cam_tools_library_type_items
 from .utils import copy, noop
 
 
@@ -207,7 +208,7 @@ class CAM_OT_ToolLibrary(Operator):
 
     def execute(self, context: Context) -> set[str]:
         cam_tools_library = context.scene.cam_tools_library
-        cam_tools_library.add_library(self.library_name)
+        cam_tools_library.add_library(context, self.library_name)
         return {"FINISHED"}
 
     def invoke(self, context: Context, event) -> set[str]:
