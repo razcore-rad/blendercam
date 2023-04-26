@@ -11,23 +11,23 @@ def set_ball_cutter_corner_radius(self, value: float) -> None:
 
 
 def set_ball_cone_cutter_corner_radius(self, value: float) -> None:
-    self["corner_radius"] = clamp(value, 0.0, self.inner_radius - EPSILON)
+    self["corner_radius"] = clamp(value, 0.0, self.lower_radius - EPSILON)
 
 
 def set_lower_diameter_cutter(self, value: float) -> None:
-    self["lower_diameter"] = max(value, self["upper_diameter"] - EPSILON)
+    self["lower_diameter"] = max(value, self.upper_diameter - EPSILON)
 
 
 def set_upper_diameter_cutter(self, value: float) -> None:
-    self["upper_diameter"] = min(value, self["lower_diameter"] + EPSILON)
+    self["upper_diameter"] = min(value, self.lower_diameter + EPSILON)
 
 
 def set_cone_cone_lower_angle(self, value: float) -> None:
-    self["lower_angle"] = clamp(value, self["upper_angle"] + EPSILON, pi - EPSILON)
+    self["lower_angle"] = clamp(value, self.upper_angle + EPSILON, pi - EPSILON)
 
 
 def set_cone_cone_upper_angle(self, value: float) -> None:
-    self["upper_angle"] = clamp(value, pi / 180, self["lower_angle"] - EPSILON)
+    self["upper_angle"] = clamp(value, pi / 180, self.lower_angle - EPSILON)
 
 
 class BaseMixin:
@@ -148,12 +148,14 @@ class BullConeCutter(BaseMixin, Diameter2Mixin, AngleMixin, LengthMixin, Propert
 
 class ConeConeCutter(BaseMixin, Diameter2Mixin, LengthMixin, PropertyGroup):
     lower_angle: FloatProperty(
-        name="Lower Angle", subtype="ANGLE", default=pi / 2, min=pi / 180, max=pi / 2,
-        get=lambda s: s["lower_angle"],
+        name="Lower Angle",
+        subtype="ANGLE",
+        get=lambda s: s.get("lower_angle", pi / 2),
         set=set_cone_cone_lower_angle,
     )
     upper_angle: FloatProperty(
-        name="Upper Angle", subtype="ANGLE", default=pi / 4, min=pi / 180, max=pi / 2,
-        get=lambda s: s["upper_angle"],
+        name="Upper Angle",
+        subtype="ANGLE",
+        get=lambda s: s.get("upper_angle", pi / 4),
         set=set_cone_cone_upper_angle,
     )
