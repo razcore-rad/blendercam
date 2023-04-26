@@ -82,7 +82,8 @@ class CAMJob(PropertyGroup):
             self.data.objects.link(self.object)
 
         if len(self.operations) == 0:
-            operation = self.operations.add()
+            self.operations.add()
+            operation = self.operations[-1]
             operation.add_data(context)
 
     def remove_data(self) -> None:

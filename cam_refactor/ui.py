@@ -402,14 +402,20 @@ class CAM_UL_ToolList(UIList):
 class CAM_PT_PanelTools(CAM_PT_Panel):
     bl_label = "CAM Tools"
 
+    @classmethod
+    def poll(self, context: Context) -> bool:
+        return context.scene is not None
+
     def draw(self, context: Context) -> None:
-        scene = context.scene
+        cam_tools_library = context.scene.cam_tools_library
+        layout = self.layout
+        layout.row().prop(cam_tools_library, "library")
         self.draw_list(
             "CAM_UL_ToolList",
             "CAM_UL_ListTools",
-            scene,
-            "cam_tools",
-            "cam_tool_active_index",
+            cam_tools_library,
+            "tools",
+            "tool_active_index",
             "TOOL",
         )
 

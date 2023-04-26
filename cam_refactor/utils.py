@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 from itertools import chain, count, islice, repeat
 from math import ceil, copysign, isclose, sqrt
+from pathlib import Path
 from typing import Any, Iterator
 
 import bpy
@@ -16,6 +17,7 @@ from bpy.types import (
 from mathutils import Vector
 
 
+ADDON_PATH = Path(bpy.utils.script_path_user()) / "addons" / "cam_refactor"
 PRECISION = 5
 EPSILON = 1 / 10**PRECISION
 LENGTH_UNIT_SCALE = 1e3
@@ -88,7 +90,8 @@ def copy(context: Context, from_prop: Property, to_prop: Property, depth=0) -> N
     elif isinstance(from_prop, bpy_prop_collection):
         to_prop.clear()
         for from_subprop in from_prop.values():
-            copy(context, from_subprop, to_prop.add(), depth + 1)
+            to_prop.add()
+            copy(context, from_subprop, to_prop[-1], depth + 1)
 
 
 def poll_object_source(strategy: PropertyGroup, obj: Object) -> bool:

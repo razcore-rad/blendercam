@@ -22,12 +22,11 @@ import importlib
 import re
 import subprocess
 import sys
-from pathlib import Path
 
-import bpy
+from .utils import ADDON_PATH
 
 
-mods = {".handlers", ".ops", ".props", ".ui"}
+mods = [".ops", ".props", ".ui", ".handlers"]
 
 globals().update(
     {
@@ -51,8 +50,7 @@ bl_info = {
 
 
 def ensure_modules() -> None:
-    addons_path = Path(bpy.utils.script_path_user()) / "addons"
-    requirements_path = addons_path / "cam_refactor" / "requirements.txt"
+    requirements_path = ADDON_PATH / "requirements.txt"
     try:
         with open(requirements_path) as r:
             for line in r.readlines():
@@ -85,7 +83,7 @@ def register() -> None:
 
 
 def unregister() -> None:
-    for mod in reversed(list(mods)):
+    for mod in reversed(mods):
         globals()[mod.lstrip(".")].unregister()
 
     for mod in sorted(filter(lambda m: m.startswith(__name__), sys.modules)):

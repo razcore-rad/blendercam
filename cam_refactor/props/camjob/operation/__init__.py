@@ -140,16 +140,8 @@ class Operation(PropertyGroup):
         return getattr(self, f"{self.previous_cutter_type.lower()}_cutter")
 
     @property
-    def cutter_propname(self) -> str:
-        return f"{self.cutter_type.lower()}_cutter"
-
-    @property
     def cutter(self) -> PropertyGroup:
-        return getattr(self, self.cutter_propname)
-
-    @property
-    def strategy_propname(self) -> str:
-        return f"{self.strategy_type.lower()}_strategy"
+        return getattr(self, f"{self.cutter_type.lower()}_cutter")
 
     @property
     def previous_strategy(self) -> PropertyGroup:
@@ -157,7 +149,7 @@ class Operation(PropertyGroup):
 
     @property
     def strategy(self) -> PropertyGroup:
-        return getattr(self, self.strategy_propname)
+        return getattr(self, f"{self.strategy_type.lower()}_strategy")
 
     def get_bound_box(self, context: Context) -> tuple[Vector, Vector]:
         result = Vector(), Vector()

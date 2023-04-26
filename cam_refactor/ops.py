@@ -117,8 +117,8 @@ class CAM_OT_Action(Operator):
         self, context: Context, dataptr, propname: str, active_propname: str
     ) -> set[str]:
         propscol = getattr(dataptr, propname)
-        item = propscol.add()
-        getattr(item, "add_data", noop)(context)
+        propscol.add()
+        getattr(propscol[-1], "add_data", noop)(context)
         setattr(dataptr, active_propname, len(propscol) - 1)
         return {"FINISHED"}
 
@@ -140,7 +140,8 @@ class CAM_OT_Action(Operator):
         if not propscol:
             return result
         active_index = getattr(dataptr, active_propname)
-        prop = propscol.add()
+        propscol.add()
+        prop = propscol[-1]
         copy(context, propscol[active_index], prop)
         setattr(dataptr, active_propname, active_index + 1)
         getattr(prop, "add_data", noop)(context)
@@ -181,7 +182,7 @@ class CAM_OT_Action(Operator):
                 "operations",
                 "operation_active_index",
             ),
-            "TOOL": (context, scene, "cam_tools", "cam_tool_active_index")
+            "TOOL": (context, scene.cam_tools_library, "tools", "tool_active_index")
         }
         _, suffix = self.type.split("_")
         return self.execute_funcs[self.type](*args[suffix])
