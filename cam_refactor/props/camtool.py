@@ -12,28 +12,37 @@ from .camjob.operation.cutter import (
     CylinderConeCutter,
     SimpleCutter,
 )
-from ..types import ShortEnumItems
+from ..types import MediumEnumItems
 from ..utils import ADDON_PATH
 
 
 TOOLS_LIBRARY_PATH = ADDON_PATH / "tools_library"
-DEFAULT_ITEM = ("DEFAULT", "Default", "")
+DEFAULT_CAM_TOOLS_LIBRARY_ITEM = ("DEFAULT", "Default", "")
 
 
-def cam_tools_library_items(self, context: Context) -> ShortEnumItems:
-    result = []
+def cam_tools_library_type_items(self, context: Context) -> MediumEnumItems:
     TOOLS_LIBRARY_PATH.mkdir(exist_ok=True)
-    result.extend(
-        sorted(
-            (p.stem.upper(), p.stem.capitalize(), "")
-            for p in TOOLS_LIBRARY_PATH.glob("*.json")
-        )
+    items = sorted(
+        (p.stem.upper(), p.stem.capitalize(), "")
+        for p in TOOLS_LIBRARY_PATH.glob("*.json")
     )
+    if DEFAULT_CAM_TOOLS_LIBRARY_ITEM in items:
+        items.remove(DEFAULT_CAM_TOOLS_LIBRARY_ITEM)
+    return [it + (i,) for i, it in enumerate([DEFAULT_CAM_TOOLS_LIBRARY_ITEM] + items)]
 
-    if DEFAULT_ITEM not in result:
-        enum, *_ = DEFAULT_ITEM
-        result.insert(0, DEFAULT_ITEM)
+
+def get_cam_tools_library_type(self) -> int:
+    enum, *_ = DEFAULT_CAM_TOOLS_LIBRARY_ITEM
+    result = self.get("type", 0)
+    if not self.tools:
+        self.tools.add()
+        tool = self.tools[-1]
+        tool.name = tool.type.capitalize()
     return result
+
+
+def set_cam_tools_library_type(self, value: int) -> None:
+    self["type"] = value
 
 
 class CAMTool(PropertyGroup):
@@ -71,7 +80,12 @@ class CAMTool(PropertyGroup):
 
 
 class CAMToolsLibrary(PropertyGroup):
-    library: EnumProperty(name="Library", items=cam_tools_library_items)
+    type: EnumProperty(
+        name="Library",
+        items=cam_tools_library_type_items,
+        get=get_cam_tools_library_type,
+        set=set_cam_tools_library_type,
+    )
     tools: CollectionProperty(type=CAMTool)
     tool_active_index: IntProperty(default=0, min=0)
 

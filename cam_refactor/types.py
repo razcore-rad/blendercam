@@ -8,5 +8,6 @@ ComputeResult = namedtuple(
 )
 
 ShortEnumItems = list[tuple[str, str, str]]
+MediumEnumItems = list[tuple[str, str, str, int]]
 
 IslandsResult = dict[str, list[set[BMVert]]]

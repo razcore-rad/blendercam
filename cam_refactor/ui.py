@@ -376,10 +376,12 @@ class CAM_PT_PanelJobsMachine(CAM_PT_PanelBase):
 
 class CAM_UL_ToolList(UIList):
     def draw_item(
-        self, context, layout, data, item, icon, active_data, active_propname
+        self, context, layout, data, item, icon, active_data, active_propname, index
     ):
-        pass
-        # if self.layout_type in {"DEFAULT", "COMPACT"}:
+        if self.layout_type in {"DEFAULT", "COMPACT"}:
+            row = layout.row()
+            row.label(text=f"{index}")
+            row.prop(item, "name", text="", emboss=False, icon_value=icon)
         #     if hasattr(item, "data") and item.data is not None:
         #         layout.row().prop(
         #             item.data, "name", text="", emboss=False, icon_value=icon
@@ -388,15 +390,15 @@ class CAM_UL_ToolList(UIList):
         #             item.data, "hide_viewport", text="", emboss=False
         #         )
         #     else:
-        #         layout.row().prop(item, "name", text="", emboss=False, icon_value=icon)
+                # layout.row().prop(item, "name", text="", emboss=False, icon_value=icon)
         #         if isinstance(item, Operation):
         #             icon = "HIDE_ON" if item.is_hidden else "HIDE_OFF"
         #             layout.row(align=True).prop(
         #                 item, "is_hidden", text="", emboss=False, icon=icon
         #             )
-        # elif self.layout_type in {"GRID"}:
-        #     layout.alignment = "CENTER"
-        #     layout.label(text="", icon_value=icon)
+        elif self.layout_type in {"GRID"}:
+            layout.alignment = "CENTER"
+            layout.label(text="", icon_value=icon)
 
 
 class CAM_PT_PanelTools(CAM_PT_Panel):
@@ -409,7 +411,7 @@ class CAM_PT_PanelTools(CAM_PT_Panel):
     def draw(self, context: Context) -> None:
         cam_tools_library = context.scene.cam_tools_library
         layout = self.layout
-        layout.row().prop(cam_tools_library, "library")
+        layout.row().prop(cam_tools_library, "type")
         self.draw_list(
             "CAM_UL_ToolList",
             "CAM_UL_ListTools",

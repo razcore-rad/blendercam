@@ -25,9 +25,10 @@ from .ui_panels.buttons_panel import CAMButtonsPanel
 
 
 class CAM_UL_orientations(UIList):
-    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+    def draw_item(
+        self, context, layout, data, item, icon, active_data, active_propname, index
+    ):
         if self.layout_type in {"DEFAULT", "COMPACT"}:
-
             layout.label(text=item.name, translate=False, icon_value=icon)
         elif self.layout_type in {"GRID"}:
             layout.alignment = "CENTER"
