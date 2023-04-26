@@ -4,7 +4,7 @@ import bpy
 from bpy.types import Context, Menu, Panel, PropertyGroup, UIList, UILayout
 
 from .props.camjob.operation import Operation
-from .ops import CAM_OT_Action
+from .ops import CAM_OT_Action, CAM_OT_ToolLibrary
 from .utils import get_propnames
 
 
@@ -379,23 +379,11 @@ class CAM_UL_ToolList(UIList):
         self, context, layout, data, item, icon, active_data, active_propname, index
     ):
         if self.layout_type in {"DEFAULT", "COMPACT"}:
-            row = layout.row()
+            row = layout.row(align=True)
+            row.alignment = "LEFT"
             row.label(text=f"{index}")
             row.prop(item, "name", text="", emboss=False, icon_value=icon)
-        #     if hasattr(item, "data") and item.data is not None:
-        #         layout.row().prop(
-        #             item.data, "name", text="", emboss=False, icon_value=icon
-        #         )
-        #         layout.row(align=True).prop(
-        #             item.data, "hide_viewport", text="", emboss=False
-        #         )
-        #     else:
-                # layout.row().prop(item, "name", text="", emboss=False, icon_value=icon)
-        #         if isinstance(item, Operation):
-        #             icon = "HIDE_ON" if item.is_hidden else "HIDE_OFF"
-        #             layout.row(align=True).prop(
-        #                 item, "is_hidden", text="", emboss=False, icon=icon
-        #             )
+            row.prop(item, "type", text="")
         elif self.layout_type in {"GRID"}:
             layout.alignment = "CENTER"
             layout.label(text="", icon_value=icon)
@@ -411,7 +399,15 @@ class CAM_PT_PanelTools(CAM_PT_Panel):
     def draw(self, context: Context) -> None:
         cam_tools_library = context.scene.cam_tools_library
         layout = self.layout
-        layout.row().prop(cam_tools_library, "type")
+        row = layout.row()
+        col = row.column()
+        col.prop(cam_tools_library, "type", text="")
+
+        row = row.row(align=True)
+        for type in ["ADD", "REMOVE"]:
+            pg = row.operator(CAM_OT_ToolLibrary.bl_idname, icon=type, text="")
+            pg.type = type
+
         self.draw_list(
             "CAM_UL_ToolList",
             "CAM_UL_ListTools",
@@ -420,6 +416,9 @@ class CAM_PT_PanelTools(CAM_PT_Panel):
             "tool_active_index",
             "TOOL",
         )
+
+        col = layout.column(align=True)
+        self.draw_property_group(cam_tools_library.tool.cutter, layout=col)
 
 
 CLASSES = [

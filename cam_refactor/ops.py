@@ -1,13 +1,13 @@
-import bl_operators
 import bpy
-from bpy.props import EnumProperty, IntProperty
+from bl_operators.presets import AddPresetBase
+from bpy.props import EnumProperty, IntProperty, StringProperty
 from bpy.types import Context, Operator
 
 # from . import props
 from .utils import copy, noop
 
 
-class CAM_OT_AddPresetMachine(bl_operators.presets.AddPresetBase, Operator):
+class CAM_OT_AddPresetMachine(AddPresetBase, Operator):
     """Add or remove a CAM Machine Preset"""
 
     bl_idname = "cam.preset_add_machine"
@@ -31,7 +31,7 @@ class CAM_OT_AddPresetMachine(bl_operators.presets.AddPresetBase, Operator):
     ]
 
 
-class CAM_OT_AddPresetCutter(bl_operators.presets.AddPresetBase, Operator):
+class CAM_OT_AddPresetCutter(AddPresetBase, Operator):
     """Add or remove a CAM Cutter Preset"""
 
     bl_idname = "cam.preset_add_cutter"
@@ -182,13 +182,53 @@ class CAM_OT_Action(Operator):
                 "operations",
                 "operation_active_index",
             ),
-            "TOOL": (context, scene.cam_tools_library, "tools", "tool_active_index")
+            "TOOL": (context, scene.cam_tools_library, "tools", "tool_active_index"),
         }
         _, suffix = self.type.split("_")
         return self.execute_funcs[self.type](*args[suffix])
 
 
-CLASSES = [CAM_OT_AddPresetCutter, CAM_OT_AddPresetMachine, CAM_OT_Action]
+class CAM_OT_ToolLibrary(Operator):
+    bl_idname = "cam.tool_library"
+    bl_label = "CAM Tool Library"
+
+    library_name: StringProperty(name="Library Name", default="New Library")
+    type: EnumProperty(
+        name="Type",
+        items=[
+            ("ADD", "Add", "Add CAM tool library"),
+            ("REMOVE", "Remove", "Remove CAM tool library"),
+        ],
+    )
+
+    @classmethod
+    def poll(self, context: Context) -> bool:
+        return context.window_manager is not None
+
+    def execute(self, context: Context) -> set[str]:
+        print("TEST")
+        return {"FINISHED"}
+
+    def invoke(self, context: Context, event) -> set[str]:
+        result = (
+            {"FINISHED"}
+            if self.type == "REMOVE"
+            else context.window_manager.invoke_props_dialog(self)
+        )
+        return result
+
+    def draw(self, context: Context) -> None:
+        layout = self.layout
+        layout.use_property_split = True
+        layout.prop(self, "library_name")
+
+
+CLASSES = [
+    CAM_OT_AddPresetCutter,
+    CAM_OT_AddPresetMachine,
+    CAM_OT_Action,
+    CAM_OT_ToolLibrary,
+]
 
 
 def register() -> None:

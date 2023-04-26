@@ -75,9 +75,6 @@ class CAMTool(PropertyGroup):
     def cutter(self) -> PropertyGroup:
         return getattr(self, f"{self.type.lower()}_cutter")
 
-    def save(self) -> None:
-        pass
-
 
 class CAMToolsLibrary(PropertyGroup):
     type: EnumProperty(
