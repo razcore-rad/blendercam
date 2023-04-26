@@ -1,4 +1,12 @@
-from bpy.props import CollectionProperty, EnumProperty, IntProperty, PointerProperty
+import json
+
+from bpy.props import (
+    CollectionProperty,
+    EnumProperty,
+    IntProperty,
+    PointerProperty,
+    StringProperty,
+)
 from bpy.types import Context, PropertyGroup
 
 from .camjob.operation.cutter import (
@@ -13,7 +21,7 @@ from .camjob.operation.cutter import (
     SimpleCutter,
 )
 from ..types import MediumEnumItems
-from ..utils import ADDON_PATH
+from ..utils import ADDON_PATH, slugify, to_dict
 
 
 TOOLS_LIBRARY_PATH = ADDON_PATH / "tools_library"
@@ -23,7 +31,7 @@ DEFAULT_CAM_TOOLS_LIBRARY_ITEM = ("DEFAULT", "Default", "")
 def cam_tools_library_type_items(self, context: Context) -> MediumEnumItems:
     TOOLS_LIBRARY_PATH.mkdir(exist_ok=True)
     items = sorted(
-        (p.stem.upper(), p.stem.capitalize(), "")
+        ((slug := slugify(p.stem)).upper(), slug.capitalize(), "")
         for p in TOOLS_LIBRARY_PATH.glob("*.json")
     )
     if DEFAULT_CAM_TOOLS_LIBRARY_ITEM in items:
@@ -32,12 +40,13 @@ def cam_tools_library_type_items(self, context: Context) -> MediumEnumItems:
 
 
 def get_cam_tools_library_type(self) -> int:
-    enum, *_ = DEFAULT_CAM_TOOLS_LIBRARY_ITEM
+    default_enum, *_ = DEFAULT_CAM_TOOLS_LIBRARY_ITEM
     result = self.get("type", 0)
     if not self.tools:
         self.tools.add()
-        tool = self.tools[-1]
-        tool.name = tool.type.capitalize()
+        default_slug = f"{slugify(default_enum)}.json"
+        with open(TOOLS_LIBRARY_PATH / default_slug, "w") as f:
+            json.dump([{self.tool.name: to_dict(self.tool.cutter)}], f)
     return result
 
 
@@ -46,6 +55,7 @@ def set_cam_tools_library_type(self, value: int) -> None:
 
 
 class CAMTool(PropertyGroup):
+    name: StringProperty(default="Tool")
     type: EnumProperty(
         items=[
             ("CYLINDER", "Cylinder", ""),
@@ -89,3 +99,16 @@ class CAMToolsLibrary(PropertyGroup):
     @property
     def tool(self) -> CAMTool:
         return self.tools[self.tool_active_index]
+
+    @property
+    def library(self) -> str:
+        return f"{slugify(self.type)}.json"
+
+    def add_library(self, name: str) -> None:
+        library = slugify(name)
+        (TOOLS_LIBRARY_PATH / f"{library}.json").touch()
+        self.type = library.upper()
+
+    def remove_library(self) -> None:
+        (TOOLS_LIBRARY_PATH / self.library).unlink(missing_ok=True)
+        self.type = "DEFAULT"

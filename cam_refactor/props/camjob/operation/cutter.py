@@ -31,10 +31,7 @@ def set_cone_cone_upper_angle(self, value: float) -> None:
 
 
 class BaseMixin:
-    EXCLUDE_PROPNAMES = {"name", "description", "id"}
-
-    id: IntProperty(name="ID", default=1, min=1)
-    description: StringProperty(name="Description")
+    EXCLUDE_PROPNAMES = {"name"}
 
 
 class LengthMixin:

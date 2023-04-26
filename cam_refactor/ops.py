@@ -206,15 +206,17 @@ class CAM_OT_ToolLibrary(Operator):
         return context.window_manager is not None
 
     def execute(self, context: Context) -> set[str]:
-        print("TEST")
+        cam_tools_library = context.scene.cam_tools_library
+        cam_tools_library.add_library(self.library_name)
         return {"FINISHED"}
 
     def invoke(self, context: Context, event) -> set[str]:
-        result = (
-            {"FINISHED"}
-            if self.type == "REMOVE"
-            else context.window_manager.invoke_props_dialog(self)
-        )
+        result = {"FINISHED"}
+        if self.type == "REMOVE":
+            cam_tools_library = context.scene.cam_tools_library
+            cam_tools_library.remove_library()
+        else:
+            result = context.window_manager.invoke_props_dialog(self)
         return result
 
     def draw(self, context: Context) -> None:

@@ -381,8 +381,8 @@ class CAM_UL_ToolList(UIList):
         if self.layout_type in {"DEFAULT", "COMPACT"}:
             row = layout.row(align=True)
             row.alignment = "LEFT"
-            row.label(text=f"{index}")
-            row.prop(item, "name", text="", emboss=False, icon_value=icon)
+            row.label(text=f"{index + 1}")
+            row.prop(item, "name", text="", icon_value=icon)
             row.prop(item, "type", text="")
         elif self.layout_type in {"GRID"}:
             layout.alignment = "CENTER"
@@ -401,10 +401,11 @@ class CAM_PT_PanelTools(CAM_PT_Panel):
         layout = self.layout
         row = layout.row()
         col = row.column()
-        col.prop(cam_tools_library, "type", text="")
+        col.prop(cam_tools_library, "type", text="", text_ctxt="", translate=False)
 
         row = row.row(align=True)
-        for type in ["ADD", "REMOVE"]:
+        types = ["ADD"] if cam_tools_library.type == "DEFAULT" else ["ADD", "REMOVE"]
+        for type in types:
             pg = row.operator(CAM_OT_ToolLibrary.bl_idname, icon=type, text="")
             pg.type = type
 

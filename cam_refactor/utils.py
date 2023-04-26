@@ -1,3 +1,4 @@
+import re
 from collections.abc import Sequence
 from itertools import chain, count, islice, repeat
 from math import ceil, copysign, isclose, sqrt
@@ -40,6 +41,14 @@ def get_propnames(pg: PropertyGroup, use_exclude_propnames=True) -> list[str]:
             if propname not in exclude_propnames
         }
     )
+
+
+def slugify(s: str) -> str:
+    return re.sub(r"\W+", "-", s).strip("-").lower()
+
+
+def to_dict(pg: PropertyGroup) -> dict:
+    return {k: getattr(pg, k) for k in get_propnames(pg)}
 
 
 def get_scaled_prop(propname: str, default, self):
