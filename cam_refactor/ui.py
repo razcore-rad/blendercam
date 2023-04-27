@@ -402,10 +402,7 @@ class CAM_PT_PanelTools(CAM_PT_Panel):
         layout = self.layout
         row = layout.row()
         col = row.column()
-
-        cam_tools_library_type_items(context)
         col.prop(cam_tools_library, "type", text="", text_ctxt="", translate=False)
-
         row = row.row(align=True)
         types = ["ADD"] if cam_tools_library.type == "DEFAULT" else ["ADD", "REMOVE"]
         for type in types:
