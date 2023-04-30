@@ -266,8 +266,6 @@ class CAM_PT_PanelJobsOperationCutter(CAM_PT_PanelJobsOperationSubPanel):
         col = self.layout.box().column(align=True)
         col.use_property_split = True
         col.prop(operation, "cutter_type")
-        col.prop(cutter, "id")
-        col.prop(cutter, "description")
         col.use_property_split = False
         self.draw_property_group(cutter, layout=col)
 

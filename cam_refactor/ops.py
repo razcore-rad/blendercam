@@ -3,8 +3,6 @@ from bl_operators.presets import AddPresetBase
 from bpy.props import EnumProperty, IntProperty, StringProperty
 from bpy.types import Context, Operator
 
-# from . import props
-from .props.camtool import cam_tools_library_type_items
 from .utils import copy, noop
 
 
@@ -121,6 +119,7 @@ class CAM_OT_Action(Operator):
         propscol.add()
         getattr(propscol[-1], "add_data", noop)(context)
         setattr(dataptr, active_propname, len(propscol) - 1)
+        getattr(dataptr, "save", noop)()
         return {"FINISHED"}
 
     def execute_compute(
@@ -146,6 +145,7 @@ class CAM_OT_Action(Operator):
         copy(context, propscol[active_index], prop)
         setattr(dataptr, active_propname, active_index + 1)
         getattr(prop, "add_data", noop)(context)
+        getattr(prop, "save", noop)()
         return result
 
     def execute_remove(
@@ -157,6 +157,7 @@ class CAM_OT_Action(Operator):
             getattr(item, "remove_data", noop)()
             propscol.remove(getattr(dataptr, active_propname))
             setattr(dataptr, active_propname, getattr(dataptr, active_propname) - 1)
+            getattr(dataptr, "save", noop)()
         except IndexError:
             pass
         return {"FINISHED"}

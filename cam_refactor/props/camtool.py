@@ -20,7 +20,7 @@ from .camjob.operation.cutter import (
     CylinderConeCutter,
     SimpleCutter,
 )
-from ..utils import ADDON_PATH, slugify, to_dict
+from ..utils import ADDON_PATH, slugify, to_dict, from_dict, update_cam_tools_library
 
 
 TOOLS_LIBRARY_PATH = ADDON_PATH / "tools_library"
@@ -45,22 +45,23 @@ cam_tools_library_type_items.items = []
 
 
 def get_cam_tools_library_type(self) -> int:
-    default_enum, *_ = DEFAULT_CAM_TOOLS_LIBRARY_ITEM
     result = self.get("type", 0)
+    enum, *_ = cam_tools_library_type_items.items[result]
     if not self.tools:
         self.tools.add()
-        default_slug = f"{slugify(default_enum)}.json"
-        with open(TOOLS_LIBRARY_PATH / default_slug, "w") as f:
-            json.dump([{self.tool.name: to_dict(self.tool.cutter)}], f)
+        self.save(slugify(enum))
     return result
 
 
 def set_cam_tools_library_type(self, value: int) -> None:
     self["type"] = value
+    enum, *_ = cam_tools_library_type_items.items[self["type"]]
+    self.load(slugify(enum))
 
 
 class CAMTool(PropertyGroup):
-    name: StringProperty(default="Tool")
+    name: StringProperty(default="Tool", update=update_cam_tools_library)
+
     type: EnumProperty(
         items=[
             ("CYLINDER", "Cylinder", ""),
@@ -71,9 +72,10 @@ class CAMTool(PropertyGroup):
             ("BALL_CONE", "Ball Cone", ""),
             ("BULL_CONE", "Bull Cone", ""),
             ("CONE_CONE", "Cone Cone", ""),
-            ("LASER_CONE", "Laser", ""),
-            ("PLASMA_CONE", "Plasma", ""),
-        ]
+            ("LASER", "Laser", ""),
+            ("PLASMA", "Plasma", ""),
+        ],
+        update=update_cam_tools_library
     )
     cylinder_cutter: PointerProperty(type=CylinderCutter)
     ball_cutter: PointerProperty(type=BallCutter)
@@ -107,13 +109,37 @@ class CAMToolsLibrary(PropertyGroup):
 
     @property
     def library(self) -> str:
-        return f"{slugify(self.type)}.json"
+        return slugify(self.type)
 
     def add_library(self, context: Context, name: str) -> None:
         library = slugify(name)
         (TOOLS_LIBRARY_PATH / f"{library}.json").touch()
+        self.tools.clear()
+        self.tools.add()
+        self.tool_active_index = 0
         self.type = library.upper()
+        self.save(library)
 
     def remove_library(self) -> None:
-        (TOOLS_LIBRARY_PATH / self.library).unlink(missing_ok=True)
-        self.type = "DEFAULT"
+        (TOOLS_LIBRARY_PATH / f"{self.library}.json").unlink(missing_ok=True)
+        self.type, *_ = DEFAULT_CAM_TOOLS_LIBRARY_ITEM
+
+    def save(self, library: str = "") -> None:
+        if library == "":
+            library = self.library
+
+        with open(TOOLS_LIBRARY_PATH / f"{library}.json", "w") as f:
+            py = to_dict(self)
+            del py["type"]
+            json.dump(py, f)
+
+    def load(self, library: str = "") -> None:
+        if library == "":
+            library = self.library
+
+        try:
+            with open(TOOLS_LIBRARY_PATH / f"{library}.json", "r") as f:
+                from_dict(json.load(f), self)
+        except json.decoder.JSONDecodeError:
+            pass
+

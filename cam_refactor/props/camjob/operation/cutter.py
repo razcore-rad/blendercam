@@ -1,9 +1,16 @@
 from math import pi
 
-from bpy.props import FloatProperty, IntProperty, StringProperty
+from bpy.props import FloatProperty
 from bpy.types import PropertyGroup
 
-from ....utils import EPSILON, PRECISION, clamp, get_scaled_prop, set_scaled_prop
+from ....utils import (
+    EPSILON,
+    PRECISION,
+    clamp,
+    get_scaled_prop,
+    set_scaled_prop,
+    update_cam_tools_library,
+)
 
 
 def set_ball_cutter_corner_radius(self, value: float) -> None:
@@ -40,6 +47,7 @@ class LengthMixin:
         unit="LENGTH",
         get=lambda s: get_scaled_prop("length", 1e-1, s),
         set=lambda s, v: set_scaled_prop("length", 1e-3, None, s, v),
+        update=update_cam_tools_library,
     )
 
 
@@ -50,6 +58,7 @@ class DiameterMixin:
         unit="LENGTH",
         get=lambda s: get_scaled_prop("diameter", 3e-3, s),
         set=lambda s, v: set_scaled_prop("diameter", EPSILON, None, s, v),
+        update=update_cam_tools_library,
     )
 
     @property
@@ -64,6 +73,7 @@ class Diameter2Mixin:
         unit="LENGTH",
         get=lambda s: get_scaled_prop("lower_diameter", 3e-3, s),
         set=set_lower_diameter_cutter,
+        update=update_cam_tools_library,
     )
 
     upper_diameter: FloatProperty(
@@ -72,6 +82,7 @@ class Diameter2Mixin:
         unit="LENGTH",
         get=lambda s: get_scaled_prop("upper_diameter", 3e-3, s),
         set=set_upper_diameter_cutter,
+        update=update_cam_tools_library,
     )
 
     @property
@@ -93,7 +104,12 @@ class Diameter2Mixin:
 
 class AngleMixin:
     angle: FloatProperty(
-        name="Angle", subtype="ANGLE", default=pi / 4, min=pi / 180, max=pi / 2
+        name="Angle",
+        subtype="ANGLE",
+        default=pi / 4,
+        min=pi / 180,
+        max=pi / 2,
+        update=update_cam_tools_library,
     )
 
 
@@ -116,6 +132,7 @@ class BullCutter(BaseMixin, DiameterMixin, LengthMixin, PropertyGroup):
         unit="LENGTH",
         get=lambda s: get_scaled_prop("corner_radius", 1e-3, s),
         set=set_ball_cutter_corner_radius,
+        update=update_cam_tools_library,
     )
 
 
@@ -140,6 +157,7 @@ class BullConeCutter(BaseMixin, Diameter2Mixin, AngleMixin, LengthMixin, Propert
         unit="LENGTH",
         get=lambda s: get_scaled_prop("corner_radius", 1e-3, s),
         set=set_ball_cone_cutter_corner_radius,
+        update=update_cam_tools_library,
     )
 
 
@@ -149,10 +167,12 @@ class ConeConeCutter(BaseMixin, Diameter2Mixin, LengthMixin, PropertyGroup):
         subtype="ANGLE",
         get=lambda s: s.get("lower_angle", pi / 2),
         set=set_cone_cone_lower_angle,
+        update=update_cam_tools_library,
     )
     upper_angle: FloatProperty(
         name="Upper Angle",
         subtype="ANGLE",
         get=lambda s: s.get("upper_angle", pi / 4),
         set=set_cone_cone_upper_angle,
+        update=update_cam_tools_library,
     )

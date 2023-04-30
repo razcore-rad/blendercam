@@ -30,6 +30,10 @@ def noop(*args, **kwargs) -> None:
     pass
 
 
+def slugify(s: str) -> str:
+    return re.sub(r"\W+", "-", s).strip("-").lower()
+
+
 def get_propnames(pg: PropertyGroup, use_exclude_propnames=True) -> list[str]:
     exclude_propnames = ["rna_type"]
     if use_exclude_propnames:
@@ -43,12 +47,31 @@ def get_propnames(pg: PropertyGroup, use_exclude_propnames=True) -> list[str]:
     )
 
 
-def slugify(s: str) -> str:
-    return re.sub(r"\W+", "-", s).strip("-").lower()
-
-
 def to_dict(pg: PropertyGroup) -> dict:
-    return {k: getattr(pg, k) for k in get_propnames(pg)}
+    return {
+        k: (
+            to_dict(value)
+            if isinstance(value := getattr(pg, k), PropertyGroup)
+            else [to_dict(v) for v in value]
+            if isinstance(value, bpy_prop_collection)
+            else value
+        )
+        for k in get_propnames(pg)
+    }
+
+
+def from_dict(d: dict, pg: PropertyGroup) -> None:
+    for key in d:
+        if isinstance(d[key], dict):
+            from_dict(d[key], getattr(pg, key))
+        elif isinstance(d[key], list):
+            collection = getattr(pg, key)
+            collection.clear()
+            for item in d[key]:
+                collection.add()
+                from_dict(item, collection[-1])
+        else:
+            setattr(pg, key, d[key])
 
 
 def get_scaled_prop(propname: str, default, self):
@@ -177,3 +200,8 @@ def get_fit_circle_2d(
     if std_deviation < tolerance:
         result = Vector((xc, yc)), 2 * sqrt(c[2] + xc**2 + yc**2)
     return result
+
+
+def update_cam_tools_library(self, context: Context) -> None:
+    cam_tools_library = context.scene.cam_tools_library
+    cam_tools_library.save()

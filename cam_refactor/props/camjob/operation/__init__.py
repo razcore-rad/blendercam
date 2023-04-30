@@ -153,14 +153,18 @@ class Operation(PropertyGroup):
 
     def get_bound_box(self, context: Context) -> tuple[Vector, Vector]:
         result = Vector(), Vector()
-        vectors = (
-            o.matrix_world @ Vector(c)
-            for o in self.strategy.get_source(context)
-            for c in o.bound_box
-        )
-        result = tuple(
-            Vector(f(cs) for cs in zip(*ps)) for f, ps in zip((min, max), tee(vectors))
-        )
+        try:
+            vectors = (
+                o.matrix_world @ Vector(c)
+                for o in self.strategy.get_source(context)
+                for c in o.bound_box
+            )
+            result = tuple(
+                Vector(f(cs) for cs in zip(*ps))
+                for f, ps in zip((min, max), tee(vectors))
+            )
+        except ValueError:
+            pass
         return result
 
     def get_depth_end(self, context: Context) -> float:
