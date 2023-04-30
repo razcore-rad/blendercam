@@ -69,8 +69,8 @@ def update_cam_tools_library_type(self, context: Context) -> None:
 def update_cam_tool_name(self, context: Context) -> None:
     update_cam_tools_library(self, context)
     for operation in (op for cj in context.scene.cam_jobs for op in cj.operations):
-        if operation.tool_id == context.scene.cam_tools_library.tool_active_index:
-            operation.tool = f"{operation.tool_id + 1}: {self.name}"
+        tool = context.scene.cam_tools_library.tools[operation.tool_id]
+        operation.tool = f"{operation.tool_id + 1}: {tool.name}"
 
 
 class CAMTool(PropertyGroup):
