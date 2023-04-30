@@ -23,6 +23,7 @@ from .camjob.operation.cutter import (
 from ..utils import ADDON_PATH, slugify, to_dict, from_dict, update_cam_tools_library
 
 
+VERSION = 0
 TOOLS_LIBRARY_PATH = ADDON_PATH / "tools_library"
 DEFAULT_CAM_TOOLS_LIBRARY_ITEM = ("DEFAULT", "Default", "")
 
@@ -131,7 +132,7 @@ class CAMToolsLibrary(PropertyGroup):
         with open(TOOLS_LIBRARY_PATH / f"{library}.json", "w") as f:
             py = to_dict(self)
             del py["type"]
-            json.dump(py, f)
+            json.dump({"version": VERSION, "library": py}, f)
 
     def load(self, library: str = "") -> None:
         if library == "":
@@ -139,7 +140,8 @@ class CAMToolsLibrary(PropertyGroup):
 
         try:
             with open(TOOLS_LIBRARY_PATH / f"{library}.json", "r") as f:
-                from_dict(json.load(f), self)
+                py = json.load(f)
+                from_dict(py["library"], self)
         except json.decoder.JSONDecodeError:
             pass
 
