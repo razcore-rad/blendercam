@@ -9,7 +9,7 @@ from bpy.props import (
 )
 from bpy.types import Context, PropertyGroup
 
-from .camjob.operation.cutter import (
+from .cutter import (
     BallCutter,
     BullCutter,
     BallConeCutter,
@@ -20,7 +20,8 @@ from .camjob.operation.cutter import (
     CylinderConeCutter,
     SimpleCutter,
 )
-from ..utils import ADDON_PATH, slugify, to_dict, from_dict, update_cam_tools_library
+from .utils import update_cam_tools_library
+from ...utils import ADDON_PATH, slugify, to_dict, from_dict
 
 
 VERSION = 0
@@ -60,8 +61,20 @@ def set_cam_tools_library_type(self, value: int) -> None:
     self.load(slugify(enum))
 
 
+def update_cam_tools_library_type(self, context: Context) -> None:
+    for operation in (op for cj in context.scene.cam_jobs for op in cj.operations):
+        operation.tool = ""
+
+
+def update_cam_tool_name(self, context: Context) -> None:
+    update_cam_tools_library(self, context)
+    for operation in (op for cj in context.scene.cam_jobs for op in cj.operations):
+        if operation.tool_id == context.scene.cam_tools_library.tool_active_index:
+            operation.tool = f"{operation.tool_id + 1}: {self.name}"
+
+
 class CAMTool(PropertyGroup):
-    name: StringProperty(default="Tool", update=update_cam_tools_library)
+    name: StringProperty(default="Tool", update=update_cam_tool_name)
 
     type: EnumProperty(
         items=[
@@ -93,6 +106,11 @@ class CAMTool(PropertyGroup):
     def cutter(self) -> PropertyGroup:
         return getattr(self, f"{self.type.lower()}_cutter")
 
+    def remove_data(self, context: Context) -> None:
+        for operation in (op for cj in context.scene.cam_jobs for op in cj.operations):
+            operation.tool_id = -1
+            operation.tool = ""
+
 
 class CAMToolsLibrary(PropertyGroup):
     type: EnumProperty(
@@ -100,6 +118,7 @@ class CAMToolsLibrary(PropertyGroup):
         items=cam_tools_library_type_items,
         get=get_cam_tools_library_type,
         set=set_cam_tools_library_type,
+        update=update_cam_tools_library_type,
     )
     tools: CollectionProperty(type=CAMTool)
     tool_active_index: IntProperty(default=0, min=0)
@@ -144,4 +163,3 @@ class CAMToolsLibrary(PropertyGroup):
                 from_dict(py["library"], self)
         except json.decoder.JSONDecodeError:
             pass
-

@@ -3,13 +3,13 @@ from math import pi
 from bpy.props import FloatProperty
 from bpy.types import PropertyGroup
 
-from ....utils import (
+from .utils import update_cam_tools_library
+from ...utils import (
     EPSILON,
     PRECISION,
     clamp,
     get_scaled_prop,
     set_scaled_prop,
-    update_cam_tools_library,
 )
 
 

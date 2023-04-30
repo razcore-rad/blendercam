@@ -200,8 +200,3 @@ def get_fit_circle_2d(
     if std_deviation < tolerance:
         result = Vector((xc, yc)), 2 * sqrt(c[2] + xc**2 + yc**2)
     return result
-
-
-def update_cam_tools_library(self, context: Context) -> None:
-    cam_tools_library = context.scene.cam_tools_library
-    cam_tools_library.save()

@@ -6,15 +6,17 @@ from . import camjob, camtool
 
 
 CLASSES = [
-    camjob.operation.cutter.CylinderCutter,
-    camjob.operation.cutter.BallCutter,
-    camjob.operation.cutter.BullCutter,
-    camjob.operation.cutter.ConeCutter,
-    camjob.operation.cutter.CylinderConeCutter,
-    camjob.operation.cutter.BallConeCutter,
-    camjob.operation.cutter.BullConeCutter,
-    camjob.operation.cutter.ConeConeCutter,
-    camjob.operation.cutter.SimpleCutter,
+    camtool.cutter.CylinderCutter,
+    camtool.cutter.BallCutter,
+    camtool.cutter.BullCutter,
+    camtool.cutter.ConeCutter,
+    camtool.cutter.CylinderConeCutter,
+    camtool.cutter.BallConeCutter,
+    camtool.cutter.BullConeCutter,
+    camtool.cutter.ConeConeCutter,
+    camtool.cutter.SimpleCutter,
+    camtool.CAMTool,
+    camtool.CAMToolsLibrary,
     camjob.operation.feedmovementspindle.Feed,
     camjob.operation.feedmovementspindle.Movement,
     camjob.operation.feedmovementspindle.Spindle,
@@ -41,8 +43,6 @@ CLASSES = [
     camjob.machine.Machine,
     camjob.stock.Stock,
     camjob.CAMJob,
-    camtool.CAMTool,
-    camtool.CAMToolsLibrary,
 ]
 
 

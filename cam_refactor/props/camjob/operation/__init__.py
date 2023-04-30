@@ -1,8 +1,10 @@
 from itertools import tee
+from typing import Iterator
 
 from bpy.props import (
     BoolProperty,
     EnumProperty,
+    IntProperty,
     PointerProperty,
     StringProperty,
 )
@@ -10,67 +12,83 @@ from bpy.types import Context, PropertyGroup
 from mathutils import Vector
 
 from . import feedmovementspindle, strategy, workarea
-from .cutter import (
-    BallCutter,
-    BullCutter,
-    BallConeCutter,
-    BullConeCutter,
-    ConeCutter,
-    ConeConeCutter,
-    CylinderCutter,
-    CylinderConeCutter,
-    SimpleCutter,
-)
+
+# from .cutter import (
+#     BallCutter,
+#     BullCutter,
+#     BallConeCutter,
+#     BullConeCutter,
+#     ConeCutter,
+#     ConeConeCutter,
+#     CylinderCutter,
+#     CylinderConeCutter,
+#     SimpleCutter,
+# )
 from ....utils import copy
 from ....types import ComputeResult
 
 
-def update_cutter(operation: PropertyGroup, context: Context) -> None:
-    copy(context, operation.previous_cutter, operation.cutter)
-    operation.previous_cutter_type = operation.cutter_type
+# def update_cutter(operation: PropertyGroup, context: Context) -> None:
+#     copy(context, operation.previous_cutter, operation.cutter)
+#     operation.previous_cutter_type = operation.cutter_type
 
 
-def update_strategy(operation: PropertyGroup, context: Context) -> None:
-    copy(context, operation.previous_strategy, operation.strategy)
-    if operation.cutter_type == "":
-        operation.cutter_type = "CYLINDER"
-    operation.previous_strategy_type = operation.strategy_type
+def update_operation_strategy(self, context: Context) -> None:
+    copy(context, self.previous_strategy, self.strategy)
+    # if operation.cutter_type == "":
+    #     operation.cutter_type = "CYLINDER"
+    self.previous_strategy_type = self.strategy_type
+
+
+def search_operation_tool(self, context: Context, edit_text: str) -> Iterator[str]:
+    tools = context.scene.cam_tools_library.tools
+    return (f"{i + 1}: {t.name}" for i, t in enumerate(tools))
+
+
+def update_operation_tool(self, context: Context) -> None:
+    self.tool_id = -1
+    try:
+        self.tool_id = int(self.tool.split(":")[0]) - 1
+    except ValueError:
+        pass
 
 
 class Operation(PropertyGroup):
     EXCLUDE_PROPNAMES = {
         "previous_strategy_type",
-        "previous_cutter_type",
+        "tool_id",
+        "tool",
+        # "previous_cutter_type",
     }
     NAME = "CAMOperation"
 
     is_hidden: BoolProperty(default=False)
-    previous_cutter_type: StringProperty(default="CYLINDER")
-    cutter_type: EnumProperty(
-        name="Type",
-        items=[
-            ("CYLINDER", "Cylinder", ""),
-            ("BALL", "Ball", ""),
-            ("BULL", "Bull", ""),
-            ("CONE", "Cone", ""),
-            ("CYLINDER_CONE", "Cylinder Cone", ""),
-            ("BALL_CONE", "Ball Cone", ""),
-            ("BULL_CONE", "Bull Cone", ""),
-            ("CONE_CONE", "Cone Cone", ""),
-        ],
-        default=5,
-        update=update_cutter,
-    )
-    cylinder_cutter: PointerProperty(type=CylinderCutter)
-    ball_cutter: PointerProperty(type=BallCutter)
-    bull_cutter: PointerProperty(type=BullCutter)
-    cone_cutter: PointerProperty(type=ConeCutter)
-    cylinder_cone_cutter: PointerProperty(type=CylinderConeCutter)
-    ball_cone_cutter: PointerProperty(type=BallConeCutter)
-    bull_cone_cutter: PointerProperty(type=BullConeCutter)
-    cone_cone_cutter: PointerProperty(type=ConeConeCutter)
-    laser_cutter: PointerProperty(type=SimpleCutter)
-    plasma_cutter: PointerProperty(type=SimpleCutter)
+    # previous_cutter_type: StringProperty(default="CYLINDER")
+    # cutter_type: EnumProperty(
+    #     name="Type",
+    #     items=[
+    #         ("CYLINDER", "Cylinder", ""),
+    #         ("BALL", "Ball", ""),
+    #         ("BULL", "Bull", ""),
+    #         ("CONE", "Cone", ""),
+    #         ("CYLINDER_CONE", "Cylinder Cone", ""),
+    #         ("BALL_CONE", "Ball Cone", ""),
+    #         ("BULL_CONE", "Bull Cone", ""),
+    #         ("CONE_CONE", "Cone Cone", ""),
+    #     ],
+    #     default=5,
+    #     update=update_cutter,
+    # )
+    # cylinder_cutter: PointerProperty(type=CylinderCutter)
+    # ball_cutter: PointerProperty(type=BallCutter)
+    # bull_cutter: PointerProperty(type=BullCutter)
+    # cone_cutter: PointerProperty(type=ConeCutter)
+    # cylinder_cone_cutter: PointerProperty(type=CylinderConeCutter)
+    # ball_cone_cutter: PointerProperty(type=BallConeCutter)
+    # bull_cone_cutter: PointerProperty(type=BullConeCutter)
+    # cone_cone_cutter: PointerProperty(type=ConeConeCutter)
+    # laser_cutter: PointerProperty(type=SimpleCutter)
+    # plasma_cutter: PointerProperty(type=SimpleCutter)
 
     previous_strategy_type: StringProperty(default="PROFILE")
     strategy_type_items = [
@@ -114,7 +132,7 @@ class Operation(PropertyGroup):
         name="Strategy",
         items=strategy_type_items,
         default="PROFILE",
-        update=update_strategy,
+        update=update_operation_strategy,
     )
     block_strategy: PointerProperty(type=strategy.Block)
     circles_strategy: PointerProperty(type=strategy.Circles)
@@ -130,18 +148,19 @@ class Operation(PropertyGroup):
     spiral_strategy: PointerProperty(type=strategy.Spiral)
     waterline_roughing_strategy: PointerProperty(type=strategy.WaterlineRoughing)
 
+    tool_id: IntProperty(default=-1)
+    tool: StringProperty(
+        name="Tool", search=search_operation_tool, update=update_operation_tool
+    )
+
     feed: PointerProperty(type=feedmovementspindle.Feed)
     movement: PointerProperty(type=feedmovementspindle.Movement)
     spindle: PointerProperty(type=feedmovementspindle.Spindle)
     work_area: PointerProperty(type=workarea.WorkArea)
 
-    @property
-    def previous_cutter(self) -> PropertyGroup:
-        return getattr(self, f"{self.previous_cutter_type.lower()}_cutter")
-
-    @property
-    def cutter(self) -> PropertyGroup:
-        return getattr(self, f"{self.cutter_type.lower()}_cutter")
+    # @property
+    # def previous_cutter(self) -> PropertyGroup:
+    #     return getattr(self, f"{self.previous_cutter_type.lower()}_cutter")
 
     @property
     def previous_strategy(self) -> PropertyGroup:
@@ -188,3 +207,7 @@ class Operation(PropertyGroup):
             self.strategy.object_source = context.object
         if self.strategy.collection_source is None:
             self.strategy.collection_source = context.collection
+
+        cam_tools_library = context.scene.cam_tools_library
+        self.tool_id = cam_tools_library.tools.values().index(cam_tools_library.tool)
+        self.tool = f"{self.tool_id + 1}: {cam_tools_library.tool.name}"

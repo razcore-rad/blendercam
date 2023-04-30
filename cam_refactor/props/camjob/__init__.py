@@ -86,7 +86,7 @@ class CAMJob(PropertyGroup):
             operation = self.operations[-1]
             operation.add_data(context)
 
-    def remove_data(self) -> None:
+    def remove_data(self, context: Context) -> None:
         if self.object is not None:
             bpy.data.meshes.remove(self.object.data)
 
@@ -95,6 +95,10 @@ class CAMJob(PropertyGroup):
 
     def execute_compute(self, context: Context, report: Callable) -> set[str]:
         result, computed = set(), []
+        if context.scene.cam_job.operation.tool_id < 0:
+            report({"ERROR"}, "Set operation tool.")
+            return {"CANCELLED"}
+
         previous_rapid_height = 0.0
         if self.operation:
             operation = self.operations[0]

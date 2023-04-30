@@ -154,7 +154,7 @@ class CAM_OT_Action(Operator):
         try:
             propscol = getattr(dataptr, propname)
             item = propscol[getattr(dataptr, active_propname)]
-            getattr(item, "remove_data", noop)()
+            getattr(item, "remove_data", noop)(context)
             propscol.remove(getattr(dataptr, active_propname))
             setattr(dataptr, active_propname, getattr(dataptr, active_propname) - 1)
             getattr(dataptr, "save", noop)()
