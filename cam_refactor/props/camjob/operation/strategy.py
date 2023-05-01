@@ -221,9 +221,7 @@ class Drill(SourceMixin, PropertyGroup):
     dwell: FloatProperty(name="Dwell", min=0.0)
 
     def get_feature_positions(
-        self,
-        context: Context,
-        operation: PropertyGroup,
+        self, context: Context, operation: PropertyGroup
     ) -> Iterator[Vector]:
         result = set()
         if operation.tool_id < 0:
@@ -319,7 +317,6 @@ class Profile(SourceMixin, PropertyGroup):
         ],
     )
     cut_type_sign = {"INSIDE": -1, "OUTSIDE": 1}
-    do_merge: BoolProperty(name="Merge Outlines", default=True)
     outlines_count: IntProperty(name="Outlines Count", default=0)
     offset: IntProperty(name="Offset", default=0)
     style_type: EnumProperty(
@@ -329,6 +326,32 @@ class Profile(SourceMixin, PropertyGroup):
             ("OVERSHOOT", "Overshoot", "Overshoot style"),
         ],
     )
+
+    def get_feature_positions(
+        self, context: Context, operation: PropertyGroup
+    ) -> Iterator[Vector]:
+        result = set()
+        if operation.tool_id < 0:
+            return result
+
+        for obj in self.get_evaluated_source(context):
+            if obj.name not in context.view_layer.objects:
+                continue
+
+            temp_mesh = obj.to_mesh()
+            bm = bmesh.new()
+            bm.from_mesh(temp_mesh)
+            for island in get_islands(bm, bm.verts)["islands"]:
+                vectors = [obj.matrix_world @ v.co for v in island]
+                vector_mean = sum(vectors, Vector()) / len(vectors)
+                depth_end = operation.get_depth_end(context)
+                is_valid = depth_end < vector_mean.z < 0.0
+                if is_valid:
+                    vector_mean.z = depth_end
+                    result.add(vector_mean.freeze())
+            bm.free()
+            obj.to_mesh_clear()
+        return result
 
     def execute_compute(
         self, context: Context, operation: PropertyGroup

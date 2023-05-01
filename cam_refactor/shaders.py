@@ -90,7 +90,23 @@ def draw_drill_features(context: Context, operation: Operation) -> None:
     gpu.state.line_width_set(1)
 
 
-DRAW_FEAURES_FUNCS = {"DRILL": draw_drill_features}
+def draw_profile_features(context: Context, operation: Operation) -> None:
+    if operation.tool_id < 0:
+        return
+
+    gpu.state.depth_test_set("LESS_EQUAL")
+    gpu.state.line_width_set(3)
+    SHADER.uniform_float("color", (1, 1, 1, 1))
+    positions = operation.strategy.get_feature_positions(context, operation)
+    positions = [tuple(p) for p in positions]
+    batch_for_shader(SHADER, "POINTS", {"pos": positions}).draw(SHADER)
+    gpu.state.line_width_set(1)
+
+
+DRAW_FEAURES_FUNCS = {
+    "DRILL": draw_drill_features,
+    "PROFILE": draw_profile_features,
+}
 
 
 def draw_features() -> None:
