@@ -120,7 +120,7 @@ class Operation(PropertyGroup):
         return getattr(self, f"{self.strategy_type.lower()}_strategy")
 
     def get_cutter(self, context: Context) -> PropertyGroup:
-        return context.scene.cam_tools_library[self.tool_id].cutter
+        return context.scene.cam_tools_library.tools[self.tool_id].cutter
 
     def get_bound_box(self, context: Context) -> tuple[Vector, Vector]:
         result = Vector(), Vector()

@@ -4,7 +4,7 @@ from bmesh.types import BMVert
 
 
 ComputeResult = namedtuple(
-    "ComputeResult", ("execute", "msg", "computed"), defaults=(set(), "", [])
+    "ComputeResult", ("execute", "computed"), defaults=(set(), [])
 )
 
 ShortEnumItems = list[tuple[str, str, str]]

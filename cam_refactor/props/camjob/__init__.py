@@ -96,7 +96,7 @@ class CAMJob(PropertyGroup):
     def execute_compute(self, context: Context, report: Callable) -> set[str]:
         result, computed = set(), []
         if context.scene.cam_job.operation.tool_id < 0:
-            report({"ERROR"}, "Set operation tool.")
+            report({"ERROR"}, "Set operation tool first.")
             return {"CANCELLED"}
 
         previous_rapid_height = 0.0
@@ -115,7 +115,7 @@ class CAMJob(PropertyGroup):
             )
 
         for index, operation in enumerate(self.operations):
-            partial_result, msg, partial_computed = operation.execute_compute(context)
+            partial_result, partial_computed = operation.execute_compute(context)
             if index > 0 and partial_computed:
                 v = partial_computed[0]["vector"]
                 computed.append(
@@ -131,12 +131,11 @@ class CAMJob(PropertyGroup):
                 )
             computed.extend(partial_computed)
             previous_rapid_height = operation.movement.rapid_height
-            msg != "" and report({"ERROR"}, msg)
             result.update(partial_result)
         (result_item,) = result = utils.reduce_cancelled_or_finished(result)
 
         if result_item == "CANCELLED":
-            report({"ERROR"}, f"CAM Job {self.data.name} canceled")
+            report({"ERROR"}, f"CAM Job {self.data.name} couldn't be computed.")
         else:
             self.add_data(context)
             context.view_layer.objects.active = self.object
