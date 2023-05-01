@@ -12,31 +12,12 @@ from bpy.types import Context, PropertyGroup
 from mathutils import Vector
 
 from . import feedmovementspindle, strategy, workarea
-
-# from .cutter import (
-#     BallCutter,
-#     BullCutter,
-#     BallConeCutter,
-#     BullConeCutter,
-#     ConeCutter,
-#     ConeConeCutter,
-#     CylinderCutter,
-#     CylinderConeCutter,
-#     SimpleCutter,
-# )
-from ....utils import copy
 from ....types import ComputeResult
-
-
-# def update_cutter(operation: PropertyGroup, context: Context) -> None:
-#     copy(context, operation.previous_cutter, operation.cutter)
-#     operation.previous_cutter_type = operation.cutter_type
+from ....utils import copy
 
 
 def update_operation_strategy(self, context: Context) -> None:
     copy(context, self.previous_strategy, self.strategy)
-    # if operation.cutter_type == "":
-    #     operation.cutter_type = "CYLINDER"
     self.previous_strategy_type = self.strategy_type
 
 
@@ -58,38 +39,10 @@ class Operation(PropertyGroup):
         "previous_strategy_type",
         "tool_id",
         "tool",
-        # "previous_cutter_type",
     }
     NAME = "CAMOperation"
 
     is_hidden: BoolProperty(default=False)
-    # previous_cutter_type: StringProperty(default="CYLINDER")
-    # cutter_type: EnumProperty(
-    #     name="Type",
-    #     items=[
-    #         ("CYLINDER", "Cylinder", ""),
-    #         ("BALL", "Ball", ""),
-    #         ("BULL", "Bull", ""),
-    #         ("CONE", "Cone", ""),
-    #         ("CYLINDER_CONE", "Cylinder Cone", ""),
-    #         ("BALL_CONE", "Ball Cone", ""),
-    #         ("BULL_CONE", "Bull Cone", ""),
-    #         ("CONE_CONE", "Cone Cone", ""),
-    #     ],
-    #     default=5,
-    #     update=update_cutter,
-    # )
-    # cylinder_cutter: PointerProperty(type=CylinderCutter)
-    # ball_cutter: PointerProperty(type=BallCutter)
-    # bull_cutter: PointerProperty(type=BullCutter)
-    # cone_cutter: PointerProperty(type=ConeCutter)
-    # cylinder_cone_cutter: PointerProperty(type=CylinderConeCutter)
-    # ball_cone_cutter: PointerProperty(type=BallConeCutter)
-    # bull_cone_cutter: PointerProperty(type=BullConeCutter)
-    # cone_cone_cutter: PointerProperty(type=ConeConeCutter)
-    # laser_cutter: PointerProperty(type=SimpleCutter)
-    # plasma_cutter: PointerProperty(type=SimpleCutter)
-
     previous_strategy_type: StringProperty(default="PROFILE")
     strategy_type_items = [
         ("BLOCK", "Block", "Block path"),
@@ -158,10 +111,6 @@ class Operation(PropertyGroup):
     spindle: PointerProperty(type=feedmovementspindle.Spindle)
     work_area: PointerProperty(type=workarea.WorkArea)
 
-    # @property
-    # def previous_cutter(self) -> PropertyGroup:
-    #     return getattr(self, f"{self.previous_cutter_type.lower()}_cutter")
-
     @property
     def previous_strategy(self) -> PropertyGroup:
         return getattr(self, f"{self.previous_strategy_type.lower()}_strategy")
@@ -169,6 +118,9 @@ class Operation(PropertyGroup):
     @property
     def strategy(self) -> PropertyGroup:
         return getattr(self, f"{self.strategy_type.lower()}_strategy")
+
+    def get_cutter(self, context: Context) -> PropertyGroup:
+        return context.scene.cam_tools_library[self.tool_id].cutter
 
     def get_bound_box(self, context: Context) -> tuple[Vector, Vector]:
         result = Vector(), Vector()

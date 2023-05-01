@@ -76,29 +76,30 @@ def from_dict(d: dict, pg: PropertyGroup) -> None:
 
 def get_scaled_prop(propname: str, default, self):
     scale_length = bpy.context.scene.unit_settings.scale_length
-    default = (
+    computed_default = (
         [d / scale_length for d in default]
         if isinstance(default, Sequence)
         else default / scale_length
     )
-    return self.get(propname, default)
+    return self.get(propname, computed_default)
 
 
 def set_scaled_prop(propname: str, value_min, value_max, self, value):
     scale_length = bpy.context.scene.unit_settings.scale_length
+    computed_value = value
     if value_min is not None:
-        value = (
+        computed_value = (
             [max(value_min / scale_length, v) for v in value]
             if isinstance(value, Sequence)
             else max(value_min / scale_length, value)
         )
     if value_max is not None:
-        value = (
+        computed_value = (
             [min(value_max / scale_length, v) for v in value]
             if isinstance(value, Sequence)
             else min(value_max / scale_length, value)
         )
-    self[propname] = value
+    self[propname] = computed_value
 
 
 def copy(context: Context, from_prop: Property, to_prop: Property, depth=0) -> None:

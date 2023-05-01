@@ -226,11 +226,10 @@ class Drill(SourceMixin, PropertyGroup):
         operation: PropertyGroup,
     ) -> Iterator[Vector]:
         result = set()
-        if operation.tool_id < 1:
+        if operation.tool_id < 0:
             return result
 
         tolerance = 1 / 10**PRECISION / context.scene.unit_settings.scale_length
-        tool = context.scene.cam_tools_library.tools[operation.tool_id - 1]
         for obj in self.get_evaluated_source(context):
             if obj.name not in context.view_layer.objects:
                 continue
@@ -244,7 +243,7 @@ class Drill(SourceMixin, PropertyGroup):
                 vector_mean.z = max(v.z for v in vectors)
                 _, diameter = get_fit_circle_2d((v.xy for v in vectors), tolerance)
                 is_valid = (
-                    tool.cutter.diameter <= diameter
+                    operation.get_cutter(context).diameter <= diameter
                     and operation.get_depth_end(context) < vector_mean.z < 0.0
                 )
                 if is_valid:
@@ -344,7 +343,6 @@ class Profile(SourceMixin, PropertyGroup):
         #        `calc_loop_triangles()`
         #  - [ ] bridges & auto-bridges
         # FIXME check for available tool
-        tool = context.scene.cam_tools_library.tools[operation.tool_id]
         for obj in self.get_evaluated_source(context):
             obj.data.calc_loop_triangles()
             vectors = (
@@ -361,7 +359,7 @@ class Profile(SourceMixin, PropertyGroup):
         cut_type = operation.strategy.cut_type
         if cut_type != "ON_LINE":
             geometry = geometry.buffer(
-                self.cut_type_sign[cut_type] * tool.cutter.radius,
+                self.cut_type_sign[cut_type] * operation.get_cutter(context).radius,
                 resolution=BUFFER_RESOLUTION,
             )
         geometry = [geometry] if geometry.geom_type == "Polygon" else geometry.geoms

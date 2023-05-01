@@ -246,8 +246,7 @@ class CAM_PT_PanelJobsOperations(CAM_PT_Panel):
             layout = self.layout
             col = layout.box().column(align=True)
             col.row().prop(operation, "tool")
-
-            if operation.tool_id > -1:
+            if operation.tool_id >= 0:
                 col = layout.box().column(align=True)
                 col.prop(operation, "strategy_type")
                 col.row().prop(strategy, "source_type", expand=True)
