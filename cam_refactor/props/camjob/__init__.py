@@ -81,7 +81,7 @@ class CAMJob(PropertyGroup):
         elif self.object.name not in context.view_layer.objects:
             self.data.objects.link(self.object)
 
-        if len(self.operations) == 0:
+        if not self.operations:
             self.operations.add()
             operation = self.operations[-1]
             operation.add_data(context)

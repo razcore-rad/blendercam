@@ -180,7 +180,7 @@ class CAM_OT_Action(Operator):
             "JOB": (context, scene, "cam_jobs", "cam_job_active_index"),
             "OPERATION": (
                 context,
-                len(scene.cam_jobs) != 0 and scene.cam_job,
+                scene.cam_job,
                 "operations",
                 "operation_active_index",
             ),

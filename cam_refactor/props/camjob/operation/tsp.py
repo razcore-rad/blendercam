@@ -30,7 +30,7 @@ def sorted_nearest_neighbor(
 
 
 def run(points: set[Vector], start=Vector()) -> list[tuple[int, Vector]]:
-    if len(points) == 0:
+    if not points:
         return []
     start = get_nearest_neighbor(points, start.freeze())
     return sorted_nearest_neighbor(points, start)
