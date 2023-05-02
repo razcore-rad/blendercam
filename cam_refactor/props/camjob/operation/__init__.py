@@ -112,6 +112,18 @@ class Operation(PropertyGroup):
     work_area: PointerProperty(type=workarea.WorkArea)
 
     @property
+    def zero(self) -> dict:
+        return {
+            "vector": (0.0, 0.0, self.movement.rapid_height),
+            "rapid_height": self.movement.rapid_height,
+            "feed_rate": self.feed.rate,
+            "plunge_scale": self.feed.plunge_scale,
+            "spindle_direction": self.spindle.direction_type,
+            "spindle_rpm": self.spindle.rpm,
+            "dwell": 0.0,
+        }
+
+    @property
     def previous_strategy(self) -> PropertyGroup:
         return getattr(self, f"{self.previous_strategy_type.lower()}_strategy")
 

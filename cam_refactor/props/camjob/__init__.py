@@ -102,57 +102,14 @@ class CAMJob(PropertyGroup):
             report({"ERROR"}, "Check all operations have sources and tools.")
             return {"CANCELLED"}
 
-        previous_rapid_height = 0.0
         if self.operations:
-            operation = self.operations[0]
-            previous_rapid_height = operation.movement.rapid_height
-            computed.append(
-                {
-                    "vector": (0.0, 0.0, operation.movement.rapid_height),
-                    "rapid_height": operation.movement.rapid_height,
-                    "dwell": 0.0,
-                    "feed_rate": operation.feed.rate,
-                    "plunge_scale": operation.feed.plunge_scale,
-                    "spindle_direction": operation.spindle.direction_type,
-                    "spindle_rpm": operation.spindle.rpm,
-                }
-            )
+            computed.append(self.operations[0].zero)
 
         partial_computed = []
-        for index, operation in enumerate(self.operations):
+        for operation in self.operations:
             partial_result, partial_computed = operation.execute_compute(context)
             result.update(partial_result)
-            if not partial_computed:
-                continue
-
-            v = partial_computed[0]["vector"]
-            computed.append(
-                {
-                    "vector": (v[0], v[1], previous_rapid_height),
-                    "rapid_height": operation.movement.rapid_height,
-                    "dwell": 0.0,
-                    "feed_rate": operation.feed.rate,
-                    "plunge_scale": operation.feed.plunge_scale,
-                    "spindle_direction": operation.spindle.direction_type,
-                    "spindle_rpm": operation.spindle.rpm,
-                }
-            )
             computed.extend(partial_computed)
-            previous_rapid_height = operation.movement.rapid_height
-
-        if partial_computed:
-            v = partial_computed[-1]["vector"]
-            computed.append(
-                {
-                    "vector": (v[0], v[1], previous_rapid_height),
-                    "rapid_height": operation.movement.rapid_height,
-                    "dwell": 0.0,
-                    "feed_rate": operation.feed.rate,
-                    "plunge_scale": operation.feed.plunge_scale,
-                    "spindle_direction": operation.spindle.direction_type,
-                    "spindle_rpm": operation.spindle.rpm,
-                }
-            )
         (result_item,) = result = reduce_cancelled_or_finished(result)
 
         if result_item == "CANCELLED":

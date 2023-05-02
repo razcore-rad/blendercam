@@ -1,6 +1,13 @@
 from itertools import chain
 from math import isclose, tau
-from shapely import LinearRing, Polygon, force_3d, is_ccw, union_all
+from shapely import (
+    LinearRing,
+    Polygon,
+    coverage_union_all,
+    force_3d,
+    is_ccw,
+    remove_repeated_points,
+)
 from typing import Iterator
 
 import bmesh
@@ -266,7 +273,7 @@ class Drill(SourceMixin, PropertyGroup):
         if operation.tool_id < 0:
             return result
 
-        tolerance = 1 / 10**PRECISION / context.scene.unit_settings.scale_length
+        tolerance = EPSILON / context.scene.unit_settings.scale_length
         for obj in self.get_evaluated_source(context):
             if obj.name not in context.view_layer.objects:
                 continue
@@ -277,11 +284,11 @@ class Drill(SourceMixin, PropertyGroup):
             for island in get_islands(bm, bm.verts)["islands"]:
                 vectors = [obj.matrix_world @ v.co for v in island]
                 vector_mean = sum(vectors, Vector()) / len(vectors)
-                vector_mean.z = max(v.z for v in vectors)
+                vector_mean.z = min(0.0, max(v.z for v in vectors))
                 _, diameter = get_fit_circle_2d((v.xy for v in vectors), tolerance)
                 is_valid = (
                     operation.get_cutter(context).diameter <= diameter
-                    and operation.get_depth_end(context) < vector_mean.z < 0.0
+                    and operation.get_depth_end(context) < vector_mean.z
                 )
                 if is_valid:
                     result.add(vector_mean.freeze())
@@ -296,6 +303,7 @@ class Drill(SourceMixin, PropertyGroup):
         depth_end = operation.get_depth_end(context)
         rapid_height = operation.movement.rapid_height
         layer_size = operation.work_area.layer_size
+        zero = operation.zero
         is_layer_size_zero = isclose(layer_size, 0)
         for i, v in tsp.run(self.get_feature_positions(context, operation)):
             layers = get_layers(v.z, layer_size, depth_end)
@@ -305,15 +313,11 @@ class Drill(SourceMixin, PropertyGroup):
                 [rapid_height],
             )
             result_computed.extend(
-                {
-                    "vector": (v.x, v.y, z),
-                    "rapid_height": rapid_height,
-                    "dwell": self.dwell if isclose(z, depth_end) else 0.0,
-                    "feed_rate": operation.feed.rate,
-                    "plunge_scale": operation.feed.plunge_scale,
-                    "spindle_direction": operation.spindle.direction_type,
-                    "spindle_rpm": operation.spindle.rpm,
-                }
+                dict(
+                    zero,
+                    vector=(v.x, v.y, z),
+                    dwell=self.dwell if isclose(z, depth_end) else 0.0,
+                )
                 for z in layers
             )
         result_execute.add("FINISHED")
@@ -392,13 +396,13 @@ class Profile(SourceMixin, PropertyGroup):
         # - outlines count and offset
         # - sort tool paths
         # - bridges
-        result_execute, result_computed, polygons = set(), [], []
+        result_execute, result_computed = set(), []
         _, bb_max = operation.get_bound_box(context)
         depth_end = operation.get_depth_end(context)
         if bb_max.z < depth_end:
             return ComputeResult({"CANCELLED"}, result_computed)
 
-        uncertainty = 10 ** -(PRECISION + 1)
+        polygons = []
         for obj in self.get_evaluated_source(context):
             mesh = obj.to_mesh()
             mesh.calc_loop_triangles()
@@ -408,12 +412,10 @@ class Profile(SourceMixin, PropertyGroup):
                 if t.area != 0.0 and obj.matrix_world @ t.normal
             )
             polygons += [
-                p.buffer(uncertainty, resolution=0)
-                for vs in vectors
-                if len(vs) == 3 and (p := Polygon(vs)).is_valid
+                p for vs in vectors if len(vs) == 3 and (p := Polygon(vs)).is_valid
             ]
             obj.to_mesh_clear()
-        geometry = union_all(polygons).simplify(EPSILON)
+        geometry = remove_repeated_points(coverage_union_all(polygons), EPSILON)
         cut_type = operation.strategy.cut_type
         if cut_type != "ON_LINE":
             geometry = geometry.buffer(
@@ -436,20 +438,10 @@ class Profile(SourceMixin, PropertyGroup):
         layers = get_layers(min(0.0, bb_max.z), layer_size, depth_end)
         geometry = [[force_3d(g, z) for z in layers] for g in geometry]
         rapid_height = operation.movement.rapid_height
-        computed = {
-            "rapid_height": rapid_height,
-            "dwell": 0.0,
-            "feed_rate": operation.feed.rate,
-            "plunge_scale": operation.feed.plunge_scale,
-            "spindle_direction": operation.spindle.direction_type,
-            "spindle_rpm": operation.spindle.rpm,
-        }
+        zero = operation.zero
         if len(geometry) == 1:
             result_computed = [
-                dict(computed, **{"vector": cs})
-                for gs in geometry
-                for g in gs
-                for cs in g.coords
+                dict(zero, vector=cs) for gs in geometry for g in gs for cs in g.coords
             ]
         else:
             gs2 = []
@@ -458,19 +450,23 @@ class Profile(SourceMixin, PropertyGroup):
                 c2 = gs2[0].coords[0]
                 result_computed.extend(
                     chain(
-                        (
-                            dict(computed, **{"vector": cs})
-                            for g in gs1
-                            for cs in g.coords
-                        ),
+                        (dict(zero, vector=cs) for g in gs1 for cs in g.coords),
                         [
-                            dict(computed, **{"vector": (c1[0], c1[1], rapid_height)}),
-                            dict(computed, **{"vector": (c2[0], c2[1], rapid_height)}),
+                            dict(zero, vector=(c1[0], c1[1], rapid_height)),
+                            dict(zero, vector=(c2[0], c2[1], rapid_height)),
                         ],
                     )
                 )
             result_computed.extend(
-                dict(computed, **{"vector": cs}) for g in gs2 for cs in g.coords
+                dict(zero, vector=cs) for g in gs2 for cs in g.coords
+            )
+
+        if result_computed:
+            c1, c2 = result_computed[0]["vector"], result_computed[-1]["vector"]
+            result_computed = (
+                [dict(operation.zero, vector=(c1[0], c1[1], rapid_height))]
+                + result_computed
+                + [dict(operation.zero, vector=(c2[0], c2[1], rapid_height))]
             )
         result_execute.add("FINISHED")
         return ComputeResult(

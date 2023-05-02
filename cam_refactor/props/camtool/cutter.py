@@ -1,3 +1,4 @@
+# FIXME: check lower/upper diameter/radius limits
 from math import pi
 
 from bpy.props import FloatProperty

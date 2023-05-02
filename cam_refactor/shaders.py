@@ -72,14 +72,14 @@ def draw_stock() -> None:
 
 
 def draw_drill_features(context: Context, operation: Operation) -> None:
-    if operation.tool_id < 0:
+    positions = operation.strategy.get_feature_positions(context, operation)
+    if operation.tool_id < 0 or not positions:
         return
 
     gpu.state.depth_test_set("LESS_EQUAL")
     gpu.state.line_width_set(3)
     SHADER.uniform_float("color", (1, 1, 1, 1))
     cutter_radius = operation.get_cutter(context).radius
-    positions = operation.strategy.get_feature_positions(context, operation)
     for position in positions:
         coords = [v * cutter_radius + position for v in UNIT_CIRCLE_VECTORS]
         batch_for_shader(SHADER, "LINE_LOOP", {"pos": coords}).draw(SHADER)

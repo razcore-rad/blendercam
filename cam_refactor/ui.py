@@ -237,6 +237,9 @@ class CAM_PT_PanelJobsOperations(CAM_PT_Panel):
             col = layout.box().column(align=True)
             col.row().prop(operation, "tool")
             if operation.tool_id >= 0:
+                cutter = scene.cam_tools_library.tools[operation.tool_id].cutter
+                self.draw_property_group(cutter, layout=col)
+
                 col = layout.box().column(align=True)
                 col.prop(operation, "strategy_type")
                 col.row().prop(strategy, "source_type", expand=True)
