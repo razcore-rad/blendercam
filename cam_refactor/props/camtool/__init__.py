@@ -21,6 +21,7 @@ from .cutter import (
     SimpleCutter,
 )
 from .utils import update_cam_tools_library
+from ...types import ShortEnumItems
 from ...utils import ADDON_PATH, slugify, to_dict, from_dict
 
 
@@ -29,7 +30,7 @@ TOOLS_LIBRARY_PATH = ADDON_PATH / "tools_library"
 DEFAULT_CAM_TOOLS_LIBRARY_ITEM = ("DEFAULT", "Default", "")
 
 
-def cam_tools_library_type_items(self, context: Context) -> None:
+def cam_tools_library_type_items(self, context: Context) -> ShortEnumItems:
     TOOLS_LIBRARY_PATH.mkdir(exist_ok=True)
     items = sorted(
         ((slug := slugify(p.stem)).upper(), slug.capitalize(), "")

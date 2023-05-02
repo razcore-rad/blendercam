@@ -36,22 +36,40 @@ BUFFER_RESOLUTION = 4
 MAP_SPLINE_POINTS = {"POLY": "points", "NURBS": "points", "BEZIER": "bezier_points"}
 
 
-def is_climb(g: LinearRing, operation: PropertyGroup, is_exterior=True) -> bool:
-    # FIXME: seems like this isn't right
+def do_reverse(g: LinearRing, operation: PropertyGroup, is_exterior=True) -> bool:
     g_is_ccw = is_ccw(g)
-    return (
-        is_exterior
-        and operation.movement.type == "CLIMB"
-        and (
-            (operation.spindle.direction_type == "CCW" and g_is_ccw)
-            or (operation.spindle.direction_type == "CW" and not g_is_ccw)
+    return not (
+        (
+            is_exterior
+            and operation.movement.type == "CLIMB"
+            and (
+                (operation.spindle.direction_type == "CW" and not g_is_ccw)
+                or (operation.spindle.direction_type == "CCW" and g_is_ccw)
+            )
         )
-    ) or (
-        not is_exterior
-        and operation.movement.type == "CLIMB"
-        and (
-            (operation.spindle.direction_type == "CW" and g_is_ccw)
-            or (operation.spindle.direction_type == "CCW" and not g_is_ccw)
+        or (
+            not is_exterior
+            and operation.movement.type == "CLIMB"
+            and (
+                (operation.spindle.direction_type == "CW" and g_is_ccw)
+                or (operation.spindle.direction_type == "CCW" and not g_is_ccw)
+            )
+        )
+        or (
+            is_exterior
+            and operation.movement.type == "CONVENTIONAL"
+            and (
+                (operation.spindle.direction_type == "CW" and g_is_ccw)
+                or (operation.spindle.direction_type == "CCW" and not g_is_ccw)
+            )
+        )
+        or (
+            not is_exterior
+            and operation.movement.type == "CONVENTIONAL"
+            and (
+                (operation.spindle.direction_type == "CW" and not g_is_ccw)
+                or (operation.spindle.direction_type == "CCW" and g_is_ccw)
+            )
         )
     )
 
@@ -370,6 +388,10 @@ class Profile(SourceMixin, PropertyGroup):
     def execute_compute(
         self, context: Context, operation: PropertyGroup
     ) -> ComputeResult:
+        # TODO
+        # - outlines count and offset
+        # - sort tool paths
+        # - bridges
         result_execute, result_computed, polygons = set(), [], []
         _, bb_max = operation.get_bound_box(context)
         depth_end = operation.get_depth_end(context)
@@ -400,20 +422,18 @@ class Profile(SourceMixin, PropertyGroup):
             )
         geometry = [geometry] if geometry.geom_type == "Polygon" else geometry.geoms
         exteriors = (
-            e if is_climb(e := g.exterior, operation) else e.reverse() for g in geometry
+            e.reverse() if do_reverse(e := g.exterior, operation) else e
+            for g in geometry
         )
         interiors = (
-            i if is_climb(i, operation, is_exterior=False) else i.reverse()
+            i.reverse() if do_reverse(i, operation, is_exterior=False) else i
             for g in geometry
             for i in g.interiors
         )
         geometry = chain(exteriors, interiors)
-        # TODO
-        # - account for MEANDER movement type
-        # - sort polygons
         # geometry = chain(*([g.exterior] + list(g.interiors) for g in geometry))
         layer_size = operation.work_area.layer_size
-        layers = get_layers(bb_max.z, layer_size, depth_end)
+        layers = get_layers(min(0.0, bb_max.z), layer_size, depth_end)
         geometry = [[force_3d(g, z) for z in layers] for g in geometry]
         rapid_height = operation.movement.rapid_height
         computed = {

@@ -95,8 +95,11 @@ class CAMJob(PropertyGroup):
 
     def execute_compute(self, context: Context, report: Callable) -> set[str]:
         result, computed = set(), []
-        if context.scene.cam_job.operation.tool_id < 0:
-            report({"ERROR"}, "Set operation tool first.")
+        if not all(
+            op.tool_id >= 0 and op.strategy.get_source(context)
+            for op in self.operations
+        ):
+            report({"ERROR"}, "Check all operations have sources and tools.")
             return {"CANCELLED"}
 
         previous_rapid_height = 0.0
@@ -115,6 +118,7 @@ class CAMJob(PropertyGroup):
                 }
             )
 
+        partial_computed = []
         for index, operation in enumerate(self.operations):
             partial_result, partial_computed = operation.execute_compute(context)
             result.update(partial_result)
@@ -135,6 +139,20 @@ class CAMJob(PropertyGroup):
             )
             computed.extend(partial_computed)
             previous_rapid_height = operation.movement.rapid_height
+
+        if partial_computed:
+            v = partial_computed[-1]["vector"]
+            computed.append(
+                {
+                    "vector": (v[0], v[1], previous_rapid_height),
+                    "rapid_height": operation.movement.rapid_height,
+                    "dwell": 0.0,
+                    "feed_rate": operation.feed.rate,
+                    "plunge_scale": operation.feed.plunge_scale,
+                    "spindle_direction": operation.spindle.direction_type,
+                    "spindle_rpm": operation.spindle.rpm,
+                }
+            )
         (result_item,) = result = reduce_cancelled_or_finished(result)
 
         if result_item == "CANCELLED":

@@ -2,8 +2,9 @@ import math
 
 import bpy
 from bpy.props import EnumProperty, FloatProperty, IntProperty
-from bpy.types import PropertyGroup
+from bpy.types import Context, PropertyGroup
 
+from ....types import ShortEnumItems
 from ....utils import PRECISION, get_scaled_prop, set_scaled_prop
 
 
@@ -18,6 +19,24 @@ def update_movement_rapid_height_min() -> None:
     operation = context.scene.cam_job.operation
     _, bb_max = operation.get_bound_box(context)
     operation.movement.rapid_height_min = bb_max.z
+
+
+def movement_type_items(self, context: Context) -> ShortEnumItems:
+    result = []
+    if not context.scene.cam_jobs and not context.scene.cam_jobs.operations:
+        return result
+
+    result = [
+        ("CLIMB", "Climb", "Cutter rotates with the direction of the feed"),
+        (
+            "CONVENTIONAL",
+            "Conventional",
+            "Cutter rotates against the direction of the feed",
+        ),
+    ]
+    if context.scene.cam_job.operation.strategy_type != "PROFILE":
+        result.append(("BOTH", "Both Ways", "Optimize for tool path length"))
+    return result
 
 
 class Feed(PropertyGroup):
@@ -51,22 +70,7 @@ class Movement(PropertyGroup):
         get=lambda s: get_scaled_prop("rapid_height", 5e-3, s),
         set=set_movement_rapid_height,
     )
-    type: EnumProperty(
-        name="Movement Type",
-        items=[
-            ("CLIMB", "Climb", "Cutter rotates with the direction of the feed"),
-            (
-                "CONVENTIONAL",
-                "Conventional",
-                "Cutter rotates against the direction of the feed",
-            ),
-            (
-                "MEANDER",
-                "Meander",
-                "Cutting is done both with and against the rotation of the spindle",
-            ),
-        ],
-    )
+    type: EnumProperty(name="Movement Type", items=movement_type_items)
 
 
 class Spindle(PropertyGroup):
