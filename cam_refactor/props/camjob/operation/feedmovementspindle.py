@@ -75,8 +75,8 @@ class Spindle(PropertyGroup):
     direction_type: EnumProperty(
         name="Spindle Direction",
         items=[
-            ("CLOCKWISE", "Clockwise", "", "LOOP_FORWARDS", 0),
-            ("COUNTER_CLOCKWISE", "Counter-Clockwise", "", "LOOP_BACK", 1),
+            ("CW", "Clockwise", "", "LOOP_FORWARDS", 0),
+            ("CCW", "Counter-Clockwise", "", "LOOP_BACK", 1),
         ],
     )
 

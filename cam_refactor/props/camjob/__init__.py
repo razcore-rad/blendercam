@@ -15,8 +15,8 @@ from bpy.types import Collection, Context, Object, PropertyGroup
 from mathutils import Vector
 
 from . import machine, operation, stock
-from ... import gcode, utils
-from ...utils import LENGTH_UNIT_SCALE, ZERO_VECTOR
+from ...gcode import G
+from ...utils import LENGTH_UNIT_SCALE, ZERO_VECTOR, reduce_cancelled_or_finished
 
 
 class CAMJob(PropertyGroup):
@@ -135,7 +135,7 @@ class CAMJob(PropertyGroup):
             )
             computed.extend(partial_computed)
             previous_rapid_height = operation.movement.rapid_height
-        (result_item,) = result = utils.reduce_cancelled_or_finished(result)
+        (result_item,) = result = reduce_cancelled_or_finished(result)
 
         if result_item == "CANCELLED":
             report({"ERROR"}, f"CAM Job {self.data.name} couldn't be computed.")
@@ -177,7 +177,7 @@ class CAMJob(PropertyGroup):
     def execute_export(self, context: Context) -> set[str]:
         out_file_path = Path(bpy.path.abspath("//")).joinpath(f"{self.data.name}.nc")
         scale_length = LENGTH_UNIT_SCALE * context.scene.unit_settings.scale_length
-        with gcode.G(out_file_path) as g:
+        with G(out_file_path) as g:
             vertices = self.object.data.vertices
             dwell = self.object.data.attributes["dwell"].data
             rapid_heights = self.object.data.attributes["rapid_height"].data

@@ -1,6 +1,6 @@
 from itertools import chain
 from math import isclose, tau
-from shapely import force_3d, union_all, Polygon
+from shapely import LinearRing, Polygon, force_3d, is_ccw, union_all
 from typing import Iterator
 
 import bmesh
@@ -16,6 +16,7 @@ from mathutils import Vector
 
 from . import tsp
 from ....utils import (
+    EPSILON,
     PRECISION,
     get_fit_circle_2d,
     get_scaled_prop,
@@ -33,6 +34,26 @@ from ....types import ComputeResult
 
 BUFFER_RESOLUTION = 4
 MAP_SPLINE_POINTS = {"POLY": "points", "NURBS": "points", "BEZIER": "bezier_points"}
+
+
+def is_climb(g: LinearRing, operation: PropertyGroup, is_exterior=True) -> bool:
+    # FIXME: seems like this isn't right
+    g_is_ccw = is_ccw(g)
+    return (
+        is_exterior
+        and operation.movement.type == "CLIMB"
+        and (
+            (operation.spindle.direction_type == "CCW" and g_is_ccw)
+            or (operation.spindle.direction_type == "CW" and not g_is_ccw)
+        )
+    ) or (
+        not is_exterior
+        and operation.movement.type == "CLIMB"
+        and (
+            (operation.spindle.direction_type == "CW" and g_is_ccw)
+            or (operation.spindle.direction_type == "CCW" and not g_is_ccw)
+        )
+    )
 
 
 def get_layers(z: float, layer_size: float, depth_end: float) -> list[float]:
@@ -317,8 +338,8 @@ class Profile(SourceMixin, PropertyGroup):
         ],
     )
     cut_type_sign = {"INSIDE": -1, "OUTSIDE": 1}
-    outlines_count: IntProperty(name="Outlines Count", default=0)
-    offset: IntProperty(name="Offset", default=0)
+    outlines_count: IntProperty(name="Outlines Count", default=1, min=1)
+    outlines_offset: FloatProperty(name="Outlines Offset", default=0.0)
     style_type: EnumProperty(
         name="Style",
         items=[
@@ -334,29 +355,27 @@ class Profile(SourceMixin, PropertyGroup):
         if operation.tool_id < 0:
             return result
 
-        for obj in self.get_evaluated_source(context):
-            if obj.name not in context.view_layer.objects:
-                continue
-
-            temp_mesh = obj.to_mesh()
-            bm = bmesh.new()
-            bm.from_mesh(temp_mesh)
-            for island in get_islands(bm, bm.verts)["islands"]:
-                vectors = [obj.matrix_world @ v.co for v in island]
-                vector_mean = sum(vectors, Vector()) / len(vectors)
-                depth_end = operation.get_depth_end(context)
-                is_valid = depth_end < vector_mean.z < 0.0
-                if is_valid:
-                    vector_mean.z = depth_end
-                    result.add(vector_mean.freeze())
-            bm.free()
-            obj.to_mesh_clear()
+        bb_min, bb_max = operation.get_bound_box(context)
+        depth_end = operation.get_depth_end(context)
+        is_valid = bb_max.z > depth_end
+        if is_valid:
+            result = [
+                Vector((bb_min.x, bb_min.y, depth_end)),
+                Vector((bb_min.x, bb_max.y, depth_end)),
+                Vector((bb_max.x, bb_max.y, depth_end)),
+                Vector((bb_max.x, bb_min.y, depth_end)),
+            ]
         return result
 
     def execute_compute(
         self, context: Context, operation: PropertyGroup
     ) -> ComputeResult:
         result_execute, result_computed, polygons = set(), [], []
+        _, bb_max = operation.get_bound_box(context)
+        depth_end = operation.get_depth_end(context)
+        if bb_max.z < depth_end:
+            return ComputeResult({"CANCELLED"}, result_computed)
+
         uncertainty = 10 ** -(PRECISION + 1)
         for obj in self.get_evaluated_source(context):
             mesh = obj.to_mesh()
@@ -372,7 +391,7 @@ class Profile(SourceMixin, PropertyGroup):
                 if len(vs) == 3 and (p := Polygon(vs)).is_valid
             ]
             obj.to_mesh_clear()
-        geometry = union_all(polygons)
+        geometry = union_all(polygons).simplify(EPSILON)
         cut_type = operation.strategy.cut_type
         if cut_type != "ON_LINE":
             geometry = geometry.buffer(
@@ -380,11 +399,21 @@ class Profile(SourceMixin, PropertyGroup):
                 resolution=BUFFER_RESOLUTION,
             )
         geometry = [geometry] if geometry.geom_type == "Polygon" else geometry.geoms
-        geometry = chain(*([g.exterior] + list(g.interiors) for g in geometry))
-        _, bound_box_max = operation.get_bound_box(context)
-        depth_end = operation.get_depth_end(context)
+        exteriors = (
+            e if is_climb(e := g.exterior, operation) else e.reverse() for g in geometry
+        )
+        interiors = (
+            i if is_climb(i, operation, is_exterior=False) else i.reverse()
+            for g in geometry
+            for i in g.interiors
+        )
+        geometry = chain(exteriors, interiors)
+        # TODO
+        # - account for MEANDER movement type
+        # - sort polygons
+        # geometry = chain(*([g.exterior] + list(g.interiors) for g in geometry))
         layer_size = operation.work_area.layer_size
-        layers = get_layers(bound_box_max.z, layer_size, depth_end)
+        layers = get_layers(bb_max.z, layer_size, depth_end)
         geometry = [[force_3d(g, z) for z in layers] for g in geometry]
         rapid_height = operation.movement.rapid_height
         computed = {

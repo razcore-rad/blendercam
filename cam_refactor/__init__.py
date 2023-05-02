@@ -50,6 +50,7 @@ bl_info = {
 
 
 def ensure_modules() -> None:
+    # FIXME: more roboust solution with account for v3.11
     requirements_path = ADDON_PATH / "requirements.txt"
     try:
         with open(requirements_path) as r:
@@ -58,20 +59,19 @@ def ensure_modules() -> None:
                     importlib.import_module(m.group(0))
     except ModuleNotFoundError:
         ensurepip.bootstrap(upgrade=True, user=True)
-        print(
-            subprocess.check_output(
-                [
-                    sys.executable,
-                    "-m",
-                    "pip",
-                    "install",
-                    "--user",
-                    "--update",
-                    "-r",
-                    requirements_path,
-                ]
-            )
+        out = subprocess.check_output(
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "install",
+                "--user",
+                "--update",
+                "-r",
+                requirements_path,
+            ]
         )
+        print(out)
     except IndexError:
         pass
 

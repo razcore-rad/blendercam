@@ -19,7 +19,7 @@ def gen_unit_circle_vectors() -> list[Vector]:
 
 
 UNIT_CIRCLE_VECTORS = gen_unit_circle_vectors()
-
+SQUARE_INDICES = [(0, 1), (1, 2), (2, 3), (3, 0)]
 STOCK_INDICES = [
     # bottom
     (0, 1),
@@ -91,15 +91,17 @@ def draw_drill_features(context: Context, operation: Operation) -> None:
 
 
 def draw_profile_features(context: Context, operation: Operation) -> None:
-    if operation.tool_id < 0:
+    positions = operation.strategy.get_feature_positions(context, operation)
+    if operation.tool_id < 0 or not positions:
         return
 
     gpu.state.depth_test_set("LESS_EQUAL")
     gpu.state.line_width_set(3)
     SHADER.uniform_float("color", (1, 1, 1, 1))
-    positions = operation.strategy.get_feature_positions(context, operation)
     positions = [tuple(p) for p in positions]
-    batch_for_shader(SHADER, "POINTS", {"pos": positions}).draw(SHADER)
+    batch_for_shader(SHADER, "LINES", {"pos": positions}, indices=SQUARE_INDICES).draw(
+        SHADER
+    )
     gpu.state.line_width_set(1)
 
 

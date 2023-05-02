@@ -5,7 +5,6 @@ from bpy.types import Context, Menu, Panel, PropertyGroup, UIList, UILayout
 
 from .props.camjob.operation import Operation
 
-# from .props.camtool import cam_tools_library_type_items
 from .ops import CAM_OT_Action, CAM_OT_ToolLibrary
 from .utils import get_propnames
 
@@ -131,15 +130,6 @@ class CAM_PT_MachinePresets(PresetPanel, Panel):
     preset_add_operator = "cam.preset_add_machine"
 
 
-# class CAM_PT_CutterPresets(PresetPanel, Panel):
-#     bl_space_type = CAM_PT_PanelBase.bl_space_type
-#     bl_region_type = CAM_PT_PanelBase.bl_region_type
-#     bl_label = "Cutter Presets"
-#     preset_subdir = "cam/cutters"
-#     preset_operator = "script.execute_preset"
-#     preset_add_operator = "cam.preset_add_cutter"
-
-
 class CAM_PT_Panel(CAM_PT_PanelBase):
     def draw_list(
         self, list_class, list_id, dataptr, propname, active_propname, suffix
@@ -260,23 +250,6 @@ class CAM_PT_PanelJobsOperations(CAM_PT_Panel):
                 self.draw_property_group(strategy, layout=col)
         except IndexError:
             pass
-
-
-# class CAM_PT_PanelJobsOperationCutter(CAM_PT_PanelJobsOperationSubPanel):
-#     bl_label = "Cutter"
-#     bl_parent_id = "CAM_PT_PanelJobsOperations"
-
-#     def draw_header_preset(self, context: Context) -> None:
-#         CAM_PT_CutterPresets.draw_panel_header(self.layout)
-
-#     def draw(self, context: Context) -> None:
-#         operation = context.scene.cam_job.operation
-#         cutter = operation.cutter
-#         col = self.layout.box().column(align=True)
-#         col.use_property_split = True
-#         col.prop(operation, "cutter_type")
-#         col.use_property_split = False
-#         self.draw_property_group(cutter, layout=col)
 
 
 class CAM_PT_PanelJobsOperationFeedMovementSpindle(CAM_PT_PanelJobsOperationSubPanel):
