@@ -3,10 +3,10 @@ from math import isclose, tau
 from shapely import (
     LinearRing,
     Polygon,
-    coverage_union_all,
     force_3d,
     is_ccw,
     remove_repeated_points,
+    union_all,
 )
 from typing import Iterator, Sequence
 
@@ -20,8 +20,12 @@ from bpy.props import (
 )
 from bpy.types import Collection, Context, PropertyGroup, Object
 from mathutils import Vector
+from shapely import Point
 
-from . import tsp
+from .tsp import run as tsp_vectors_run
+from ....bmesh.ops import get_islands
+from ....shapely.tsp import run as tsp_geometry_run
+from ....types import ComputeResult
 from ....utils import (
     EPSILON,
     PRECISION,
@@ -35,8 +39,6 @@ from ....utils import (
     seq,
     set_scaled_prop,
 )
-from ....bmesh.ops import get_islands
-from ....types import ComputeResult
 
 
 BUFFER_RESOLUTION = 4
@@ -309,7 +311,8 @@ class Drill(SourceMixin, PropertyGroup):
         zero = operation.zero
         last_position = Vector(last_position).freeze()
         is_layer_size_zero = isclose(layer_size, 0)
-        for v in tsp.run(self.get_feature_positions(context, operation), last_position):
+        feature_positions = self.get_feature_positions(context, operation)
+        for v in tsp_vectors_run(feature_positions, last_position):
             layers = get_layers(v.z, layer_size, depth_end)
             layers = chain(
                 [rapid_height],
@@ -394,7 +397,10 @@ class Profile(SourceMixin, PropertyGroup):
         return result
 
     def execute_compute(
-        self, context: Context, operation: PropertyGroup, last_position: Vector
+        self,
+        context: Context,
+        operation: PropertyGroup,
+        last_position: Vector | Sequence[float] | Iterator[float],
     ) -> ComputeResult:
         # TODO
         # - outlines count and offset
@@ -414,7 +420,7 @@ class Profile(SourceMixin, PropertyGroup):
                 for p in mesh.polygons
             ]
             obj.to_mesh_clear()
-        geometry = remove_repeated_points(coverage_union_all(polygons), EPSILON)
+        geometry = union_all(polygons)
         cut_type = operation.strategy.cut_type
         if cut_type != "ON_LINE":
             geometry = geometry.buffer(
@@ -431,9 +437,8 @@ class Profile(SourceMixin, PropertyGroup):
             for g in geometry
             for i in g.interiors
         )
-        geometry = chain(exteriors, interiors)
-
-        # geometry = chain(*([g.exterior] + list(g.interiors) for g in geometry))
+        geometry = set(chain(exteriors, interiors))
+        geometry = tsp_geometry_run(geometry, Point(last_position))
         layer_size = operation.work_area.layer_size
         layers = get_layers(min(0.0, bb_max.z), layer_size, depth_end)
         geometry = [[force_3d(g, z) for z in layers] for g in geometry]

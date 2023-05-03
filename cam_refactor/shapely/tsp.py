@@ -1,37 +1,33 @@
-from typing import Iterator
-
-from shapely import Geometry, Point
-from shapely.ops import prepare, shortest_line
+from shapely import LinearRing, Point, prepare, shortest_line
 
 from .ops import start_at
 from ..utils import first
 
 
-def distance(g1: Geometry, g2: Geometry) -> list:
-    prepare(g1)
-    line = shortest_line(g1, g2)
-    return [line.length, Point(line.coords[0]), g1]
+def distance(linear_ring: LinearRing, origin: Point) -> tuple[float, Point]:
+    prepare(linear_ring)
+    line = shortest_line(linear_ring, origin)
+    if not line.is_valid:
+        return (0.0, Point())
+    return (line.length, Point(first(line.coords)))
 
 
-def get_nearest_neighbor(geoms: Iterator[Geometry], origin: Point) -> list:
-    _, *result = min((distance(g, origin) for g in geoms), key=first)
-    start_at(*result)
-    return result
+def get_nearest_neighbor(
+    linear_rings: list[tuple[int, LinearRing]], origin: Point
+) -> list[tuple[LinearRing, Point]]:
+    _, at, i, linear_ring = min(
+        (distance(lr, origin) + (i, lr) for i, lr in linear_rings), key=first
+    )
+    # FIXME: `at` and `first(linear_ring.coords)` do not coincide for some reason
+    # Need to test `shortest_line()`
+    return i, start_at(linear_ring, at), at
 
 
-def sorted_nearest_neighbor(geoms: set[Geometry], start=None) -> list[Geometry]:
-    start = first(geoms) if start is None else start
-    result = [start]
-    unvisited = set(geoms - {start})
+def run(linear_rings: list[LinearRing], origin: Point) -> list[LinearRing]:
+    result = []
+    unvisited = list(enumerate(linear_rings))
     while unvisited:
-        geom = get_nearest_neighbor(unvisited, result[-1].coords[0])
-        result.append(geom)
-        unvisited.remove(geom)
+        i, linear_ring, origin = get_nearest_neighbor(unvisited, origin)
+        result.append(linear_ring)
+        unvisited = [u for u in unvisited if first(u) != i]
     return result
-
-
-def run(geoms: set[Geometry], start=Point((0, 0))) -> list[Geometry]:
-    if not geoms:
-        return []
-    *_, start = get_nearest_neighbor(geoms, start)
-    return sorted_nearest_neighbor(geoms, start)
