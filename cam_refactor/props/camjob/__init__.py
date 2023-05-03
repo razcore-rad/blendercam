@@ -105,11 +105,16 @@ class CAMJob(PropertyGroup):
         if self.operations:
             computed.append(self.operations[0].zero)
 
+        last_position = ZERO_VECTOR
         partial_computed = []
         for operation in self.operations:
-            partial_result, partial_computed = operation.execute_compute(context)
+            partial_result, partial_computed = operation.execute_compute(
+                context, last_position
+            )
             result.update(partial_result)
             computed.extend(partial_computed)
+            if computed:
+                last_position = computed[-1]["vector"]
         (result_item,) = result = reduce_cancelled_or_finished(result)
 
         if result_item == "CANCELLED":

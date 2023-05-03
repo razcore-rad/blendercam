@@ -162,8 +162,8 @@ class Operation(PropertyGroup):
             result = stock_bound_box_min.z
         return result
 
-    def execute_compute(self, context: Context) -> ComputeResult:
-        return self.strategy.execute_compute(context, self)
+    def execute_compute(self, context: Context, last_position: Vector) -> ComputeResult:
+        return self.strategy.execute_compute(context, self, last_position)
 
     def add_data(self, context: Context) -> None:
         self.name = self.NAME

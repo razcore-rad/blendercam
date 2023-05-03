@@ -8,7 +8,7 @@ from shapely import (
     is_ccw,
     remove_repeated_points,
 )
-from typing import Iterator
+from typing import Iterator, Sequence
 
 import bmesh
 from bpy.props import (
@@ -268,7 +268,7 @@ class Drill(SourceMixin, PropertyGroup):
 
     def get_feature_positions(
         self, context: Context, operation: PropertyGroup
-    ) -> Iterator[Vector]:
+    ) -> set[Vector]:
         result = set()
         if operation.tool_id < 0:
             return result
@@ -297,15 +297,19 @@ class Drill(SourceMixin, PropertyGroup):
         return result
 
     def execute_compute(
-        self, context: Context, operation: PropertyGroup
+        self,
+        context: Context,
+        operation: PropertyGroup,
+        last_position: Vector | Sequence[float] | Iterator[float],
     ) -> ComputeResult:
         result_execute, result_computed = set(), []
         depth_end = operation.get_depth_end(context)
         rapid_height = operation.movement.rapid_height
         layer_size = operation.work_area.layer_size
         zero = operation.zero
+        last_position = Vector(last_position).freeze()
         is_layer_size_zero = isclose(layer_size, 0)
-        for v in tsp.run(self.get_feature_positions(context, operation)):
+        for v in tsp.run(self.get_feature_positions(context, operation), last_position):
             layers = get_layers(v.z, layer_size, depth_end)
             layers = chain(
                 [rapid_height],
@@ -390,7 +394,7 @@ class Profile(SourceMixin, PropertyGroup):
         return result
 
     def execute_compute(
-        self, context: Context, operation: PropertyGroup
+        self, context: Context, operation: PropertyGroup, last_position: Vector
     ) -> ComputeResult:
         # TODO
         # - outlines count and offset
