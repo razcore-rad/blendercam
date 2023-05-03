@@ -1,4 +1,3 @@
-# FIXME: check lower/upper diameter/radius limits
 from math import pi
 
 from bpy.props import FloatProperty
@@ -23,11 +22,11 @@ def set_ball_cone_cutter_corner_radius(self, value: float) -> None:
 
 
 def set_lower_diameter_cutter(self, value: float) -> None:
-    self["lower_diameter"] = max(value, self.upper_diameter - EPSILON)
+    self["lower_diameter"] = clamp(value, 0.0, self.upper_diameter - EPSILON)
 
 
 def set_upper_diameter_cutter(self, value: float) -> None:
-    self["upper_diameter"] = min(value, self.lower_diameter + EPSILON)
+    self["upper_diameter"] = max(value, self.lower_diameter + EPSILON)
 
 
 def set_cone_cone_lower_angle(self, value: float) -> None:
@@ -58,7 +57,7 @@ class DiameterMixin:
         precision=PRECISION,
         unit="LENGTH",
         get=lambda s: get_scaled_prop("diameter", 3e-3, s),
-        set=lambda s, v: set_scaled_prop("diameter", EPSILON, None, s, v),
+        set=lambda s, v: set_scaled_prop("diameter", 1e-3, None, s, v),
         update=update_cam_tools_library,
     )
 
@@ -109,7 +108,7 @@ class AngleMixin:
         subtype="ANGLE",
         default=pi / 4,
         min=pi / 180,
-        max=pi / 2,
+        max=pi - EPSILON,
         update=update_cam_tools_library,
     )
 
