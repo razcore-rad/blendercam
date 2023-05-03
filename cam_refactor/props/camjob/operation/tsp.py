@@ -1,35 +1,29 @@
 from typing import Iterator
 from mathutils import Vector
 
+from ....utils import first
+
 
 def distance(v1: Vector, v2: Vector) -> float:
     return (v2 - v1).xy.length
-
-
-def length(tour: [Vector]) -> float:
-    return sum(distance(tour[i], tour[i - 1]) for i in range(len(tour)))
 
 
 def get_nearest_neighbor(points: Iterator[Vector], origin: Vector) -> Vector:
     return min(points, key=lambda p: distance(p, origin))
 
 
-def sorted_nearest_neighbor(
-    points: set[Vector], start=None
-) -> list[tuple[int, Vector]]:
-    start = next(iter(points)) if start is None else start
-    i = 0
-    result = [(i, start)]
+def sorted_nearest_neighbor(points: set[Vector], start=None) -> list[Vector]:
+    start = first(points) if start is None else start
+    result = [start]
     unvisited = set(points - {start})
     while unvisited:
-        i += 1
-        p = get_nearest_neighbor(unvisited, result[-1][-1])
-        result.append((i, p))
+        p = get_nearest_neighbor(unvisited, result[-1])
+        result.append(p)
         unvisited.remove(p)
     return result
 
 
-def run(points: set[Vector], start=Vector()) -> list[tuple[int, Vector]]:
+def run(points: set[Vector], start=Vector()) -> list[Vector]:
     if not points:
         return []
     start = get_nearest_neighbor(points, start.freeze())

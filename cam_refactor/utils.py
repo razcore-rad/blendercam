@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from itertools import chain, count, islice, repeat
 from math import ceil, copysign, isclose, sqrt
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any, Iterator, Sequence
 
 import bpy
 import numpy as np
@@ -201,3 +201,7 @@ def get_fit_circle_2d(
     if std_deviation < tolerance:
         result = Vector((xc, yc)), 2 * sqrt(c[2] + xc**2 + yc**2)
     return result
+
+
+def first(it: Sequence[Any] | Iterator[Any]) -> Any:
+    return next(iter(it))

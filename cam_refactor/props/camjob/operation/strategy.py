@@ -305,7 +305,7 @@ class Drill(SourceMixin, PropertyGroup):
         layer_size = operation.work_area.layer_size
         zero = operation.zero
         is_layer_size_zero = isclose(layer_size, 0)
-        for i, v in tsp.run(self.get_feature_positions(context, operation)):
+        for v in tsp.run(self.get_feature_positions(context, operation)):
             layers = get_layers(v.z, layer_size, depth_end)
             layers = chain(
                 [rapid_height],
@@ -428,6 +428,7 @@ class Profile(SourceMixin, PropertyGroup):
             for i in g.interiors
         )
         geometry = chain(exteriors, interiors)
+
         # geometry = chain(*([g.exterior] + list(g.interiors) for g in geometry))
         layer_size = operation.work_area.layer_size
         layers = get_layers(min(0.0, bb_max.z), layer_size, depth_end)
