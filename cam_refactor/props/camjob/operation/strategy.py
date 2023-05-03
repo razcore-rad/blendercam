@@ -405,14 +405,9 @@ class Profile(SourceMixin, PropertyGroup):
         polygons = []
         for obj in self.get_evaluated_source(context):
             mesh = obj.to_mesh()
-            mesh.calc_loop_triangles()
-            vectors = (
-                [(obj.matrix_world @ mesh.vertices[i].co).xy for i in t.vertices]
-                for t in mesh.loop_triangles
-                if t.area != 0.0 and obj.matrix_world @ t.normal
-            )
             polygons += [
-                p for vs in vectors if len(vs) == 3 and (p := Polygon(vs)).is_valid
+                Polygon((obj.matrix_world @ mesh.vertices[i].co).xy for i in p.vertices)
+                for p in mesh.polygons
             ]
             obj.to_mesh_clear()
         geometry = remove_repeated_points(coverage_union_all(polygons), EPSILON)
