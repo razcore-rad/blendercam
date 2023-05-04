@@ -17,12 +17,7 @@ def get_nearest_neighbor(
     _, at, linear_ring, i = min(
         (distance(lr, origin) + (lr, i) for i, lr in linear_rings), key=first
     )
-    # FIXME: Problem is that `at` has to be precisely on the line for
-    # `shapely.ops.split(linear_ring, at)` to work.
-    # Need to extend the intersectin point and split with another line
-    # instead to see if that fixes it.
-    linear_ring = start_at(linear_ring, at)
-    return i, linear_ring, at
+    return i, start_at(linear_ring, at), at
 
 
 def run(linear_rings: list[LinearRing], origin: Point) -> list[LinearRing]:
