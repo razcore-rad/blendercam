@@ -5,7 +5,6 @@ from shapely import (
     Polygon,
     force_3d,
     is_ccw,
-    remove_repeated_points,
     union_all,
 )
 from typing import Iterator, Sequence

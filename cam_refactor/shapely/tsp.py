@@ -1,4 +1,5 @@
-from shapely import LinearRing, Point, prepare, shortest_line
+from shapely import LinearRing, Point, prepare
+from shapely.ops import nearest_points
 
 from .ops import start_at
 from ..utils import first
@@ -6,21 +7,22 @@ from ..utils import first
 
 def distance(linear_ring: LinearRing, origin: Point) -> tuple[float, Point]:
     prepare(linear_ring)
-    line = shortest_line(linear_ring, origin)
-    if not line.is_valid:
-        return (0.0, Point())
-    return (line.length, Point(first(line.coords)))
+    p1, p2 = nearest_points(linear_ring, origin)
+    return (p1.distance(p2), p1)
 
 
 def get_nearest_neighbor(
     linear_rings: list[tuple[int, LinearRing]], origin: Point
 ) -> list[tuple[LinearRing, Point]]:
-    _, at, i, linear_ring = min(
-        (distance(lr, origin) + (i, lr) for i, lr in linear_rings), key=first
+    _, at, linear_ring, i = min(
+        (distance(lr, origin) + (lr, i) for i, lr in linear_rings), key=first
     )
-    # FIXME: `at` and `first(linear_ring.coords)` do not coincide for some reason
-    # Need to test `shortest_line()`
-    return i, start_at(linear_ring, at), at
+    # FIXME: Problem is that `at` has to be precisely on the line for
+    # `shapely.ops.split(linear_ring, at)` to work.
+    # Need to extend the intersectin point and split with another line
+    # instead to see if that fixes it.
+    linear_ring = start_at(linear_ring, at)
+    return i, linear_ring, at
 
 
 def run(linear_rings: list[LinearRing], origin: Point) -> list[LinearRing]:
