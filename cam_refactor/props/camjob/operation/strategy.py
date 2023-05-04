@@ -5,6 +5,7 @@ from shapely import (
     Polygon,
     force_3d,
     is_ccw,
+    remove_repeated_points,
     union_all,
 )
 from typing import Iterator, Sequence
@@ -403,7 +404,6 @@ class Profile(SourceMixin, PropertyGroup):
     ) -> ComputeResult:
         # TODO
         # - outlines count and offset
-        # - sort tool paths
         # - bridges
         result_execute, result_computed = set(), []
         _, bb_max = operation.get_bound_box(context)
@@ -436,7 +436,7 @@ class Profile(SourceMixin, PropertyGroup):
             for g in geometry
             for i in g.interiors
         )
-        geometry = set(chain(exteriors, interiors))
+        geometry = set(remove_repeated_points(g) for g in chain(exteriors, interiors))
         geometry = tsp_geometry_run(geometry, Point(last_position))
         layer_size = operation.work_area.layer_size
         layers = get_layers(min(0.0, bb_max.z), layer_size, depth_end)
