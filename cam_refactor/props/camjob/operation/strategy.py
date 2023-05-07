@@ -122,13 +122,13 @@ class PathsAngleMixin:
 
 
 class SourceMixin:
-    EXCLUDE_PROPNAMES = {
+    EXCLUDE_PROPNAMES = [
         "name",
         "computed",
         "source_type",
         "object_source",
         "collection_source",
-    }
+    ]
 
     source_type_items = [
         ("OBJECT", "Object", "Object data source.", "OBJECT_DATA", 0),
@@ -229,13 +229,13 @@ class Cross(
 
 
 class CurveToPath(SourceMixin, PropertyGroup):
-    EXCLUDE_PROPNAMES = {
+    EXCLUDE_PROPNAMES = [
         "name",
         "source_type",
         "curve_object_source",
         "object_source",
         "collection_source",
-    }
+    ]
 
     source_type_items = [
         (
@@ -358,6 +358,15 @@ class Pocket(DistanceBetweenPathsMixin, SourceMixin, PropertyGroup):
 
 
 class Profile(SourceMixin, PropertyGroup):
+    EXCLUDE_PROPNAMES = [
+        "name",
+        "computed",
+        "source_type",
+        "object_source",
+        "collection_source",
+        "style_type",
+    ]
+
     cut_type: EnumProperty(
         name="Cut",
         items=[

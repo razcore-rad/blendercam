@@ -35,11 +35,11 @@ def update_operation_tool(self, context: Context) -> None:
 
 
 class Operation(PropertyGroup):
-    EXCLUDE_PROPNAMES = {
+    EXCLUDE_PROPNAMES = [
         "previous_strategy_type",
         "tool_id",
         "tool",
-    }
+    ]
     NAME = "CAMOperation"
 
     is_hidden: BoolProperty(default=False)

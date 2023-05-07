@@ -5,7 +5,7 @@ from ...utils import get_scaled_prop, set_scaled_prop
 
 
 class Stock(PropertyGroup):
-    EXCLUDE_PROPNAMES = {"name"}
+    EXCLUDE_PROPNAMES = ["name"]
 
     type: EnumProperty(
         name="Type",

@@ -34,10 +34,12 @@ def slugify(s: str) -> str:
     return re.sub(r"\W+", "-", s).strip("-").lower()
 
 
-def get_propnames(pg: PropertyGroup, use_exclude_propnames=True) -> list[str]:
-    exclude_propnames = ["rna_type"]
+def get_propnames(
+    pg: PropertyGroup, use_exclude_propnames=True, extra_exclude_propnames=[]
+) -> list[str]:
+    exclude_propnames = ["rna_type"] + extra_exclude_propnames
     if use_exclude_propnames:
-        exclude_propnames += getattr(pg, "EXCLUDE_PROPNAMES", set())
+        exclude_propnames += getattr(pg, "EXCLUDE_PROPNAMES", [])
     return sorted(
         {
             propname

@@ -40,7 +40,7 @@ def movement_type_items(self, context: Context) -> ShortEnumItems:
 
 
 class Feed(PropertyGroup):
-    EXCLUDE_PROPNAMES = {"name", "rate"}
+    EXCLUDE_PROPNAMES = ["name", "rate"]
 
     rate: FloatProperty(
         name="Feed Rate",
@@ -60,7 +60,7 @@ class Feed(PropertyGroup):
 
 
 class Movement(PropertyGroup):
-    EXCLUDE_PROPNAMES = {"name", "rapid_height_min"}
+    EXCLUDE_PROPNAMES = ["name", "rapid_height_min"]
 
     rapid_height_min: FloatProperty(default=0.0)
     rapid_height: FloatProperty(
@@ -74,7 +74,7 @@ class Movement(PropertyGroup):
 
 
 class Spindle(PropertyGroup):
-    EXCLUDE_PROPNAMES = {"name"}
+    EXCLUDE_PROPNAMES = ["name"]
 
     direction_type: EnumProperty(
         name="Spindle Direction",

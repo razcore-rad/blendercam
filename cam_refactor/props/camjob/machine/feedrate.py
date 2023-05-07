@@ -3,7 +3,8 @@ from bpy.types import PropertyGroup
 
 
 class FeedRate(PropertyGroup):
-    EXCLUDE_PROPNAMES = {"name"}
+    EXCLUDE_PROPNAMES = ["name"]
+
     default: FloatProperty(
         name="Feed Rate Default", default=1.5, min=1e-3, max=2, unit="LENGTH"
     )

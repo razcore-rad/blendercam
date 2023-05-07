@@ -80,25 +80,18 @@ class CAM_PT_PanelBase(Panel):
         pg: PropertyGroup,
         *,
         layout: UILayout = None,
-        label_text=None,
+        extra_exclude_propnames=[],
     ) -> None:
         if layout is None:
             layout = self.layout.box().column(align=True)
             layout.use_property_split = True
 
-        for propname in get_propnames(pg):
+        for propname in get_propnames(pg, True, extra_exclude_propnames):
             if isinstance(getattr(pg, propname), PropertyGroup):
                 continue
 
             row = layout.row(align=True)
-            if label_text is not None:
-                split = layout.split(factor=0.85, align=True)
-                row = split.row(align=True)
             row.prop(pg, propname, expand=propname.endswith("type"))
-            if label_text is not None:
-                row = split.row(align=True)
-                row.alignment = "RIGHT"
-                row.label(text=label_text)
 
 
 class CAM_PT_PanelJobsOperationSubPanel(CAM_PT_PanelBase):
@@ -250,7 +243,17 @@ class CAM_PT_PanelJobsOperations(CAM_PT_Panel):
                         strategy.source_type_items, strategy.source_type
                     ),
                 )
-                self.draw_property_group(strategy, layout=col)
+                extra_exclude_propnames = []
+                if (
+                    operation.strategy_type == "PROFILE"
+                    and strategy.cut_type == "ON_LINE"
+                ):
+                    extra_exclude_propnames = ["outlines_count", "outlines_offset"]
+                self.draw_property_group(
+                    strategy,
+                    layout=col,
+                    extra_exclude_propnames=extra_exclude_propnames,
+                )
         except IndexError:
             pass
 
@@ -297,7 +300,6 @@ class CAM_PT_PanelJobsOperationWorkArea(CAM_PT_PanelJobsOperationSubPanel):
             row = col.row()
             row.use_property_split = True
             row.prop(work_area, "depth_end_type", expand=True)
-        # self.draw_property_group(work_area)
 
 
 class CAM_PT_PanelJobsStock(CAM_PT_PanelBase):
@@ -338,24 +340,10 @@ class CAM_PT_PanelJobsMachine(CAM_PT_PanelBase):
         layout = self.layout
         box = layout.box()
         box.prop(machine, "post_processor_enum")
-        # box.prop(post_processor, "use_custom_positions")
-        # if post_processor.use_custom_positions:
-        # self.draw_property_group(
-        # post_processor.custom_positions, layout=box.column(align=True)
-        # )
         self.draw_property_group(post_processor, layout=box.column(align=True))
 
         box = layout.box()
         box.prop(machine, "axes")
-
-        # self.draw_property_group(
-        #     machine.feed_rate,
-        #     layout=layout.box().column(align=True),
-        #     label_text=UNITS["MIN"],
-        # )
-        # self.draw_property_group(
-        #     machine.spindle_rpm, layout=layout.box().column(align=True)
-        # )
 
 
 class CAM_UL_ToolList(UIList):

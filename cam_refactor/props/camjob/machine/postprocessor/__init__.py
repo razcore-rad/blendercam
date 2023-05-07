@@ -3,7 +3,7 @@ from bpy.types import PropertyGroup
 
 
 class PostProcessorMixin(PropertyGroup):
-    EXCLUDE_PROPNAMES = {"name"}
+    EXCLUDE_PROPNAMES = ["name"]
 
     # custom_positions: PointerProperty(type=CustomPositions)
     g_code_footer: StringProperty(name="G-code Footer", default="", subtype="FILE_PATH")

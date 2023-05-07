@@ -6,7 +6,7 @@ from ....utils import PRECISION, get_scaled_prop, set_scaled_prop
 
 class WorkArea(PropertyGroup):
     ICON_MAP = {"curve_limit": "OUTLINER_OB_CURVE"}
-    EXCLUDE_PROPNAMES = {"name", "depth_end_type", "depth_end", "layer_size"}
+    EXCLUDE_PROPNAMES = ["name", "depth_end_type", "depth_end", "layer_size"]
 
     depth_end: FloatProperty(
         name="Depth End",

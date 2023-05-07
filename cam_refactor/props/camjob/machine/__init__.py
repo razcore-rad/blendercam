@@ -11,7 +11,7 @@ def update_post_processor(machine: PropertyGroup, context: Context) -> None:
 
 
 class Machine(PropertyGroup):
-    EXCLUDE_PROPNAMES = {"name", "post_processor_enum", "previous_post_processor_enum"}
+    EXCLUDE_PROPNAMES = ["name", "post_processor_enum", "previous_post_processor_enum"]
 
     # feed_rate: PointerProperty(type=feedrate.FeedRate)
     # spindle_rpm: PointerProperty(type=spindlerpm.SpindleRPM)
