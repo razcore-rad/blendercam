@@ -76,7 +76,8 @@ class CAMJob(PropertyGroup):
                 self.NAME, bpy.data.meshes.new(self.NAME)
             )
             self.object.lock_location = 3 * [True]
-            self.object.lock_rotation = 3 * [True]
+            self.object.lock_rotation = self.object.lock_location
+            self.object.lock_scale = self.object.lock_location
             self.data.objects.link(self.object)
         elif self.object.name not in context.view_layer.objects:
             self.data.objects.link(self.object)

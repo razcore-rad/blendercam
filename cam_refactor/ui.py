@@ -244,11 +244,16 @@ class CAM_PT_PanelJobsOperations(CAM_PT_Panel):
                     ),
                 )
                 extra_exclude_propnames = []
-                if (
-                    operation.strategy_type == "PROFILE"
-                    and strategy.cut_type == "ON_LINE"
-                ):
-                    extra_exclude_propnames = ["outlines_count", "outlines_offset"]
+                if operation.strategy_type == "PROFILE":
+                    if strategy.cut_type == "ON_LINE":
+                        extra_exclude_propnames = [
+                            "outlines_count",
+                            "outlines_offset",
+                            "outlines_distance",
+                        ]
+                    elif strategy.outlines_count == 1:
+                        extra_exclude_propnames = ["outlines_distance"]
+
                 self.draw_property_group(
                     strategy,
                     layout=col,

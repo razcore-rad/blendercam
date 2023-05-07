@@ -44,46 +44,45 @@ class Operation(PropertyGroup):
 
     is_hidden: BoolProperty(default=False)
     previous_strategy_type: StringProperty(default="PROFILE")
-    strategy_type_items = [
-        ("BLOCK", "Block", "Block path"),
-        (
-            "CARVE_PROJECT",
-            "Carve Project",
-            "Project a curve object on a 3D surface",
-        ),
-        ("CIRCLES", "Circles", "Circles path"),
-        ("CROSS", "Cross", "Cross paths"),
-        ("CURVE_TO_PATH", "Curve to Path", "Convert a curve object to G-code path"),
-        ("DRILL", "Drill", "Drill"),
-        (
-            "MEDIAL_AXIS",
-            "Medial axis",
-            (
-                "Medial axis, must be used with V or ball cutter, for engraving"
-                " various width shapes with a single stroke"
-            ),
-        ),
-        (
-            "OUTLINE_FILL",
-            "Outline Fill",
-            (
-                "Detect outline and fill it with paths as pocket then sample"
-                " these paths on the 3D surface"
-            ),
-        ),
-        ("PARALLEL", "Parallel", "Parallel lines at any angle"),
-        ("POCKET", "Pocket", "Pocket"),
-        ("PROFILE", "Profile", "Profile cutout"),
-        ("SPIRAL", "Spiral", "Spiral path"),
-        (
-            "WATERLINE_ROUGHING",
-            "Waterline Roughing",
-            "Roughing below ZERO. Z is always below ZERO",
-        ),
-    ]
     strategy_type: EnumProperty(
         name="Strategy",
-        items=strategy_type_items,
+        items=[
+            ("BLOCK", "Block", "Block path"),
+            (
+                "CARVE_PROJECT",
+                "Carve Project",
+                "Project a curve object on a 3D surface",
+            ),
+            ("CIRCLES", "Circles", "Circles path"),
+            ("CROSS", "Cross", "Cross paths"),
+            ("CURVE_TO_PATH", "Curve to Path", "Convert a curve object to G-code path"),
+            ("DRILL", "Drill", "Drill"),
+            (
+                "MEDIAL_AXIS",
+                "Medial axis",
+                (
+                    "Medial axis, must be used with V or ball cutter, for engraving"
+                    " various width shapes with a single stroke"
+                ),
+            ),
+            (
+                "OUTLINE_FILL",
+                "Outline Fill",
+                (
+                    "Detect outline and fill it with paths as pocket then sample"
+                    " these paths on the 3D surface"
+                ),
+            ),
+            ("PARALLEL", "Parallel", "Parallel lines at any angle"),
+            ("POCKET", "Pocket", "Pocket"),
+            ("PROFILE", "Profile", "Profile cutout"),
+            ("SPIRAL", "Spiral", "Spiral path"),
+            (
+                "WATERLINE_ROUGHING",
+                "Waterline Roughing",
+                "Roughing below ZERO. Z is always below ZERO",
+            ),
+        ],
         default="PROFILE",
         update=update_operation_strategy,
     )

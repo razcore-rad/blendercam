@@ -178,14 +178,16 @@ class CAM_OT_Action(Operator):
         scene = context.scene
         args = {
             "JOB": (context, scene, "cam_jobs", "cam_job_active_index"),
-            "OPERATION": (
+            "TOOL": (context, scene.cam_tools_library, "tools", "tool_active_index"),
+        }
+        if scene.cam_jobs:
+            args["OPERATION"] = (
                 context,
                 scene.cam_job,
                 "operations",
                 "operation_active_index",
-            ),
-            "TOOL": (context, scene.cam_tools_library, "tools", "tool_active_index"),
-        }
+            )
+
         _, suffix = self.type.split("_")
         return self.execute_funcs[self.type](*args[suffix])
 

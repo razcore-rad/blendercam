@@ -8,17 +8,13 @@ from ....types import ShortEnumItems
 from ....utils import PRECISION, get_scaled_prop, set_scaled_prop
 
 
-def set_movement_rapid_height(self: PropertyGroup, value: float) -> None:
-    self["rapid_height"] = max(self.rapid_height_min, value)
-
-
-def update_movement_rapid_height_min() -> None:
-    context = bpy.context
-    if not (context.scene.cam_jobs and context.scene.cam_job.operations):
-        return
-    operation = context.scene.cam_job.operation
-    _, bb_max = operation.get_bound_box(context)
-    operation.movement.rapid_height_min = bb_max.z
+# def update_movement_rapid_height_min() -> None:
+#     context = bpy.context
+#     if not (context.scene.cam_jobs and context.scene.cam_job.operations):
+#         return
+#     operation = context.scene.cam_job.operation
+#     _, bb_max = operation.get_bound_box(context)
+#     operation.movement.rapid_height_min = bb_max.z
 
 
 def movement_type_items(self, context: Context) -> ShortEnumItems:
@@ -40,7 +36,7 @@ def movement_type_items(self, context: Context) -> ShortEnumItems:
 
 
 class Feed(PropertyGroup):
-    EXCLUDE_PROPNAMES = ["name", "rate"]
+    EXCLUDE_PROPNAMES = ["name", "rate", "plunge_angle"]
 
     rate: FloatProperty(
         name="Feed Rate",
@@ -60,15 +56,14 @@ class Feed(PropertyGroup):
 
 
 class Movement(PropertyGroup):
-    EXCLUDE_PROPNAMES = ["name", "rapid_height_min"]
+    EXCLUDE_PROPNAMES = ["name"]
 
-    rapid_height_min: FloatProperty(default=0.0)
     rapid_height: FloatProperty(
         name="Rapid Height",
         precision=PRECISION,
         unit="LENGTH",
         get=lambda s: get_scaled_prop("rapid_height", 5e-3, s),
-        set=set_movement_rapid_height,
+        set=lambda s, v: set_scaled_prop("rapid_height", 0.0, None, s, v),
     )
     type: EnumProperty(name="Movement Type", items=movement_type_items)
 

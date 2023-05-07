@@ -375,9 +375,22 @@ class Profile(SourceMixin, PropertyGroup):
             ("OUTSIDE", "Outside", "Outside"),
         ],
     )
-    cut_type_sign = {"INSIDE": -1, "OUTSIDE": 1}
+    cut_type_sign = {"ON_LINE": 0, "INSIDE": -1, "OUTSIDE": 1}
     outlines_count: IntProperty(name="Outlines Count", default=1, min=1)
-    outlines_offset: FloatProperty(name="Outlines Offset", default=0.0)
+    outlines_offset: FloatProperty(
+        name="Outlines Offset",
+        get=lambda s: get_scaled_prop("outlines_offset", 0.0, s),
+        set=lambda s, v: set_scaled_prop("outlines_offset", 0.0, None, s, v),
+        precision=PRECISION,
+        unit="LENGTH",
+    )
+    outlines_distance: FloatProperty(
+        name="Outlines Distance",
+        get=lambda s: get_scaled_prop("outlines_distance", 3e-3, s),
+        set=lambda s, v: set_scaled_prop("outlines_distance", EPSILON, None, s, v),
+        precision=PRECISION,
+        unit="LENGTH",
+    )
     style_type: EnumProperty(
         name="Style",
         items=[
@@ -385,6 +398,14 @@ class Profile(SourceMixin, PropertyGroup):
             ("OVERSHOOT", "Overshoot", "Overshoot style"),
         ],
     )
+
+    @property
+    def cut_sign(self) -> int:
+        return self.cut_type_sign[self.cut_type]
+
+    def get_outline_distance(self, cutter_radius: float, index: int) -> float:
+        distance = (index - 1) * self.outlines_distance
+        return self.cut_sign * (cutter_radius + distance) + self.outlines_offset
 
     def get_feature_positions(
         self, context: Context, operation: PropertyGroup
@@ -411,9 +432,7 @@ class Profile(SourceMixin, PropertyGroup):
         operation: PropertyGroup,
         last_position: Vector | Sequence[float] | Iterator[float],
     ) -> ComputeResult:
-        # TODO
-        # - outlines count and offset
-        # - bridges
+        # TODO: bridges
         result_execute, result_computed = set(), []
         _, bb_max = operation.get_bound_box(context)
         depth_end = operation.get_depth_end(context)
@@ -429,13 +448,21 @@ class Profile(SourceMixin, PropertyGroup):
             ]
             obj.to_mesh_clear()
         geometry = union_all(polygons)
-        cut_type = operation.strategy.cut_type
-        if cut_type != "ON_LINE":
-            geometry = geometry.buffer(
-                self.cut_type_sign[cut_type] * operation.get_cutter(context).radius,
-                resolution=BUFFER_RESOLUTION,
-            )
-        geometry = [geometry] if geometry.geom_type == "Polygon" else geometry.geoms
+        if self.cut_type != "ON_LINE":
+            cutter_radius = operation.get_cutter(context).radius
+            geometry = [
+                [g] if g.geom_type == "Polygon" else g.geoms
+                for i in range(1, self.outlines_count + 1)
+                if not (
+                    g := geometry.buffer(
+                        self.get_outline_distance(cutter_radius, i),
+                        resolution=BUFFER_RESOLUTION,
+                    )
+                ).is_empty
+            ]
+            geometry = set(chain(*geometry))
+        else:
+            geometry = {geometry} if geometry.geom_type == "Polygon" else geometry.geoms
         exteriors = (
             e.reverse() if do_reverse(e := g.exterior, operation) else e
             for g in geometry

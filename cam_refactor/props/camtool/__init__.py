@@ -48,7 +48,7 @@ cam_tools_library_type_items.items = []
 
 
 def get_cam_tools_library_type(self) -> int:
-    result = self.get("type", -1)
+    result = self.get("type", 0)
     if not cam_tools_library_type_items.items:
         return result
 
