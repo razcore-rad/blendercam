@@ -1,5 +1,5 @@
 from itertools import chain
-from math import isclose, tau
+from math import isclose, pi, tau
 from shapely import (
     LinearRing,
     Polygon,
@@ -10,6 +10,7 @@ from shapely import (
 )
 from typing import Iterator, Sequence
 
+import bpy
 import bmesh
 from bpy.props import (
     BoolProperty,
@@ -301,10 +302,10 @@ class Drill(SourceMixin, PropertyGroup):
     def execute_compute(
         self,
         context: Context,
-        operation: PropertyGroup,
         last_position: Vector | Sequence[float] | Iterator[float],
     ) -> ComputeResult:
         result_execute, result_computed = set(), []
+        operation = context.scene.cam_job.operation
         depth_end = operation.get_depth_end(context)
         rapid_height = operation.movement.rapid_height
         layer_size = operation.work_area.layer_size
@@ -376,6 +377,21 @@ class Profile(SourceMixin, PropertyGroup):
         ],
     )
     cut_type_sign = {"ON_LINE": 0, "INSIDE": -1, "OUTSIDE": 1}
+    bridges_count: IntProperty(name="Bridges Count", default=0, min=0)
+    bridges_length: FloatProperty(
+        name="Bridges Length",
+        get=lambda s: get_scaled_prop("bridges_length", 3e-3, s),
+        set=lambda s, v: set_scaled_prop("bridges_length", EPSILON, None, s, v),
+        precision=PRECISION,
+        unit="LENGTH",
+    )
+    bridges_height: FloatProperty(
+        name="Bridges Height",
+        get=lambda s: get_scaled_prop("bridges_height", 1e-3, s),
+        set=lambda s, v: set_scaled_prop("bridges_height", EPSILON, None, s, v),
+        precision=PRECISION,
+        unit="LENGTH",
+    )
     outlines_count: IntProperty(name="Outlines Count", default=1, min=1)
     outlines_offset: FloatProperty(
         name="Outlines Offset",
@@ -426,19 +442,8 @@ class Profile(SourceMixin, PropertyGroup):
             ]
         return result
 
-    def execute_compute(
-        self,
-        context: Context,
-        operation: PropertyGroup,
-        last_position: Vector | Sequence[float] | Iterator[float],
-    ) -> ComputeResult:
-        # TODO: bridges
-        result_execute, result_computed = set(), []
-        _, bb_max = operation.get_bound_box(context)
-        depth_end = operation.get_depth_end(context)
-        if bb_max.z < depth_end:
-            return ComputeResult({"CANCELLED"}, result_computed)
-
+    def compute_geometry(self, context: Context) -> Iterator:
+        operation = context.scene.cam_job.operation
         polygons = []
         for obj in self.get_evaluated_source(context):
             mesh = obj.to_mesh()
@@ -472,7 +477,23 @@ class Profile(SourceMixin, PropertyGroup):
             for g in geometry
             for i in g.interiors
         )
-        geometry = set(remove_repeated_points(g) for g in chain(exteriors, interiors))
+        return chain(exteriors, interiors)
+
+    def execute_compute(
+        self,
+        context: Context,
+        last_position: Vector | Sequence[float] | Iterator[float],
+    ) -> ComputeResult:
+        # TODO: bridges
+        result_execute, result_computed = set(), []
+        operation = context.scene.cam_job.operation
+        _, bb_max = operation.get_bound_box(context)
+        depth_end = operation.get_depth_end(context)
+        if bb_max.z < depth_end:
+            return ComputeResult({"CANCELLED"}, result_computed)
+
+        geometry = self.compute_geometry(context)
+        geometry = set(remove_repeated_points(g) for g in geometry)
         geometry = tsp_geometry_run(geometry, Point(last_position))
         layer_size = operation.work_area.layer_size
         layers = get_layers(min(0.0, bb_max.z), layer_size, depth_end)
@@ -512,6 +533,40 @@ class Profile(SourceMixin, PropertyGroup):
         return ComputeResult(
             reduce_cancelled_or_finished(result_execute), result_computed
         )
+
+    def add_bridges(
+        self, context: Context, count: int, length: float, height: float
+    ) -> set[str]:
+        cam_job = context.scene.cam_job
+        operation = cam_job.operation
+
+        cam_job.add_data(context)
+        col_name = f"{operation.name}Bridges"
+        col = bpy.data.collections.get(col_name)
+        if col is None:
+            col = bpy.data.collections.new(col_name)
+
+        if col.name not in cam_job.data.children:
+            cam_job.data.children.link(col)
+
+        for obj in col.objects:
+            bpy.data.objects.remove(obj)
+
+        count += 2
+        geometry = self.compute_geometry(context)
+        empty_name = f"{operation.name}Bridge"
+        for lr in geometry:
+            for i in range(1, count - 1):
+                c, *_ = lr.line_interpolate_point(i / count, True).coords
+                empty = bpy.data.objects.new(empty_name, None)
+                empty.empty_display_type = "CIRCLE"
+                empty.empty_display_size = length / 2
+                empty.location = c + (0.0,)
+                empty.rotation_euler[0] = pi / 2
+                empty.lock_rotation = 3 * [True]
+                empty.lock_scale = empty.lock_rotation
+                col.objects.link(empty)
+        return {"FINISHED"}
 
 
 class Parallel(

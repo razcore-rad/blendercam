@@ -1,9 +1,9 @@
 import bpy
 from bl_operators.presets import AddPresetBase
-from bpy.props import EnumProperty, IntProperty, StringProperty
+from bpy.props import EnumProperty, IntProperty, FloatProperty, StringProperty
 from bpy.types import Context, Operator
 
-from .utils import copy, noop
+from .utils import EPSILON, copy, get_scaled_prop, noop, set_scaled_prop
 
 
 class CAM_OT_AddPresetMachine(AddPresetBase, Operator):
@@ -70,6 +70,29 @@ class CAM_OT_AddPresetCutter(AddPresetBase, Operator):
     #     return result
 
 
+class CAM_OT_Bridge(Operator):
+    bl_idname = "cam.bridge"
+    bl_label = "Generate Bridges"
+    bl_options = {"UNDO"}
+
+    count: IntProperty()
+    height: FloatProperty()
+    length: FloatProperty()
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        return (
+            context.scene is not None
+            and context.scene.cam_jobs
+            and context.scene.cam_job.operations
+            and context.scene.cam_job.operation.strategy_type == "PROFILE"
+        )
+
+    def execute(self, context: Context) -> set[str]:
+        strategy = context.scene.cam_job.operation.strategy
+        return strategy.add_bridges(context, self.count, self.length, self.height)
+
+
 class CAM_OT_Action(Operator):
     bl_idname = "cam.action"
     bl_label = "CAM Action"
@@ -96,9 +119,12 @@ class CAM_OT_Action(Operator):
 
     def __init__(self):
         super().__init__()
-        self.computed = {}
         self.execute_funcs = {
-            id: getattr(self, f"execute_{id.split('_')[0].lower()}", self.execute_todo)
+            id: getattr(
+                self,
+                "_".join(["execute"] + id.split("_")[:-1]).lower(),
+                self.execute_todo,
+            )
             for id, *_ in self.type_items
         }
 
@@ -233,6 +259,7 @@ CLASSES = [
     CAM_OT_AddPresetCutter,
     CAM_OT_AddPresetMachine,
     CAM_OT_Action,
+    CAM_OT_Bridge,
     CAM_OT_ToolLibrary,
 ]
 
