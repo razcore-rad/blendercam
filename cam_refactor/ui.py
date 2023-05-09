@@ -5,7 +5,7 @@ from bpy.types import Context, Menu, Panel, PropertyGroup, UIList, UILayout
 
 from .props.camjob.operation import Operation
 
-from .ops import CAM_OT_Action, CAM_OT_Bridge, CAM_OT_ToolLibrary
+from .ops import CAM_OT_Action, CAM_OT_ToolLibrary
 from .utils import get_propnames
 
 
@@ -244,13 +244,10 @@ class CAM_PT_PanelJobsOperations(CAM_PT_Panel):
                     ),
                 )
                 extra_exclude_propnames = []
-                # TODO: delegate UI to strategies?
                 if operation.strategy_type == "PROFILE":
-                    extra_exclude_propnames += [
-                        "bridges_count",
-                        "bridges_height",
-                        "bridges_length",
-                    ]
+                    if strategy.bridges_count == 0:
+                        extra_exclude_propnames += ["bridges_height", "bridges_length"]
+
                     if strategy.cut_type == "ON_LINE":
                         extra_exclude_propnames += [
                             "outlines_count",
@@ -265,27 +262,6 @@ class CAM_PT_PanelJobsOperations(CAM_PT_Panel):
                     layout=col,
                     extra_exclude_propnames=extra_exclude_propnames,
                 )
-
-                if operation.strategy_type == "PROFILE":
-                    col = layout.box().column(align=True)
-                    extra_exclude_propnames = [
-                        "cut_type",
-                        "outlines_count",
-                        "outlines_distance",
-                        "outlines_offset",
-                    ]
-                    if strategy.bridges_count == 0:
-                        extra_exclude_propnames += ["bridges_height", "bridges_length"]
-                    else:
-                        pg = col.operator(CAM_OT_Bridge.bl_idname, icon="ADD")
-                        pg.count = strategy.bridges_count
-                        pg.height = strategy.bridges_height
-                        pg.length = strategy.bridges_length
-                    self.draw_property_group(
-                        strategy,
-                        layout=col,
-                        extra_exclude_propnames=extra_exclude_propnames,
-                    )
         except IndexError:
             pass
 

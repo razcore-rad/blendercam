@@ -88,6 +88,53 @@ def get_layers(z: float, layer_size: float, depth_end: float) -> list[float]:
     return list(seq(z - layer_size, depth_end, -layer_size)) + [depth_end]
 
 
+def update_bridges() -> None:
+    context = bpy.context
+    if not context.scene.cam_jobs:
+        return
+
+    operations = context.scene.cam_job.operations
+    for op in (op for op in operations if op.strategy_type == "PROFILE"):
+        if op.strategy.bridges_source is None and op.strategy.bridges_count != 0:
+            op.strategy.bridges_count = 0
+
+        depth_end = op.get_depth_end(context)
+        for obj in op.strategy.bridges:
+            if not isclose(obj.location[2], depth_end):
+                obj.location[2] = depth_end
+
+            if not isclose(obj.empty_display_size, op.strategy.bridges_length):
+                obj.empty_display_size = op.strategy.bridges_length
+
+            for c in obj.children:
+                if c.type == "EMPTY" and not isclose(
+                    c.empty_display_size, op.strategy.bridges_height
+                ):
+                    obj.empty_display_size = op.strategy.bridges_height
+
+
+def update_bridges_count(self, context: Context) -> None:
+    if (
+        self.bridges_count == 0
+        and self.bridges_source is not None
+        and self.bridges_source.name in bpy.data.collections
+    ):
+        self.remove_bridges()
+
+    if self.bridges_count > 0:
+        self.add_bridges(context)
+
+
+def update_bridges_length(self, context: Context) -> None:
+    for obj in self.bridges:
+        obj.empty_display_size = self.bridges_length
+
+
+def update_bridges_height(self, context: Context) -> None:
+    for obj in (c for obj in self.bridges for c in obj.children if c is not None):
+        obj.empty_display_size = self.bridges_height
+
+
 class DistanceAlongPathsMixin:
     distance_along_paths: FloatProperty(
         name="Distance Along Paths",
@@ -366,6 +413,7 @@ class Profile(SourceMixin, PropertyGroup):
         "object_source",
         "collection_source",
         "style_type",
+        "bridges_source",
     ]
 
     cut_type: EnumProperty(
@@ -377,13 +425,17 @@ class Profile(SourceMixin, PropertyGroup):
         ],
     )
     cut_type_sign = {"ON_LINE": 0, "INSIDE": -1, "OUTSIDE": 1}
-    bridges_count: IntProperty(name="Bridges Count", default=0, min=0)
+    bridges_source: PointerProperty(type=Collection)
+    bridges_count: IntProperty(
+        name="Bridges Count", default=0, min=0, update=update_bridges_count
+    )
     bridges_length: FloatProperty(
         name="Bridges Length",
         get=lambda s: get_scaled_prop("bridges_length", 3e-3, s),
         set=lambda s, v: set_scaled_prop("bridges_length", EPSILON, None, s, v),
         precision=PRECISION,
         unit="LENGTH",
+        update=update_bridges_length,
     )
     bridges_height: FloatProperty(
         name="Bridges Height",
@@ -391,6 +443,7 @@ class Profile(SourceMixin, PropertyGroup):
         set=lambda s, v: set_scaled_prop("bridges_height", EPSILON, None, s, v),
         precision=PRECISION,
         unit="LENGTH",
+        update=update_bridges_height,
     )
     outlines_count: IntProperty(name="Outlines Count", default=1, min=1)
     outlines_offset: FloatProperty(
@@ -418,6 +471,18 @@ class Profile(SourceMixin, PropertyGroup):
     @property
     def cut_sign(self) -> int:
         return self.cut_type_sign[self.cut_type]
+
+    @property
+    def bridges(self) -> Iterator[Object]:
+        return (
+            (
+                obj
+                for obj in self.bridges_source.objects
+                if obj.type == "EMPTY" and obj.parent is None
+            )
+            if self.bridges_source is not None
+            else {}
+        )
 
     def get_outline_distance(self, cutter_radius: float, index: int) -> float:
         distance = (index - 1) * self.outlines_distance
@@ -534,9 +599,8 @@ class Profile(SourceMixin, PropertyGroup):
             reduce_cancelled_or_finished(result_execute), result_computed
         )
 
-    def add_bridges(
-        self, context: Context, count: int, length: float, height: float
-    ) -> set[str]:
+    def add_bridges(self, context: Context) -> None:
+        # TODO: place bridges at `depth_end` and keep them updated
         cam_job = context.scene.cam_job
         operation = cam_job.operation
 
@@ -545,28 +609,51 @@ class Profile(SourceMixin, PropertyGroup):
         col = bpy.data.collections.get(col_name)
         if col is None:
             col = bpy.data.collections.new(col_name)
-
         if col.name not in cam_job.data.children:
             cam_job.data.children.link(col)
-
+        self.bridges_source = col
         for obj in col.objects:
             bpy.data.objects.remove(obj)
 
-        count += 2
         geometry = self.compute_geometry(context)
-        empty_name = f"{operation.name}Bridge"
-        for lr in geometry:
-            for i in range(1, count - 1):
-                c, *_ = lr.line_interpolate_point(i / count, True).coords
-                empty = bpy.data.objects.new(empty_name, None)
+        depth_end = operation.get_depth_end(context)
+        indices = range(self.bridges_count)
+        suffixes = ["Length", "Height"]
+        iterator = chain(
+            *([(lr, i, s) for i in indices for s in suffixes] for lr in geometry)
+        )
+        previous_empty = None
+        for lr, i, s in iterator:
+            empty = bpy.data.objects.new(f"{operation.name}Bridge{s}", None)
+            empty.lock_rotation = 3 * [True]
+            empty.lock_scale = empty.lock_rotation
+            location = 3 * (0.0,)
+            if s == "Length":
+                location, *_ = lr.line_interpolate_point(
+                    i / self.bridges_count, True
+                ).coords
+                location += (depth_end,)
                 empty.empty_display_type = "CIRCLE"
-                empty.empty_display_size = length / 2
-                empty.location = c + (0.0,)
+                empty.empty_display_size = self.bridges_length / 2
                 empty.rotation_euler[0] = pi / 2
-                empty.lock_rotation = 3 * [True]
-                empty.lock_scale = empty.lock_rotation
-                col.objects.link(empty)
-        return {"FINISHED"}
+                empty.lock_location[2] = True
+            else:
+                empty.empty_display_type = "SINGLE_ARROW"
+                empty.empty_display_size = self.bridges_height
+                empty.rotation_euler[0] = -pi / 2
+                empty.lock_location = empty.lock_rotation
+                empty.parent = previous_empty
+            empty.location = location
+            col.objects.link(empty)
+            previous_empty = empty
+
+    def remove_bridges(self) -> None:
+        if self.bridges_source is not None:
+            for obj in self.bridges:
+                for c in obj.children:
+                    bpy.data.objects.remove(c)
+                bpy.data.objects.remove(obj)
+            bpy.data.collections.remove(self.bridges_source)
 
 
 class Parallel(
