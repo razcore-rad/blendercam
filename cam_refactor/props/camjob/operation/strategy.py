@@ -1,13 +1,5 @@
 from itertools import chain
 from math import isclose, pi, tau
-from shapely import (
-    LinearRing,
-    Polygon,
-    force_3d,
-    is_ccw,
-    remove_repeated_points,
-    union_all,
-)
 from typing import Iterator, Sequence
 
 import bpy
@@ -21,7 +13,20 @@ from bpy.props import (
 )
 from bpy.types import Collection, Context, PropertyGroup, Object
 from mathutils import Vector
-from shapely import Point
+from shapely import (
+    Geometry,
+    LinearRing,
+    LineString,
+    Point,
+    Polygon,
+    contains_xy,
+    force_3d,
+    is_ccw,
+    remove_repeated_points,
+    set_coordinates,
+    union_all,
+)
+from shapely.ops import split
 
 from .tsp import run as tsp_vectors_run
 from ....bmesh.ops import get_islands
@@ -103,8 +108,8 @@ def update_bridges() -> None:
             if not isclose(obj.location[2], depth_end):
                 obj.location[2] = depth_end
 
-            if not isclose(obj.empty_display_size, op.strategy.bridges_length):
-                obj.empty_display_size = op.strategy.bridges_length
+            if not isclose(obj.empty_display_size, op.strategy.bridges_radius):
+                obj.empty_display_size = op.strategy.bridges_radius
 
             for c in obj.children:
                 if c.type == "EMPTY" and not isclose(
@@ -125,9 +130,9 @@ def update_bridges_count(self, context: Context) -> None:
         self.add_bridges(context)
 
 
-def update_bridges_length(self, context: Context) -> None:
+def update_bridges_radius(self, context: Context) -> None:
     for obj in self.bridges:
-        obj.empty_display_size = self.bridges_length
+        obj.empty_display_size = self.bridges_radius
 
 
 def update_bridges_height(self, context: Context) -> None:
@@ -429,13 +434,13 @@ class Profile(SourceMixin, PropertyGroup):
     bridges_count: IntProperty(
         name="Bridges Count", default=0, min=0, update=update_bridges_count
     )
-    bridges_length: FloatProperty(
-        name="Bridges Length",
-        get=lambda s: get_scaled_prop("bridges_length", 3e-3, s),
-        set=lambda s, v: set_scaled_prop("bridges_length", EPSILON, None, s, v),
+    bridges_radius: FloatProperty(
+        name="Bridges Radius",
+        get=lambda s: get_scaled_prop("bridges_radius", 3e-3, s),
+        set=lambda s, v: set_scaled_prop("bridges_radius", EPSILON, None, s, v),
         precision=PRECISION,
         unit="LENGTH",
-        update=update_bridges_length,
+        update=update_bridges_radius,
     )
     bridges_height: FloatProperty(
         name="Bridges Height",
@@ -544,12 +549,29 @@ class Profile(SourceMixin, PropertyGroup):
         )
         return chain(exteriors, interiors)
 
+    def bridge_geometry(
+        self, geom: Geometry, bridges: Geometry, z: float, depth_end_bridges: float
+    ) -> Geometry:
+        if not bridges:
+            return geom
+
+        result = geom
+        even_odd = 0 if bridges.contains(Point(geom.coords[0][:2])) else 1
+        if z < depth_end_bridges:
+            geom = LineString(geom.coords)
+            splits = split(geom, bridges).geoms
+            result = LineString(
+                (cs[0], cs[1], depth_end_bridges) if i % 2 == even_odd else cs
+                for i, g in enumerate(splits)
+                for cs in g.coords
+            )
+        return result
+
     def execute_compute(
         self,
         context: Context,
         last_position: Vector | Sequence[float] | Iterator[float],
     ) -> ComputeResult:
-        # TODO: bridges
         result_execute, result_computed = set(), []
         operation = context.scene.cam_job.operation
         _, bb_max = operation.get_bound_box(context)
@@ -560,9 +582,23 @@ class Profile(SourceMixin, PropertyGroup):
         geometry = self.compute_geometry(context)
         geometry = set(remove_repeated_points(g) for g in geometry)
         geometry = tsp_geometry_run(geometry, Point(last_position))
+
+        depth_end_bridges = min(0.0, depth_end + self.bridges_height)
+        bridges = union_all(
+            [
+                Point(obj.location[:2]).buffer(self.bridges_radius)
+                for obj in self.bridges
+            ]
+        )
         layer_size = operation.work_area.layer_size
         layers = get_layers(min(0.0, bb_max.z), layer_size, depth_end)
-        geometry = [[force_3d(g, z) for z in layers] for g in geometry]
+        geometry = [
+            [
+                self.bridge_geometry(force_3d(g, z), bridges, z, depth_end_bridges)
+                for z in layers
+            ]
+            for g in geometry
+        ]
         rapid_height = operation.movement.rapid_height
         zero = operation.zero
         if len(geometry) == 1:
@@ -600,7 +636,6 @@ class Profile(SourceMixin, PropertyGroup):
         )
 
     def add_bridges(self, context: Context) -> None:
-        # TODO: place bridges at `depth_end` and keep them updated
         cam_job = context.scene.cam_job
         operation = cam_job.operation
 
@@ -634,7 +669,7 @@ class Profile(SourceMixin, PropertyGroup):
                 ).coords
                 location += (depth_end,)
                 empty.empty_display_type = "CIRCLE"
-                empty.empty_display_size = self.bridges_length / 2
+                empty.empty_display_size = self.bridges_radius
                 empty.rotation_euler[0] = pi / 2
                 empty.lock_location[2] = True
             else:
