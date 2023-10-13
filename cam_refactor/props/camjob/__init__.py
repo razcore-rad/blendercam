@@ -25,9 +25,7 @@ class CAMJob(PropertyGroup):
     data: PointerProperty(type=Collection)
     object: PointerProperty(type=Object)
     count: IntVectorProperty(name="Count", default=(1, 1), min=1, subtype="XYZ", size=2)
-    gap: FloatVectorProperty(
-        name="Gap", default=(0, 0), min=0, subtype="XYZ_LENGTH", size=2
-    )
+    gap: FloatVectorProperty(name="Gap", default=(0, 0), min=0, subtype="XYZ_LENGTH", size=2)
     operations: CollectionProperty(type=operation.Operation)
     operation_active_index: IntProperty(default=0, min=0)
     stock: PointerProperty(type=stock.Stock)
@@ -41,11 +39,7 @@ class CAMJob(PropertyGroup):
         result = (Vector(), Vector())
         if self.stock.type == "ESTIMATE":
             bound_boxes = (o.get_bound_box(context) for o in self.operations)
-            bound_boxes = [
-                (bb_min, bb_max)
-                for bb_min, bb_max in bound_boxes
-                if bb_max - bb_min != ZERO_VECTOR
-            ]
+            bound_boxes = [(bb_min, bb_max) for bb_min, bb_max in bound_boxes if bb_max - bb_min != ZERO_VECTOR]
             if sum((bb_max - bb_min).length for bb_min, bb_max in bound_boxes) > 0:
                 result = tuple(
                     op(Vector(f(cs) for cs in zip(*vs)), eo)
@@ -60,10 +54,7 @@ class CAMJob(PropertyGroup):
         elif self.stock.type == "CUSTOM":
             position = self.stock.custom_position.to_3d()
             size = self.stock.custom_size
-            result = tuple(
-                position + v
-                for v in (Vector((0.0, 0.0, -size.z)), Vector((size.x, size.y, 0.0)))
-            )
+            result = tuple(position + v for v in (Vector((0.0, 0.0, -size.z)), Vector((size.x, size.y, 0.0))))
         return result
 
     def add_data(self, context: Context) -> None:
@@ -72,9 +63,7 @@ class CAMJob(PropertyGroup):
             context.collection.children.link(self.data)
 
         if self.object is None:
-            self.object = bpy.data.objects.new(
-                self.NAME, bpy.data.meshes.new(self.NAME)
-            )
+            self.object = bpy.data.objects.new(self.NAME, bpy.data.meshes.new(self.NAME))
             self.object.lock_location = 3 * [True]
             self.object.lock_rotation = self.object.lock_location
             self.object.lock_scale = self.object.lock_location
@@ -96,10 +85,7 @@ class CAMJob(PropertyGroup):
 
     def execute_compute(self, context: Context, report: Callable) -> set[str]:
         result, computed = set(), []
-        if not all(
-            op.tool_id >= 0 and op.strategy.get_source(context)
-            for op in self.operations
-        ):
+        if not all(op.tool_id >= 0 and op.strategy.get_source(context) for op in self.operations):
             report({"ERROR"}, "Check all operations have sources and tools.")
             return {"CANCELLED"}
 
@@ -108,10 +94,8 @@ class CAMJob(PropertyGroup):
 
         last_position = ZERO_VECTOR
         partial_computed = []
-        for operation in self.operations:
-            partial_result, partial_computed = operation.strategy.execute_compute(
-                context, last_position
-            )
+        for op in self.operations:
+            partial_result, partial_computed = op.strategy.execute_compute(context, last_position)
             result.update(partial_result)
             computed.extend(partial_computed)
             if computed:
@@ -143,9 +127,7 @@ class CAMJob(PropertyGroup):
                 vert[dwell] = c["dwell"]
                 vert[feed_rate] = c["feed_rate"]
                 vert[plunge_scale] = c["plunge_scale"]
-                vert[spindle_direction] = (
-                    0 if c["spindle_direction"] == "CLOCKWISE" else 1
-                )
+                vert[spindle_direction] = 0 if c["spindle_direction"] == "CLOCKWISE" else 1
                 vert[spindle_rpm] = c["spindle_rpm"]
             bm.verts.index_update()
             for pair in zip(bm.verts[:-1], bm.verts[1:]):

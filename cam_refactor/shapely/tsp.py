@@ -11,12 +11,8 @@ def distance(linear_ring: LinearRing, origin: Point) -> tuple[float, Point]:
     return (p1.distance(p2), p1)
 
 
-def get_nearest_neighbor(
-    linear_rings: list[tuple[int, LinearRing]], origin: Point
-) -> list[tuple[LinearRing, Point]]:
-    _, at, linear_ring, i = min(
-        (distance(lr, origin) + (lr, i) for i, lr in linear_rings), key=first
-    )
+def get_nearest_neighbor(linear_rings: list[tuple[int, LinearRing]], origin: Point) -> list[tuple[LinearRing, Point]]:
+    _, at, linear_ring, i = min((distance(lr, origin) + (lr, i) for i, lr in linear_rings), key=first)
     return i, start_at(linear_ring, at), at
 
 

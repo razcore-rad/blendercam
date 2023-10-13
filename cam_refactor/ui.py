@@ -301,7 +301,7 @@ class CAM_PT_PanelJobsOperationWorkArea(CAM_PT_PanelJobsOperationSubPanel):
         layout = self.layout
         col = layout.box().column(align=True)
         col.prop(work_area, "layer_size")
-        if operation.strategy_type in {"DRILL", "PROFILE"}:
+        if operation.strategy_type in {"DRILL", "PROFILE", "POCKET"}:
             row = col.row(align=True)
             if work_area.depth_end_type == "CUSTOM":
                 row.prop(work_area, "depth_end")

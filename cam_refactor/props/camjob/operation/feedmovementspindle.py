@@ -1,6 +1,5 @@
 import math
 
-import bpy
 from bpy.props import EnumProperty, FloatProperty, IntProperty
 from bpy.types import Context, PropertyGroup
 
@@ -30,7 +29,7 @@ def movement_type_items(self, context: Context) -> ShortEnumItems:
             "Cutter rotates against the direction of the feed",
         ),
     ]
-    if context.scene.cam_job.operation.strategy_type != "PROFILE":
+    if context.scene.cam_job.operation.strategy_type not in ("PROFILE", "POCKET"):
         result.append(("BOTH", "Both Ways", "Optimize for tool path length"))
     return result
 

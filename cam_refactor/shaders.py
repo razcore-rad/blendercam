@@ -1,24 +1,16 @@
 import bpy
-import bmesh
 import gpu
 from bpy.types import Context
 from gpu_extras.batch import batch_for_shader
 from mathutils import Vector
+from shapely import Point, Polygon, force_3d
+from shapely import affinity
 
 from .props.camjob.operation import Operation
 from .utils import noop
 
-
-def gen_unit_circle_vectors() -> list[Vector]:
-    bm = bmesh.new()
-    result = [
-        v.co.copy() for v in bmesh.ops.create_circle(bm, segments=12, radius=1)["verts"]
-    ]
-    bm.free()
-    return result
-
-
-UNIT_CIRCLE_VECTORS = gen_unit_circle_vectors()
+BUFFER_RESOLUTION = 12
+UNIT_CIRCLE_VECTORS = [Vector(cs) for cs in Point(0, 0, 0).buffer(1, resolution=BUFFER_RESOLUTION).exterior.coords]
 SQUARE_INDICES = [(0, 1), (1, 2), (2, 3), (3, 0)]
 STOCK_INDICES = [
     # bottom
@@ -38,16 +30,12 @@ STOCK_INDICES = [
     (3, 7),
 ]
 
-SHADER = gpu.shader.from_builtin("3D_UNIFORM_COLOR")
+SHADER = gpu.shader.from_builtin("UNIFORM_COLOR")
 
 
 def draw_stock() -> None:
     context = bpy.context
-    if not (
-        context.mode == "OBJECT"
-        and context.scene.cam_jobs
-        and context.scene.cam_job.operations
-    ):
+    if not (context.mode == "OBJECT" and context.scene.cam_jobs and context.scene.cam_job.operations):
         return
 
     cam_job = context.scene.cam_job
@@ -84,10 +72,25 @@ def draw_drill_features(context: Context, operation: Operation) -> None:
         coords = [v * cutter_radius + position for v in UNIT_CIRCLE_VECTORS]
         batch_for_shader(SHADER, "LINE_LOOP", {"pos": coords}).draw(SHADER)
 
-    positions = [(p.x, p.y, operation.get_depth_end(context)) for p in positions]
+    depth_end = operation.get_depth_end(context)
+    positions = [(p.x, p.y, depth_end) for p in positions]
     batch = batch_for_shader(SHADER, "POINTS", {"pos": positions})
     batch.draw(SHADER)
     gpu.state.line_width_set(1)
+
+
+def draw_pocket_features(context: Context, operation: Operation) -> None:
+    positions = operation.strategy.get_feature_positions(context, operation)
+    if operation.tool_id < 0 or not positions:
+        return
+
+    gpu.state.depth_test_set("LESS_EQUAL")
+    gpu.state.line_width_set(3)
+    SHADER.uniform_float("color", (1, 1, 1, 1))
+    batch_for_shader(SHADER, "LINES", {"pos": [tuple(p) for p in positions]}, indices=SQUARE_INDICES).draw(SHADER)
+    gpu.state.line_width_set(1)
+    scaled_positions = affinity.scale(Polygon(positions), 0.5, 0.5).exterior.coords
+    batch_for_shader(SHADER, "LINES", {"pos": scaled_positions}, indices=SQUARE_INDICES).draw(SHADER)
 
 
 def draw_profile_features(context: Context, operation: Operation) -> None:
@@ -99,15 +102,14 @@ def draw_profile_features(context: Context, operation: Operation) -> None:
     gpu.state.line_width_set(3)
     SHADER.uniform_float("color", (1, 1, 1, 1))
     positions = [tuple(p) for p in positions]
-    batch_for_shader(SHADER, "LINES", {"pos": positions}, indices=SQUARE_INDICES).draw(
-        SHADER
-    )
+    batch_for_shader(SHADER, "LINES", {"pos": positions}, indices=SQUARE_INDICES).draw(SHADER)
     gpu.state.line_width_set(1)
 
 
 DRAW_FEAURES_FUNCS = {
     "DRILL": draw_drill_features,
     "PROFILE": draw_profile_features,
+    "POCKET": draw_pocket_features,
 }
 
 

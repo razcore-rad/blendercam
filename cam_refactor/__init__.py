@@ -23,17 +23,19 @@ import re
 import subprocess
 import sys
 
+from . import ops, props, ui, handlers
 from .utils import ADDON_PATH
 
 
-mods = [".ops", ".props", ".ui", ".handlers"]
+mods = [ops, props, ui, handlers]
+# mods = [".ops", ".props", ".ui", ".handlers"]
 
-globals().update(
-    {
-        mod.lstrip("."): importlib.reload(importlib.import_module(mod, __package__))
-        for mod in mods
-    }
-)
+# globals().update(
+#     {
+#         mod.lstrip("."): importlib.reload(importlib.import_module(mod, __package__))
+#         for mod in mods
+#     }
+# )
 
 bl_info = {
     "name": "CNC G-Code Tools",
@@ -79,12 +81,14 @@ def ensure_modules() -> None:
 def register() -> None:
     ensure_modules()
     for mod in mods:
-        globals()[mod.lstrip(".")].register()
+        mod.register()
+        # globals()[mod.lstrip(".")].register()
 
 
 def unregister() -> None:
     for mod in reversed(mods):
-        globals()[mod.lstrip(".")].unregister()
+        mod.unregister()
+        # globals()[mod.lstrip(".")].unregister()
 
     for mod in sorted(filter(lambda m: m.startswith(__name__), sys.modules)):
         del sys.modules[mod]
