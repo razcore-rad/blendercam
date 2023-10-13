@@ -10,7 +10,9 @@ from .props.camjob.operation import Operation
 from .utils import noop
 
 BUFFER_RESOLUTION = 12
-UNIT_CIRCLE_VECTORS = [Vector(cs) for cs in Point(0, 0, 0).buffer(1, resolution=BUFFER_RESOLUTION).exterior.coords]
+UNIT_CIRCLE_VECTORS = [
+    Vector(cs) for cs in force_3d(Point(0, 0).buffer(1, resolution=BUFFER_RESOLUTION).exterior, 0.0).coords
+]
 SQUARE_INDICES = [(0, 1), (1, 2), (2, 3), (3, 0)]
 STOCK_INDICES = [
     # bottom
@@ -55,8 +57,7 @@ def draw_stock() -> None:
 
     gpu.state.depth_test_set("LESS_EQUAL")
     SHADER.uniform_float("color", (1, 1, 1, 1))
-    batch = batch_for_shader(SHADER, "LINES", {"pos": coords}, indices=STOCK_INDICES)
-    batch.draw(SHADER)
+    batch_for_shader(SHADER, "LINES", {"pos": coords}, indices=STOCK_INDICES).draw(SHADER)
 
 
 def draw_drill_features(context: Context, operation: Operation) -> None:
@@ -68,14 +69,18 @@ def draw_drill_features(context: Context, operation: Operation) -> None:
     gpu.state.line_width_set(3)
     SHADER.uniform_float("color", (1, 1, 1, 1))
     cutter_radius = operation.get_cutter(context).radius
+    batches = []
     for position in positions:
         coords = [v * cutter_radius + position for v in UNIT_CIRCLE_VECTORS]
-        batch_for_shader(SHADER, "LINE_LOOP", {"pos": coords}).draw(SHADER)
+        batches.append(batch_for_shader(SHADER, "LINE_LOOP", {"pos": coords}))
 
     depth_end = operation.get_depth_end(context)
     positions = [(p.x, p.y, depth_end) for p in positions]
-    batch = batch_for_shader(SHADER, "POINTS", {"pos": positions})
-    batch.draw(SHADER)
+    batches.append(batch_for_shader(SHADER, "POINTS", {"pos": positions}))
+    print(batches)
+    for batch in batches:
+        print("test")
+        batch.draw(SHADER)
     gpu.state.line_width_set(1)
 
 
@@ -87,10 +92,11 @@ def draw_pocket_features(context: Context, operation: Operation) -> None:
     gpu.state.depth_test_set("LESS_EQUAL")
     gpu.state.line_width_set(3)
     SHADER.uniform_float("color", (1, 1, 1, 1))
-    batch_for_shader(SHADER, "LINES", {"pos": [tuple(p) for p in positions]}, indices=SQUARE_INDICES).draw(SHADER)
-    gpu.state.line_width_set(1)
+    batch = batch_for_shader(SHADER, "LINES", {"pos": [tuple(p) for p in positions]}, indices=SQUARE_INDICES)
     scaled_positions = affinity.scale(Polygon(positions), 0.5, 0.5).exterior.coords
-    batch_for_shader(SHADER, "LINES", {"pos": scaled_positions}, indices=SQUARE_INDICES).draw(SHADER)
+    for batch in [batch, batch_for_shader(SHADER, "LINES", {"pos": scaled_positions}, indices=SQUARE_INDICES)]:
+        batch.draw(SHADER)
+        gpu.state.line_width_set(1)
 
 
 def draw_profile_features(context: Context, operation: Operation) -> None:

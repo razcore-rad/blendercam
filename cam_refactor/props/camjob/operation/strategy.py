@@ -223,7 +223,7 @@ class SourceMixin:
 
         bb_min, bb_max = operation.get_bound_box(context)
         depth_end = operation.get_depth_end(context)
-        is_valid = bb_max.z > depth_end
+        is_valid = bb_max.z > depth_end or isclose(bb_max.z, depth_end)
         if is_valid:
             result = [
                 Vector((bb_min.x, bb_min.y, depth_end)),
@@ -400,7 +400,7 @@ class Pocket(DistanceBetweenPathsMixin, SourceMixin, PropertyGroup):
     def compute_geometry(self, context: Context) -> set[LinearRing]:
         operation = context.scene.cam_job.operation
         geometry = get_raw_profile_geoms(operation, self.get_evaluated_source(context))
-        geometry = ({geometry} if geometry.geom_type == "Polygon" else geometry.geoms)
+        geometry = {geometry} if geometry.geom_type == "Polygon" else geometry.geoms
         return set(remove_repeated_points(g.exterior) for g in geometry)
 
     def execute_compute(
