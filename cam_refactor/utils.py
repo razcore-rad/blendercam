@@ -104,7 +104,7 @@ def set_scaled_prop(propname: str, value_min, value_max, self, value):
     self[propname] = computed_value
 
 
-def copy(context: Context, from_prop: Property, to_prop: Property, depth=0) -> None:
+def copy(from_prop: Property, to_prop: Property, depth=0) -> None:
     if isinstance(from_prop, PropertyGroup):
         for propname in get_propnames(to_prop, use_exclude_propnames=False):
             if not hasattr(from_prop, propname) or propname in ["data", "object"]:
@@ -115,7 +115,7 @@ def copy(context: Context, from_prop: Property, to_prop: Property, depth=0) -> N
                 isinstance(from_subprop, t)
                 for t in [PropertyGroup, bpy_prop_collection]
             ):
-                copy(context, from_subprop, getattr(to_prop, propname), depth + 1)
+                copy(from_subprop, getattr(to_prop, propname), depth + 1)
             elif hasattr(to_prop, propname):
                 try:
                     setattr(to_prop, propname, from_subprop)
@@ -126,7 +126,7 @@ def copy(context: Context, from_prop: Property, to_prop: Property, depth=0) -> N
         to_prop.clear()
         for from_subprop in from_prop.values():
             to_prop.add()
-            copy(context, from_subprop, to_prop[-1], depth + 1)
+            copy(from_subprop, to_prop[-1], depth + 1)
 
 
 def poll_object_source(strategy: PropertyGroup, obj: Object) -> bool:

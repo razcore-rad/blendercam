@@ -29,7 +29,7 @@ from shapely import (
 from shapely.ops import split
 
 from .tsp import run as tsp_vectors_run
-from ....bmesh.ops import get_islands
+from ....bmesh.ops import get_islands, get_sorted_islands
 from ....shapely.tsp import run as tsp_geometry_run
 from ....types import ComputeResult
 from ....utils import (
@@ -314,6 +314,32 @@ class CurveToPath(SourceMixin, PropertyGroup):
     def is_source(self, obj: Object) -> bool:
         collection_source = [] if self.collection_source is None else self.collection_source
         return obj == self.curve_object_source or obj in collection_source
+
+    def execute_compute(
+        self,
+        context: Context,
+        last_position: Vector | Sequence[float] | Iterator[float],
+    ) -> ComputeResult:
+        result_computed = []
+        operation = context.scene.cam_job.operation
+        rapid_height = operation.movement.rapid_height
+        zero = operation.zero
+        for obj in self.get_evaluated_source(context):
+            if obj.name not in context.view_layer.objects:
+                continue
+
+            temp_mesh = obj.to_mesh()
+            bm = bmesh.new()
+            bm.from_mesh(temp_mesh)
+            for island in get_sorted_islands(bm, bm.verts)["islands"]:
+                if any(island[0] == e.other_vert(island[-1]) for e in island[-1].link_edges):
+                    island.append(island[0])
+                result_computed.append(dict(zero, vector=(obj.matrix_world @ island[0].co)[:2] + (rapid_height,)))
+                result_computed.extend(dict(zero, vector=obj.matrix_world @ v.co) for v in island)
+                result_computed.append(dict(zero, vector=(obj.matrix_world @ island[-1].co)[:2] + (rapid_height,)))
+            bm.free()
+            obj.to_mesh_clear()
+        return ComputeResult({"FINISHED"}, result_computed)
 
 
 class Drill(SourceMixin, PropertyGroup):

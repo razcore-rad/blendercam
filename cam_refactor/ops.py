@@ -145,7 +145,7 @@ class CAM_OT_Action(Operator):
         active_index = getattr(dataptr, active_propname)
         propscol.add()
         prop = propscol[-1]
-        copy(context, propscol[active_index], prop)
+        copy(propscol[active_index], prop)
         setattr(dataptr, active_propname, active_index + 1)
         getattr(prop, "add_data", noop)(context)
         getattr(prop, "save", noop)()

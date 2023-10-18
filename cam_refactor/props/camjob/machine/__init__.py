@@ -6,7 +6,7 @@ from .... import utils
 
 
 def update_post_processor(machine: PropertyGroup, context: Context) -> None:
-    utils.copy(context, machine.previous_post_processor, machine.post_processor)
+    utils.copy(machine.previous_post_processor, machine.post_processor)
     machine.previous_post_processor_enum = machine.post_processor_enum
 
 

@@ -16,7 +16,7 @@ from ....utils import copy
 
 
 def update_operation_strategy(self, context: Context) -> None:
-    copy(context, self.previous_strategy, self.strategy)
+    copy(self.previous_strategy, self.strategy)
     self.previous_strategy_type = self.strategy_type
 
 
