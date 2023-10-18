@@ -1,4 +1,4 @@
-from bpy.props import EnumProperty, IntProperty, PointerProperty, StringProperty
+from bpy.props import EnumProperty, PointerProperty, StringProperty
 from bpy.types import Context, PropertyGroup
 
 from . import postprocessor
@@ -15,7 +15,7 @@ class Machine(PropertyGroup):
 
     # feed_rate: PointerProperty(type=feedrate.FeedRate)
     # spindle_rpm: PointerProperty(type=spindlerpm.SpindleRPM)
-    axes: IntProperty(name="Axes", default=3, min=3, max=5)
+    # axes: IntProperty(name="Axes", default=3, min=3, max=5)
     previous_post_processor_enum: StringProperty(default="GRBL")
     post_processor_enum: EnumProperty(
         name="Post Processor",
@@ -55,9 +55,7 @@ class Machine(PropertyGroup):
 
     @property
     def previous_post_processor(self) -> PropertyGroup:
-        return getattr(
-            self, f"{self.previous_post_processor_enum.lower()}_post_processor"
-        )
+        return getattr(self, f"{self.previous_post_processor_enum.lower()}_post_processor")
 
     @property
     def post_processor_propname(self) -> str:

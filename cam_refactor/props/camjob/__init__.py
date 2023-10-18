@@ -24,7 +24,7 @@ class CAMJob(PropertyGroup):
 
     data: PointerProperty(type=Collection)
     object: PointerProperty(type=Object)
-    count: IntVectorProperty(name="Count", default=(1, 1), min=1, subtype="XYZ", size=2)
+    copies: IntVectorProperty(name="Copies", default=(0, 0), min=0, subtype="XYZ", size=2)
     gap: FloatVectorProperty(name="Gap", default=(0, 0), min=0, subtype="XYZ_LENGTH", size=2)
     operations: CollectionProperty(type=operation.Operation)
     operation_active_index: IntProperty(default=0, min=0)
@@ -34,6 +34,14 @@ class CAMJob(PropertyGroup):
     @property
     def operation(self) -> operation.Operation:
         return self.operations[self.operation_active_index]
+
+    def get_bound_box(self, context: Context) -> tuple[Vector, Vector]:
+        result = (Vector(), Vector())
+        bound_boxes = (o.get_bound_box(context) for o in self.operations)
+        bound_boxes = [(bb_min, bb_max) for bb_min, bb_max in bound_boxes if bb_max - bb_min != ZERO_VECTOR]
+        if sum((bb_max - bb_min).length for bb_min, bb_max in bound_boxes) > 0:
+            result = tuple(Vector(f(cs) for cs in zip(*vs)) for f, vs in zip((min, max), zip(*bound_boxes)))
+        return result
 
     def get_stock_bound_box(self, context: Context) -> tuple[Vector, Vector]:
         result = (Vector(), Vector())
@@ -100,6 +108,20 @@ class CAMJob(PropertyGroup):
             computed.extend(partial_computed)
             if computed:
                 last_position = computed[-1]["vector"]
+
+        if self.copies[0] > 0 or self.copies[1] > 0:
+            bound_box_min, bound_box_max = self.get_bound_box(context)
+            bb = bound_box_max - bound_box_min
+            bb = Vector(bb[:2] + (0.0,))
+            offset = bb + self.gap.to_3d()
+            xs, ys = self.copies[0] + 1, self.copies[1] + 1
+            computed.extend(
+                [
+                    dict(c, vector=Vector(c["vector"]) + offset * xy)
+                    for xy in [Vector((index % xs, index // xs, 0.0)) for index in range(xs * ys)]
+                    for c in computed
+                ]
+            )
         (result_item,) = result = reduce_cancelled_or_finished(result)
 
         if result_item == "CANCELLED":

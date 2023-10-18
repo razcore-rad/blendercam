@@ -183,12 +183,12 @@ class CAM_PT_PanelJobs(CAM_PT_Panel):
             row = layout.row()
             col = row.column(align=True)
 
-            if all(count_coord == 1 for count_coord in cam_job.count):
-                col.prop(cam_job, "count")
+            if all(copies_coord == 0 for copies_coord in cam_job.copies):
+                col.prop(cam_job, "copies")
             else:
                 split = col.split()
                 col = split.column()
-                col.prop(cam_job, "count")
+                col.prop(cam_job, "copies")
 
                 col = split.column()
                 col.prop(cam_job, "gap")
@@ -272,7 +272,11 @@ class CAM_PT_PanelJobsOperationFeedMovementSpindle(CAM_PT_PanelJobsOperationSubP
 
     def draw(self, context: Context) -> None:
         operation = context.scene.cam_job.operation
-        if operation.strategy_type == "DRILL":
+        if operation.strategy_type == "CURVE_TO_PATH":
+            layout = self.layout
+            row = layout.row(align=True)
+            row.prop(operation.movement, "rapid_height")
+        elif operation.strategy_type == "DRILL":
             layout = self.layout.box().column(align=True)
             layout.use_property_split = True
             row = layout.row(align=True)
@@ -350,8 +354,8 @@ class CAM_PT_PanelJobsMachine(CAM_PT_PanelBase):
         box.prop(machine, "post_processor_enum")
         self.draw_property_group(post_processor, layout=box.column(align=True))
 
-        box = layout.box()
-        box.prop(machine, "axes")
+        # box = layout.box()
+        # box.prop(machine, "axes")
 
 
 class CAM_UL_ToolList(UIList):

@@ -77,9 +77,7 @@ def draw_drill_features(context: Context, operation: Operation) -> None:
     depth_end = operation.get_depth_end(context)
     positions = [(p.x, p.y, depth_end) for p in positions]
     batches.append(batch_for_shader(SHADER, "POINTS", {"pos": positions}))
-    print(batches)
     for batch in batches:
-        print("test")
         batch.draw(SHADER)
     gpu.state.line_width_set(1)
 
