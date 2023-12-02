@@ -1,26 +1,29 @@
-from shapely import LinearRing, Point, prepare
+from shapely import Geometry, Point, prepare
 from shapely.ops import nearest_points
+from typing import Iterator
 
 from .ops import start_at
 from ..utils import first
 
 
-def distance(linear_ring: LinearRing, origin: Point) -> tuple[float, Point]:
-    prepare(linear_ring)
-    p1, p2 = nearest_points(linear_ring, origin)
+def distance(geom: Geometry, origin: Point) -> tuple[float, Point]:
+    prepare(geom)
+    p1, p2 = nearest_points(geom, origin)
     return (p1.distance(p2), p1)
 
 
-def get_nearest_neighbor(linear_rings: list[tuple[int, LinearRing]], origin: Point) -> list[tuple[LinearRing, Point]]:
-    _, at, linear_ring, i = min((distance(lr, origin) + (lr, i) for i, lr in linear_rings), key=first)
-    return i, start_at(linear_ring, at), at
+def get_nearest_neighbor(geom: list[tuple[int, Geometry]], origin: Point) -> list[tuple[Geometry, Point]]:
+    _, at, geom, i = min((distance(lr, origin) + (lr, i) for i, lr in geom), key=first)
+    if geom.geom_type == "LinearRing":
+        geom = start_at(geom, at)
+    return i, geom, at
 
 
-def run(linear_rings: list[LinearRing], origin: Point) -> list[LinearRing]:
+def run(geoms: Iterator[Geometry], origin: Point) -> list[Geometry]:
     result = []
-    unvisited = list(enumerate(linear_rings))
+    unvisited = list(enumerate(geoms))
     while unvisited:
-        i, linear_ring, origin = get_nearest_neighbor(unvisited, origin)
-        result.append(linear_ring)
+        i, geom, origin = get_nearest_neighbor(unvisited, origin)
+        result.append(geom)
         unvisited = [u for u in unvisited if first(u) != i]
     return result

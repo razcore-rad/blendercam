@@ -25,6 +25,7 @@ from shapely import (
     remove_repeated_points,
     union_all,
     get_coordinates,
+    intersects,
 )
 from shapely.ops import split
 
@@ -44,6 +45,7 @@ from ....utils import (
     reduce_cancelled_or_finished,
     seq,
     set_scaled_prop,
+    sign,
 )
 
 
@@ -157,11 +159,11 @@ class DistanceAlongPathsMixin:
 class DistanceBetweenPathsMixin:
     distance_between_paths: FloatProperty(
         name="Distance Between Paths",
-        default=1e-3,
-        min=1e-5,
-        max=32,
-        precision=PRECISION,
-        unit="LENGTH",
+        default=5,
+        min=0.1,
+        max=100,
+        precision=1,
+        subtype="PERCENTAGE",
     )
 
 
@@ -423,11 +425,10 @@ class OutlineFill(
 
 
 class Pocket(DistanceBetweenPathsMixin, SourceMixin, PropertyGroup):
-    def compute_geometry(self, context: Context) -> set[LinearRing]:
-        operation = context.scene.cam_job.operation
+    def compute_geometry(self, context: Context, operation: PropertyGroup) -> set[Polygon]:
         geometry = get_raw_profile_geoms(operation, self.get_evaluated_source(context))
         geometry = {geometry} if geometry.geom_type == "Polygon" else geometry.geoms
-        return set(remove_repeated_points(g.exterior) for g in geometry)
+        return set(remove_repeated_points(g) for g in geometry)
 
     def execute_compute(
         self,
@@ -441,42 +442,49 @@ class Pocket(DistanceBetweenPathsMixin, SourceMixin, PropertyGroup):
         if bb_max.z < depth_end:
             return ComputeResult({"CANCELLED"}, result_computed)
 
-        exteriors = self.compute_geometry(context)
-        exteriors = tsp_geometry_run(exteriors, Point(last_position))
-
         layer_size = operation.work_area.layer_size
         layers = get_layers(min(0.0, bb_max.z), layer_size, depth_end)
         cutter_diameter = operation.get_cutter(context).diameter
+        cutter_radius = cutter_diameter / 2
         rapid_height = operation.movement.rapid_height
         zero = operation.zero
-        exterior_count = len(exteriors)
-        for exterior in exteriors:
-            polygon = Polygon(exterior).buffer(-cutter_diameter / 2, resolution=BUFFER_RESOLUTION)
-            result_computed.append(dict(zero, vector=np.append(polygon.exterior.coords[0], rapid_height)))
-            partials = []
 
-            while not polygon.is_empty:
-                if do_reverse(polygon, operation):
-                    polygon = polygon.reverse()
-                partials.append(polygon)
-                if cutter_diameter < self.distance_between_paths:
-                    partials.append(Point(*polygon.exterior.coords[0], rapid_height))
-                polygon = polygon.buffer(-self.distance_between_paths, resolution=BUFFER_RESOLUTION)
-                if cutter_diameter < self.distance_between_paths and not polygon.is_empty:
-                    partials.append(Point(*polygon.exterior.coords[0], rapid_height))
-
-            for layer in layers:
-                result_computed.extend(
-                    dict(zero, vector=np.append(cs[:2], layer) if np.isnan(cs[-1]) else cs)
-                    for cs in get_coordinates(partials, include_z=True)
+        geometry = tsp_geometry_run(self.compute_geometry(context, operation), Point(last_position))
+        for geom in geometry:
+            linear_rings = []
+            temp_geom = geom.buffer(cutter_radius, resolution=BUFFER_RESOLUTION)
+            index = 1
+            while not temp_geom.is_empty:
+                temp_geom = geom.buffer(
+                    -index * self.distance_between_paths / 100 * cutter_diameter, resolution=BUFFER_RESOLUTION
                 )
-                if cutter_diameter < self.distance_between_paths:
-                    result_computed.append(dict(zero, vector=np.append(partials[0].exterior.coords[0], rapid_height)))
-                elif layer != layers[-1]:
-                    result_computed.append(dict(zero, vector=np.append(partials[0].exterior.coords[0], layer)))
+                if temp_geom.geom_type == "Polygon":
+                    linear_rings.extend(temp_geom.interiors)
+                    linear_rings.append(temp_geom.exterior)
+                elif temp_geom.geom_type == "MultiPolygon":
+                    linear_rings.extend(g.exterior for g in temp_geom.geoms)
+                index += 1
 
-            if exterior_count > 1:
-                result_computed.append(dict(zero, vector=np.append(result_computed[-1]["vector"][:2], rapid_height)))
+            linear_rings = tsp_geometry_run(
+                [lr.reverse() if do_reverse(lr, operation) else lr for lr in linear_rings if not lr.is_empty],
+                Point(last_position),
+            )
+            for layer_index, layer in enumerate(layers):
+                for linear_ring_index in range(len(linear_rings)):
+                    linear_ring = linear_rings[linear_ring_index if layer_index % 2 == 0 else (-1 - linear_ring_index)]
+                    linear_ring_coordinates = get_coordinates(linear_ring)
+                    if layer_index == 0 and linear_ring_index == 0:
+                        result_computed.append(dict(zero, vector=np.append(linear_ring_coordinates[0], rapid_height)))
+                    line = LineString([last_position[:2], linear_ring.coords[0]])
+                    is_line_intersection = any(intersects(line, p) for p in geom.interiors)
+                    result_computed.extend(dict(zero, vector=np.append(cs, layer)) for cs in linear_ring_coordinates)
+                    if linear_ring_index > 0 and is_line_intersection:
+                        result_computed.extend(dict(zero, vector=np.append(x, rapid_height)) for x in line.coords)
+                    last_position = result_computed[-1]["vector"]
+            result_computed.append(dict(zero, vector=np.append(last_position[:2], rapid_height)))
+
+        if len(result_computed) > 0:
+            result_computed.append(dict(zero, vector=np.append(result_computed[-1]["vector"][:2], rapid_height)))
         return ComputeResult({"FINISHED"}, result_computed)
 
 
@@ -557,8 +565,7 @@ class Profile(SourceMixin, PropertyGroup):
         distance = (index - 1) * self.outlines_distance
         return self.cut_sign * (cutter_radius + distance) + self.outlines_offset
 
-    def compute_geometry(self, context: Context) -> Iterator:
-        operation = context.scene.cam_job.operation
+    def compute_geometry(self, context: Context, operation: PropertyGroup) -> Iterator:
         geometry = get_raw_profile_geoms(operation, self.get_evaluated_source(context))
         if self.cut_type != "ON_LINE":
             cutter_radius = operation.get_cutter(context).radius
@@ -609,7 +616,7 @@ class Profile(SourceMixin, PropertyGroup):
         if bb_max.z < depth_end:
             return ComputeResult({"CANCELLED"}, result_computed)
 
-        geometry = self.compute_geometry(context)
+        geometry = self.compute_geometry(context, operation)
         geometry = set(remove_repeated_points(g) for g in geometry)
         geometry = tsp_geometry_run(geometry, Point(last_position))
 
@@ -665,7 +672,7 @@ class Profile(SourceMixin, PropertyGroup):
         for obj in col.objects:
             bpy.data.objects.remove(obj)
 
-        geometry = self.compute_geometry(context)
+        geometry = self.compute_geometry(context, operation)
         depth_end = operation.get_depth_end(context)
         indices = range(self.bridges_count)
         suffixes = ["Length", "Height"]
