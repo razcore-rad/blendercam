@@ -103,7 +103,7 @@ class CAMJob(PropertyGroup):
         last_position = ZERO_VECTOR
         partial_computed = []
         for op in self.operations:
-            partial_result, partial_computed = op.strategy.execute_compute(context, last_position)
+            partial_result, partial_computed = op.strategy.execute_compute(context, op, last_position)
             result.update(partial_result)
             computed.extend(partial_computed)
             if computed:

@@ -2,11 +2,10 @@ from math import isclose
 from pathlib import PurePath
 from typing import TypeVar
 
-from .utils import PRECISION
-
 
 LF = "\n"
 SPACE = " "
+PRECISION = 3
 
 Self = TypeVar("Self", bound="G")
 

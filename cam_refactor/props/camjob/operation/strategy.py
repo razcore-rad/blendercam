@@ -318,10 +318,10 @@ class CurveToPath(SourceMixin, PropertyGroup):
     def execute_compute(
         self,
         context: Context,
+        operation: PropertyGroup,
         last_position: Vector | Sequence[float] | Iterator[float],
     ) -> ComputeResult:
         result_computed = []
-        operation = context.scene.cam_job.operation
         rapid_height = operation.movement.rapid_height
         zero = operation.zero
         for obj in self.get_evaluated_source(context):
@@ -376,10 +376,10 @@ class Drill(SourceMixin, PropertyGroup):
     def execute_compute(
         self,
         context: Context,
+        operation: PropertyGroup,
         last_position: Vector | Sequence[float] | Iterator[float],
     ) -> ComputeResult:
         result_execute, result_computed = set(), []
-        operation = context.scene.cam_job.operation
         depth_end = operation.get_depth_end(context)
         rapid_height = operation.movement.rapid_height
         layer_size = operation.work_area.layer_size
@@ -432,10 +432,10 @@ class Pocket(DistanceBetweenPathsMixin, SourceMixin, PropertyGroup):
     def execute_compute(
         self,
         context: Context,
+        operation: PropertyGroup,
         last_position: Vector | Sequence[float] | Iterator[float],
     ) -> ComputeResult:
         result_computed = []
-        operation = context.scene.cam_job.operation
         _, bb_max = operation.get_bound_box(context)
         depth_end = operation.get_depth_end(context)
         if bb_max.z < depth_end:
@@ -600,10 +600,10 @@ class Profile(SourceMixin, PropertyGroup):
     def execute_compute(
         self,
         context: Context,
+        operation: PropertyGroup,
         last_position: Vector | Sequence[float] | Iterator[float],
     ) -> ComputeResult:
         result_execute, result_computed = set(), []
-        operation = context.scene.cam_job.operation
         _, bb_max = operation.get_bound_box(context)
         depth_end = operation.get_depth_end(context)
         if bb_max.z < depth_end:
