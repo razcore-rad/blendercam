@@ -1,5 +1,6 @@
 import bpy
 import gpu
+from itertools import chain, tee
 from bpy.types import Context
 from gpu_extras.batch import batch_for_shader
 from mathutils import Vector
@@ -61,22 +62,33 @@ def draw_stock() -> None:
 
 
 def draw_drill_features(context: Context, operation: Operation) -> None:
-    positions = operation.strategy.get_feature_positions(context, operation)
-    if operation.tool_id < 0 or not positions:
+    features = operation.strategy.get_feature_positions(context, operation)
+    if operation.tool_id < 0 or not features:
         return
 
     gpu.state.depth_test_set("LESS_EQUAL")
     gpu.state.line_width_set(3)
     SHADER.uniform_float("color", (1, 1, 1, 1))
     cutter_radius = operation.get_cutter(context).radius
-    batches = []
-    for position in positions:
-        coords = [v * cutter_radius + position for v in UNIT_CIRCLE_VECTORS]
-        batches.append(batch_for_shader(SHADER, "LINE_LOOP", {"pos": coords}))
 
-    depth_end = operation.get_depth_end(context)
-    positions = [(p.x, p.y, depth_end) for p in positions]
-    batches.append(batch_for_shader(SHADER, "POINTS", {"pos": positions}))
+    batches = []
+    if operation.strategy.source_type == "COLLECTION":
+        depth_end = operation.get_depth_end(context, is_individual=True)
+        for obj_name, positions in features.items():
+            for pos in positions:
+                coords = [v * cutter_radius + pos for v in UNIT_CIRCLE_VECTORS]
+                batches.append(batch_for_shader(SHADER, "LINE_LOOP", {"pos": coords}))
+            positions = [(p.x, p.y, depth_end[obj_name]) for p in positions]
+            batches.append(batch_for_shader(SHADER, "POINTS", {"pos": positions}))
+    else:
+        depth_end = operation.get_depth_end(context)
+        positions = chain(*features.values())
+        for pos in positions:
+            coords = [v * cutter_radius + pos for v in UNIT_CIRCLE_VECTORS]
+            batches.append(batch_for_shader(SHADER, "LINE_LOOP", {"pos": coords}))
+        positions = [(p.x, p.y, depth_end) for p in chain(*features.values())]
+        batches.append(batch_for_shader(SHADER, "POINTS", {"pos": positions}))
+
     for batch in batches:
         batch.draw(SHADER)
     gpu.state.line_width_set(1)

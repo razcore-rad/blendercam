@@ -1,4 +1,4 @@
-from itertools import tee
+from itertools import chain, tee
 from typing import Iterator
 
 from bpy.props import (
@@ -132,27 +132,28 @@ class Operation(PropertyGroup):
     def get_cutter(self, context: Context) -> PropertyGroup:
         return context.scene.cam_tools_library.tools[self.tool_id].cutter
 
-    def get_bound_box(self, context: Context) -> tuple[Vector, Vector]:
-        result = Vector(), Vector()
+    def get_bound_box(self, context: Context, is_individual: bool = False) -> dict[str, tuple[Vector, Vector]] | tuple[Vector, Vector]:
+        result: dict = {}
         try:
-            vectors = (
-                o.matrix_world @ Vector(c)
-                for o in self.strategy.get_source(context)
-                for c in o.bound_box
-            )
-            result = tuple(
-                Vector(f(cs) for cs in zip(*ps))
-                for f, ps in zip((min, max), tee(vectors))
-            )
+            for obj in self.strategy.get_source(context):
+                vectors = list(obj.matrix_world @ Vector(c) for c in obj.bound_box)
+                result[obj.name] = tuple(Vector(f(cs) for cs in zip(*ps)) for f, ps in zip((min, max), tee(vectors)))
+            if not is_individual and result:
+                result = tuple(Vector(f(cs) for cs in zip(*ps)) for f, ps in zip((min, max), tee(chain(*result.values()))))
+            elif not is_individual:
+                result = Vector(), Vector()
         except ValueError:
             pass
         return result
 
-    def get_depth_end(self, context: Context) -> float:
+    def get_depth_end(self, context: Context, is_individual = False) -> dict[str, float] | float:
         result = 0
         if self.work_area.depth_end_type == "CUSTOM":
             result = self.work_area.depth_end
-        if self.work_area.depth_end_type == "SOURCE":
+        elif self.work_area.depth_end_type == "SOURCE" and self.strategy.source_type == "COLLECTION":
+            bound_boxes = self.get_bound_box(context, is_individual)
+            result = {k: v_min.z for k, (v_min, _) in bound_boxes.items()} if is_individual else bound_boxes[0].z
+        elif self.work_area.depth_end_type == "SOURCE":
             bound_box_min, _ = self.get_bound_box(context)
             result = bound_box_min.z
         elif self.work_area.depth_end_type == "STOCK":

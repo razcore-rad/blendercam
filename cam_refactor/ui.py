@@ -298,6 +298,10 @@ class CAM_PT_PanelJobsOperationWorkArea(CAM_PT_PanelJobsOperationSubPanel):
     bl_label = "Work Area"
     bl_parent_id = "CAM_PT_PanelJobsOperations"
 
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        return super().poll(context) and context.scene.cam_job.operation.strategy_type not in {"CURVE_TO_PATH"}
+
     def draw(self, context: Context) -> None:
         operation = context.scene.cam_job.operation
         work_area = operation.work_area
