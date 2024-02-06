@@ -72,7 +72,7 @@ def draw_drill_features(context: Context, operation: Operation) -> None:
     cutter_radius = operation.get_cutter(context).radius
 
     batches = []
-    if operation.strategy.source_type == "COLLECTION":
+    if operation.work_area.depth_end_type == "SOURCE" and operation.strategy.source_type == "COLLECTION":
         depth_end = operation.get_depth_end(context, is_individual=True)
         for obj_name, positions in features.items():
             for pos in positions:

@@ -370,7 +370,7 @@ class Drill(SourceMixin, PropertyGroup):
             bm.from_mesh(temp_mesh)
 
             depth_end = operation.get_depth_end(context, is_individual=True)
-            if self.source_type == "COLLECTION":
+            if operation.work_area.depth_end_type == "SOURCE" and self.source_type == "COLLECTION":
                 depth_end = depth_end[obj.name]
 
             for island in get_islands(bm, bm.verts)["islands"]:
@@ -404,8 +404,11 @@ class Drill(SourceMixin, PropertyGroup):
         positions = features.values()
         for v in tsp_vectors_run(set().union(*positions), last_position):
             obj_depth_end = v.z
-            for obj_name in (list(features.keys())[list(positions).index(s)] for s in positions if v in s):
-                obj_depth_end = depth_end[obj_name]
+            if depth_end is dict:
+                for obj_name in (list(features.keys())[list(positions).index(s)] for s in positions if v in s):
+                    obj_depth_end = depth_end[obj_name]
+            else:
+                obj_depth_end = depth_end
             layers = get_layers(v.z, layer_size, obj_depth_end)
             layers = chain(
                 [rapid_height],

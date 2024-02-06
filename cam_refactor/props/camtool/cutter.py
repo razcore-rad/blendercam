@@ -57,7 +57,7 @@ class DiameterMixin:
         precision=PRECISION,
         unit="LENGTH",
         get=lambda s: get_scaled_prop("diameter", 3e-3, s),
-        set=lambda s, v: set_scaled_prop("diameter", 1e-3, None, s, v),
+        set=lambda s, v: set_scaled_prop("diameter", 0, None, s, v),
         update=update_cam_tools_library,
     )
 
