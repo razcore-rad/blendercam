@@ -193,6 +193,8 @@ class SourceMixin:
 
     source_type_items = [
         ("OBJECT", "Object", "Object data source.", "OBJECT_DATA", 0),
+        ("COLLECTION", "Collection", "Collection data source", "OUTLINER_COLLECTION", 1),
+
     ]
     source_type: EnumProperty(items=source_type_items, name="Source Type")
     object_source: PointerProperty(type=Object, name="Source", poll=poll_object_source)
@@ -355,12 +357,17 @@ class Drill(SourceMixin, PropertyGroup):
 
     dwell: FloatProperty(name="Dwell", min=0.0)
 
-    def get_feature_positions(self, context: Context, operation: PropertyGroup) -> dict[str, set[Vector]]:
+    def get_feature_positions(self, context: Context, operation: PropertyGroup) -> dict[Vector, float]:
         result = {}
         if operation.tool_id < 0:
             return result
 
         tolerance = EPSILON / context.scene.unit_settings.scale_length
+        depth_end = float("-inf")
+        if operation.work_area.depth_end_type != "SOURCE":
+            depth_end = operation.get_depth_end(context, is_individual=True)
+
+        cutter_diameter = operation.get_cutter(context).diameter
         for obj in self.get_evaluated_source(context):
             if obj.name not in context.view_layer.objects:
                 continue
@@ -369,20 +376,17 @@ class Drill(SourceMixin, PropertyGroup):
             bm = bmesh.new()
             bm.from_mesh(temp_mesh)
 
-            depth_end = operation.get_depth_end(context, is_individual=True)
-            if operation.work_area.depth_end_type == "SOURCE" and self.source_type == "COLLECTION":
-                depth_end = depth_end[obj.name]
-
             for island in get_islands(bm, bm.verts)["islands"]:
                 vectors = [obj.matrix_world @ v.co for v in island]
                 vector_mean = sum(vectors, Vector()) / len(vectors)
-                vector_mean.z = min(0.0, max(v.z for v in vectors))
+                vector_mean.z = max(v.z for v in vectors)
+                if operation.work_area.depth_end_type == "SOURCE":
+                    depth_end = min(v.z for v in vectors)
+
                 _, diameter = get_fit_circle_2d((v.xy for v in vectors), tolerance)
-                is_valid = operation.get_cutter(context).diameter <= diameter and depth_end < vector_mean.z
+                is_valid = cutter_diameter <= diameter and depth_end < vector_mean.z
                 if is_valid:
-                    if not obj.name in result:
-                        result[obj.name] = set()
-                    result[obj.name].add(vector_mean.freeze())
+                    result[vector_mean.freeze()] = depth_end
             bm.free()
             obj.to_mesh_clear()
         return result
@@ -394,22 +398,16 @@ class Drill(SourceMixin, PropertyGroup):
         last_position: Vector | Sequence[float] | Iterator[float],
     ) -> ComputeResult:
         result_execute, result_computed = set(), []
-        depth_end = operation.get_depth_end(context)
         rapid_height = operation.movement.rapid_height
         layer_size = operation.work_area.layer_size
         zero = operation.zero
         last_position = Vector(last_position).freeze()
         is_layer_size_zero = isclose(layer_size, 0)
         features = self.get_feature_positions(context, operation)
-        positions = features.values()
-        for v in tsp_vectors_run(set().union(*positions), last_position):
-            obj_depth_end = v.z
-            if depth_end is dict:
-                for obj_name in (list(features.keys())[list(positions).index(s)] for s in positions if v in s):
-                    obj_depth_end = depth_end[obj_name]
-            else:
-                obj_depth_end = depth_end
-            layers = get_layers(v.z, layer_size, obj_depth_end)
+        positions = features.keys()
+        for v in tsp_vectors_run(set().union(positions), last_position):
+            depth_end = features[v]
+            layers = get_layers(v.z, layer_size, depth_end)
             layers = chain(
                 [rapid_height],
                 layers if is_layer_size_zero else intersperse(layers, v.z),
@@ -419,7 +417,7 @@ class Drill(SourceMixin, PropertyGroup):
                 dict(
                     zero,
                     vector=(v.x, v.y, z),
-                    dwell=self.dwell if isclose(z, obj_depth_end) else 0.0,
+                    dwell=self.dwell if isclose(z, depth_end) else 0.0,
                 )
                 for z in layers
             )

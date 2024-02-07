@@ -72,22 +72,13 @@ def draw_drill_features(context: Context, operation: Operation) -> None:
     cutter_radius = operation.get_cutter(context).radius
 
     batches = []
-    if operation.work_area.depth_end_type == "SOURCE" and operation.strategy.source_type == "COLLECTION":
-        depth_end = operation.get_depth_end(context, is_individual=True)
-        for obj_name, positions in features.items():
-            for pos in positions:
-                coords = [v * cutter_radius + pos for v in UNIT_CIRCLE_VECTORS]
-                batches.append(batch_for_shader(SHADER, "LINE_LOOP", {"pos": coords}))
-            positions = [(p.x, p.y, depth_end[obj_name]) for p in positions]
-            batches.append(batch_for_shader(SHADER, "POINTS", {"pos": positions}))
-    else:
-        depth_end = operation.get_depth_end(context)
-        positions = chain(*features.values())
-        for pos in positions:
-            coords = [v * cutter_radius + pos for v in UNIT_CIRCLE_VECTORS]
-            batches.append(batch_for_shader(SHADER, "LINE_LOOP", {"pos": coords}))
-        positions = [(p.x, p.y, depth_end) for p in chain(*features.values())]
-        batches.append(batch_for_shader(SHADER, "POINTS", {"pos": positions}))
+    positions = []
+    for pos, depth_end in features.items():
+        coords = [v * cutter_radius + pos for v in UNIT_CIRCLE_VECTORS]
+        batches.append(batch_for_shader(SHADER, "LINE_LOOP", {"pos": coords}))
+
+        positions.append((pos.x, pos.y, depth_end))
+    batches.append(batch_for_shader(SHADER, "POINTS", {"pos": positions}))
 
     for batch in batches:
         batch.draw(SHADER)

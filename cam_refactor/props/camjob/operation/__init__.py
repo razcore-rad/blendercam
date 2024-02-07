@@ -150,9 +150,6 @@ class Operation(PropertyGroup):
         result = 0
         if self.work_area.depth_end_type == "CUSTOM":
             result = self.work_area.depth_end
-        elif self.work_area.depth_end_type == "SOURCE" and self.strategy.source_type == "COLLECTION":
-            bound_boxes = self.get_bound_box(context, is_individual)
-            result = {k: v_min.z for k, (v_min, _) in bound_boxes.items()} if is_individual else bound_boxes[0].z
         elif self.work_area.depth_end_type == "SOURCE":
             bound_box_min, _ = self.get_bound_box(context)
             result = bound_box_min.z
