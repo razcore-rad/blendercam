@@ -15,50 +15,8 @@ UNIT_CIRCLE_VECTORS = [
     Vector(cs) for cs in force_3d(Point(0, 0).buffer(1, resolution=BUFFER_RESOLUTION).exterior, 0.0).coords
 ]
 SQUARE_INDICES = [(0, 1), (1, 2), (2, 3), (3, 0)]
-STOCK_INDICES = [
-    # bottom
-    (0, 1),
-    (1, 2),
-    (2, 3),
-    (3, 0),
-    # top
-    (4, 5),
-    (5, 6),
-    (6, 7),
-    (7, 4),
-    # vertical lines
-    (0, 4),
-    (1, 5),
-    (2, 6),
-    (3, 7),
-]
 
 SHADER = gpu.shader.from_builtin("UNIFORM_COLOR")
-
-
-def draw_stock() -> None:
-    context = bpy.context
-    if not (context.mode == "OBJECT" and context.scene.cam_jobs and context.scene.cam_job.operations):
-        return
-
-    cam_job = context.scene.cam_job
-    bb_min, bb_max = cam_job.get_stock_bound_box(context)
-    coords = [
-        # bottom
-        Vector((bb_min.x, bb_min.y, bb_min.z)),
-        Vector((bb_max.x, bb_min.y, bb_min.z)),
-        Vector((bb_max.x, bb_max.y, bb_min.z)),
-        Vector((bb_min.x, bb_max.y, bb_min.z)),
-        # top
-        Vector((bb_min.x, bb_min.y, bb_max.z)),
-        Vector((bb_max.x, bb_min.y, bb_max.z)),
-        Vector((bb_max.x, bb_max.y, bb_max.z)),
-        Vector((bb_min.x, bb_max.y, bb_max.z)),
-    ]
-
-    gpu.state.depth_test_set("LESS_EQUAL")
-    SHADER.uniform_float("color", (1, 1, 1, 1))
-    batch_for_shader(SHADER, "LINES", {"pos": coords}, indices=STOCK_INDICES).draw(SHADER)
 
 
 def draw_drill_features(context: Context, operation: Operation) -> None:

@@ -13,7 +13,6 @@ SUFFIX = {"types": "add", "app": "append"}
 
 HANDLERS_ADD = {
     "types.SpaceView3D.draw_handler_{}": [
-        HandlerItem(shaders.draw_stock, (), "WINDOW", "POST_VIEW"),
         HandlerItem(shaders.draw_features, (), "WINDOW", "POST_VIEW"),
         HandlerItem(strategy.update_bridges, (), "WINDOW", "POST_VIEW"),
     ],

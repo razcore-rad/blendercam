@@ -41,7 +41,7 @@ CLASSES = [
     camjob.machine.postprocessor.Base,
     camjob.machine.postprocessor.LinuxCNC,
     camjob.machine.Machine,
-    camjob.stock.Stock,
+    # camjob.stock.Stock,
     camjob.CAMJob,
 ]
 

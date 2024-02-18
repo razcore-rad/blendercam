@@ -154,10 +154,6 @@ def poll_curve_object_source(strategy: PropertyGroup, obj: Object) -> bool:
     )
 
 
-def clamp(x: float, bottom: float, top: float) -> float:
-    return max(bottom, min(x, top))
-
-
 def sign(x: float) -> float:
     if isclose(x, 0):
         x = 0

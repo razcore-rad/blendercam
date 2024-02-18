@@ -1,5 +1,6 @@
-from itertools import chain
+from itertools import chain, tee
 from math import isclose, pi, tau
+from operator import itemgetter
 from typing import Iterator, Sequence
 
 import bpy
@@ -30,7 +31,7 @@ from shapely import (
 from shapely.ops import split
 
 from .tsp import run as tsp_vectors_run
-from ....bmesh.ops import get_islands, get_sorted_islands
+from ....bmesh.ops import get_sorted_islands
 from ....shapely.tsp import run as tsp_geometry_run
 from ....types import ComputeResult
 from ....utils import (
@@ -50,7 +51,6 @@ from ....utils import (
 
 
 BUFFER_RESOLUTION = 4
-MAP_SPLINE_POINTS = {"POLY": "points", "NURBS": "points", "BEZIER": "bezier_points"}
 
 
 def do_reverse(g: LinearRing, operation: PropertyGroup, is_exterior=True) -> bool:
@@ -91,13 +91,15 @@ def do_reverse(g: LinearRing, operation: PropertyGroup, is_exterior=True) -> boo
     )
 
 
-def get_raw_profile_geoms(operation: PropertyGroup, source: list[Object]) -> Iterator:
-    polygons = []
-    for obj in source:
-        mesh = obj.to_mesh()
-        polygons += [Polygon((obj.matrix_world @ mesh.vertices[i].co).xy for i in p.vertices) for p in mesh.polygons]
-        obj.to_mesh_clear()
-    return union_all(polygons)
+def get_raw_profile_geom(operation: PropertyGroup, obj: Object) -> Polygon:
+    result = Polygon()
+    mesh = obj.to_mesh()
+    geom = [Polygon((obj.matrix_world @ mesh.vertices[i].co).xy for i in p.vertices) for p in mesh.polygons]
+    geom = union_all(geom)
+    if geom.geom_type == "Polygon":
+        result = remove_repeated_points(geom)
+    obj.to_mesh_clear()
+    return result
 
 
 def get_layers(z: float, layer_size: float, depth_end: float) -> list[float]:
@@ -194,7 +196,6 @@ class SourceMixin:
     source_type_items = [
         ("OBJECT", "Object", "Object data source.", "OBJECT_DATA", 0),
         ("COLLECTION", "Collection", "Collection data source", "OUTLINER_COLLECTION", 1),
-
     ]
     source_type: EnumProperty(items=source_type_items, name="Source Type")
     object_source: PointerProperty(type=Object, name="Source", poll=poll_object_source)
@@ -203,6 +204,13 @@ class SourceMixin:
     @property
     def source_propname(self) -> str:
         return f"{self.source_type.lower()}_source"
+
+    def is_source(self, obj: Object) -> bool:
+        collection_source = [] if self.collection_source is None else self.collection_source
+        return obj == self.object_source or obj in collection_source
+
+    def is_valid(self, bb: tuple[Vector, Vector], depth_end: float, rapid_height: float) -> bool:
+        return all(isclose(v.z, depth_end) or depth_end < v.z < rapid_height for v in bb)
 
     def get_source(self, context: Context) -> list[Object]:
         result = getattr(self, self.source_propname)
@@ -223,8 +231,8 @@ class SourceMixin:
 
         bb_min, bb_max = operation.get_bound_box(context)
         depth_end = operation.get_depth_end(context)
-        is_valid = bb_max.z > depth_end or isclose(bb_max.z, depth_end)
-        if is_valid:
+        rapid_height = operation.movement.rapid_height
+        if self.is_valid((bb_min, bb_max), depth_end, rapid_height):
             result = [
                 Vector((bb_min.x, bb_min.y, depth_end)),
                 Vector((bb_min.x, bb_max.y, depth_end)),
@@ -237,9 +245,26 @@ class SourceMixin:
         depsgraph = context.evaluated_depsgraph_get()
         return [o.evaluated_get(depsgraph) for o in self.get_source(context)]
 
-    def is_source(self, obj: Object) -> bool:
-        collection_source = [] if self.collection_source is None else self.collection_source
-        return obj == self.object_source or obj in collection_source
+    def get_bound_box(self, obj: Object) -> tuple[Vector, Vector]:
+        vectors = (obj.matrix_world @ Vector(c) for c in obj.bound_box)
+        return tuple(Vector(f(cs) for cs in zip(*ps)) for f, ps in zip((min, max), tee(vectors)))
+
+    def get_depth_end(self, context: Context, operation: PropertyGroup, obj: Object = None) -> float:
+        result = float("-inf")
+        depth_end_type = operation.work_area.depth_end_type
+        if depth_end_type == "OBJECT":
+            bb_min, _ = self.get_bound_box(obj)
+            result = bb_min.z
+        elif operation.work_area.depth_end_type == "CUSTOM":
+            result = operation.work_area.depth_end
+        return result
+
+    def get_profiles(self, context: Context, operation: PropertyGroup) -> list[tuple[Object, Polygon]]:
+        return [
+            (obj, geom)
+            for obj in self.get_evaluated_source(context)
+            if not (geom := get_raw_profile_geom(operation, obj)).is_empty
+        ]
 
 
 class Block(
@@ -292,29 +317,6 @@ class CurveToPath(SourceMixin, PropertyGroup):
         "collection_source",
     ]
 
-    source_type_items = [
-        (
-            "CURVE_OBJECT",
-            "Object (Curve)",
-            "Curve object data source",
-            "OUTLINER_OB_CURVE",
-            0,
-        ),
-        (
-            "COLLECTION",
-            "Collection",
-            "Collection data source",
-            "OUTLINER_COLLECTION",
-            1,
-        ),
-    ]
-    source_type: EnumProperty(items=source_type_items, name="Source Type")
-    curve_object_source: PointerProperty(type=Object, name="Source", poll=poll_curve_object_source)
-
-    def is_source(self, obj: Object) -> bool:
-        collection_source = [] if self.collection_source is None else self.collection_source
-        return obj == self.curve_object_source or obj in collection_source
-
     def execute_compute(
         self,
         context: Context,
@@ -325,19 +327,16 @@ class CurveToPath(SourceMixin, PropertyGroup):
         rapid_height = operation.movement.rapid_height
         zero = operation.zero
         for obj in self.get_evaluated_source(context):
-            if obj.name not in context.view_layer.objects:
+            temp_mesh = obj.to_mesh()
+            if obj.name not in context.view_layer.objects or len(temp_mesh.vertices) == 0:
+                obj.to_mesh_clear()
                 continue
 
-            temp_mesh = obj.to_mesh()
-            bm = bmesh.new()
-            bm.from_mesh(temp_mesh)
-            for island in get_sorted_islands(bm, bm.verts)["islands"]:
-                if any(island[0] == e.other_vert(island[-1]) for e in island[-1].link_edges):
-                    island.append(island[0])
-                result_computed.append(dict(zero, vector=(obj.matrix_world @ island[0].co)[:2] + (rapid_height,)))
-                result_computed.extend(dict(zero, vector=obj.matrix_world @ v.co) for v in island)
-                result_computed.append(dict(zero, vector=(obj.matrix_world @ island[-1].co)[:2] + (rapid_height,)))
-            bm.free()
+            vertices = temp_mesh.vertices
+            c1, c2 = [(obj.matrix_world @ v.co)[:2] + (rapid_height,) for v in [vertices[0], vertices[-1]]]
+            result_computed.append(dict(zero, vector=c1))
+            result_computed.extend(dict(zero, vector=obj.matrix_world @ v.co) for v in vertices)
+            result_computed.append(dict(zero, vector=c2))
             obj.to_mesh_clear()
         return ComputeResult({"FINISHED"}, result_computed)
 
@@ -363,31 +362,25 @@ class Drill(SourceMixin, PropertyGroup):
             return result
 
         tolerance = EPSILON / context.scene.unit_settings.scale_length
-        depth_end = float("-inf")
-        if operation.work_area.depth_end_type != "SOURCE":
-            depth_end = operation.get_depth_end(context, is_individual=True)
-
         cutter_diameter = operation.get_cutter(context).diameter
+        rapid_height = operation.movement.rapid_height
+
         for obj in self.get_evaluated_source(context):
             if obj.name not in context.view_layer.objects:
                 continue
 
             temp_mesh = obj.to_mesh()
-            bm = bmesh.new()
-            bm.from_mesh(temp_mesh)
+            vectors = [obj.matrix_world @ v.co for v in temp_mesh.vertices]
+            circle_position, circle_diameter = get_fit_circle_2d((v.xy for v in vectors), tolerance)
+            circle_position = circle_position.resized(3)
+            circle_position.z = max(v.z for v in vectors)
 
-            for island in get_islands(bm, bm.verts)["islands"]:
-                vectors = [obj.matrix_world @ v.co for v in island]
-                vector_mean = sum(vectors, Vector()) / len(vectors)
-                vector_mean.z = max(v.z for v in vectors)
-                if operation.work_area.depth_end_type == "SOURCE":
-                    depth_end = min(v.z for v in vectors)
-
-                _, diameter = get_fit_circle_2d((v.xy for v in vectors), tolerance)
-                is_valid = cutter_diameter <= diameter and depth_end < vector_mean.z
-                if is_valid:
-                    result[vector_mean.freeze()] = depth_end
-            bm.free()
+            bb = self.get_bound_box(obj)
+            depth_end = self.get_depth_end(context, operation, obj)
+            if self.is_valid(bb, depth_end, rapid_height) and (
+                cutter_diameter < circle_diameter or isclose(cutter_diameter, circle_diameter)
+            ):
+                result[circle_position.freeze()] = depth_end
             obj.to_mesh_clear()
         return result
 
@@ -442,11 +435,6 @@ class OutlineFill(
 
 
 class Pocket(DistanceBetweenPathsMixin, SourceMixin, PropertyGroup):
-    def compute_geometry(self, context: Context, operation: PropertyGroup) -> set[Polygon]:
-        geometry = get_raw_profile_geoms(operation, self.get_evaluated_source(context))
-        geometry = {geometry} if geometry.geom_type == "Polygon" else geometry.geoms
-        return set(remove_repeated_points(g) for g in geometry)
-
     def execute_compute(
         self,
         context: Context,
@@ -454,20 +442,23 @@ class Pocket(DistanceBetweenPathsMixin, SourceMixin, PropertyGroup):
         last_position: Vector | Sequence[float] | Iterator[float],
     ) -> ComputeResult:
         result_computed = []
-        _, bb_max = operation.get_bound_box(context)
-        depth_end = operation.get_depth_end(context)
-        if bb_max.z < depth_end:
-            return ComputeResult({"CANCELLED"}, result_computed)
 
         layer_size = operation.work_area.layer_size
-        layers = get_layers(min(0.0, bb_max.z), layer_size, depth_end)
-        cutter_diameter = operation.get_cutter(context).diameter
-        cutter_radius = cutter_diameter / 2
+        cutter_radius = (cutter_diameter := operation.get_cutter(context).diameter) / 2
         rapid_height = operation.movement.rapid_height
         zero = operation.zero
 
-        geometry = tsp_geometry_run(self.compute_geometry(context, operation), Point(last_position))
-        for geom in geometry:
+        profiles = self.get_profiles(context, operation)
+        geoms = tsp_geometry_run(profiles, Point(last_position), key=itemgetter(1))
+        for obj, geom in geoms:
+            if obj.name not in context.view_layer.objects:
+                continue
+
+            bb_min, bb_max = (bb := self.get_bound_box(obj))
+            depth_end = self.get_depth_end(context, operation, obj)
+            if not self.is_valid(bb, depth_end, rapid_height):
+                return ComputeResult({"CANCELLED"}, result_computed)
+
             linear_rings = []
             temp_geom = geom.buffer(cutter_radius, resolution=BUFFER_RESOLUTION)
             index = 1
@@ -486,6 +477,8 @@ class Pocket(DistanceBetweenPathsMixin, SourceMixin, PropertyGroup):
                 [lr.reverse() if do_reverse(lr, operation) else lr for lr in linear_rings if not lr.is_empty],
                 Point(last_position),
             )
+
+            layers = get_layers(bb_max.z, layer_size, depth_end)
             for layer_index, layer in enumerate(layers):
                 for linear_ring_index in range(len(linear_rings)):
                     linear_ring = linear_rings[linear_ring_index if layer_index % 2 == 0 else (-1 - linear_ring_index)]
@@ -499,9 +492,6 @@ class Pocket(DistanceBetweenPathsMixin, SourceMixin, PropertyGroup):
                         result_computed.extend(dict(zero, vector=np.append(x, rapid_height)) for x in line.coords)
                     last_position = result_computed[-1]["vector"]
             result_computed.append(dict(zero, vector=np.append(last_position[:2], rapid_height)))
-
-        if len(result_computed) > 0:
-            result_computed.append(dict(zero, vector=np.append(result_computed[-1]["vector"][:2], rapid_height)))
         return ComputeResult({"FINISHED"}, result_computed)
 
 
@@ -547,7 +537,7 @@ class Profile(SourceMixin, PropertyGroup):
     outlines_offset: FloatProperty(
         name="Outlines Offset",
         get=lambda s: get_scaled_prop("outlines_offset", 0.0, s),
-        set=lambda s, v: set_scaled_prop("outlines_offset", 0.0, None, s, v),
+        set=lambda s, v: set_scaled_prop("outlines_offset", None, None, s, v),
         precision=PRECISION,
         unit="LENGTH",
     )
@@ -582,28 +572,27 @@ class Profile(SourceMixin, PropertyGroup):
         distance = (index - 1) * self.outlines_distance
         return self.cut_sign * (cutter_radius + distance) + self.outlines_offset
 
-    def compute_geometry(self, context: Context, operation: PropertyGroup) -> Iterator:
-        geometry = get_raw_profile_geoms(operation, self.get_evaluated_source(context))
-        if self.cut_type != "ON_LINE":
-            cutter_radius = operation.get_cutter(context).radius
-            geometry = [
-                [g] if g.geom_type == "Polygon" else g.geoms
-                for i in range(1, self.outlines_count + 1)
-                if not (
-                    g := geometry.buffer(
-                        self.get_outline_distance(cutter_radius, i),
-                        resolution=BUFFER_RESOLUTION,
-                    )
-                ).is_empty
-            ]
-            geometry = set(chain(*geometry))
-        else:
-            geometry = {geometry} if geometry.geom_type == "Polygon" else geometry.geoms
-        exteriors = (e.reverse() if do_reverse(e := g.exterior, operation) else e for g in geometry)
-        interiors = (
-            i.reverse() if do_reverse(i, operation, is_exterior=False) else i for g in geometry for i in g.interiors
-        )
-        return chain(exteriors, interiors)
+    def get_profiles(self, context: Context, operation: PropertyGroup) -> list[tuple[Object, LinearRing]]:
+        result = []
+        profiles = super().get_profiles(context, operation)
+        cutter_radius = operation.get_cutter(context).radius
+        for obj, geom in profiles:
+            if self.cut_type != "ON_LINE":
+                geoms = {
+                    g
+                    for i in range(1, self.outlines_count + 1)
+                    if not (
+                        g := geom.buffer(self.get_outline_distance(cutter_radius, i), resolution=BUFFER_RESOLUTION)
+                    ).is_empty
+                }
+            else:
+                geoms = {geom}
+            exteriors = (e.reverse() if do_reverse(e := g.exterior, operation) else e for g in geoms)
+            interiors = (
+                i.reverse() if do_reverse(i, operation, is_exterior=False) else i for g in geoms for i in g.interiors
+            )
+            result.extend((obj, g) for g in chain(exteriors, interiors))
+        return result
 
     def bridge_geometry(self, geom: Geometry, bridges: Geometry, z: float, depth_end_bridges: float) -> Geometry:
         if not bridges:
@@ -627,52 +616,32 @@ class Profile(SourceMixin, PropertyGroup):
         operation: PropertyGroup,
         last_position: Vector | Sequence[float] | Iterator[float],
     ) -> ComputeResult:
-        result_execute, result_computed = set(), []
-        _, bb_max = operation.get_bound_box(context)
-        depth_end = operation.get_depth_end(context)
-        if bb_max.z < depth_end:
-            return ComputeResult({"CANCELLED"}, result_computed)
+        result_computed = []
 
-        geometry = self.compute_geometry(context, operation)
-        geometry = set(remove_repeated_points(g) for g in geometry)
-        geometry = tsp_geometry_run(geometry, Point(last_position))
-
-        depth_end_bridges = min(0.0, depth_end + self.bridges_height)
-        bridges = union_all([Point(obj.location[:2]).buffer(self.bridges_radius) for obj in self.bridges])
         layer_size = operation.work_area.layer_size
-        layers = get_layers(min(0.0, bb_max.z), layer_size, depth_end)
-        geometry = [
-            [self.bridge_geometry(force_3d(g, z), bridges, z, depth_end_bridges) for z in layers] for g in geometry
-        ]
         rapid_height = operation.movement.rapid_height
         zero = operation.zero
-        if len(geometry) == 1:
-            result_computed = [dict(zero, vector=cs) for gs in geometry for g in gs for cs in g.coords]
-        else:
-            gs2 = []
-            for gs1, gs2 in zip(geometry[:-1], geometry[1:]):
-                c1 = gs1[0].coords[-1]
-                c2 = gs2[0].coords[0]
-                result_computed.extend(
-                    chain(
-                        (dict(zero, vector=cs) for g in gs1 for cs in g.coords),
-                        [
-                            dict(zero, vector=(c1[0], c1[1], rapid_height)),
-                            dict(zero, vector=(c2[0], c2[1], rapid_height)),
-                        ],
-                    )
-                )
-            result_computed.extend(dict(zero, vector=cs) for g in gs2 for cs in g.coords)
 
-        if result_computed:
-            c1, c2 = result_computed[0]["vector"], result_computed[-1]["vector"]
-            result_computed = (
-                [dict(operation.zero, vector=(c1[0], c1[1], rapid_height))]
-                + result_computed
-                + [dict(operation.zero, vector=(c2[0], c2[1], rapid_height))]
-            )
-        result_execute.add("FINISHED")
-        return ComputeResult(reduce_cancelled_or_finished(result_execute), result_computed)
+        bridges = union_all([Point(b.location[:2]).buffer(self.bridges_radius) for b in self.bridges])
+        profiles = self.get_profiles(context, operation)
+        geoms = tsp_geometry_run(profiles, Point(last_position), key=itemgetter(1))
+        for obj, geom in geoms:
+            if obj.name not in context.view_layer.objects:
+                continue
+
+            bb_min, bb_max = (bb := self.get_bound_box(obj))
+            depth_end = self.get_depth_end(context, operation, obj)
+            if not self.is_valid(bb, depth_end, rapid_height):
+                return ComputeResult({"CANCELLED"}, result_computed)
+
+            depth_end_bridges = min(bb_max.z, depth_end + self.bridges_height)
+            layers = get_layers(bb_max.z, layer_size, depth_end)
+            depth_geoms = [self.bridge_geometry(force_3d(geom, z), bridges, z, depth_end_bridges) for z in layers]
+            c1, c2 = [c[:2] + (rapid_height,) for c in (geom.coords[0], geom.coords[-1])]
+            result_computed.append(dict(zero, vector=c1))
+            result_computed.extend(dict(zero, vector=cs) for g in depth_geoms for cs in g.coords)
+            result_computed.append(dict(zero, vector=c2))
+        return ComputeResult({"FINISHED"}, result_computed)
 
     def add_bridges(self, context: Context) -> None:
         cam_job = context.scene.cam_job
@@ -689,18 +658,18 @@ class Profile(SourceMixin, PropertyGroup):
         for obj in col.objects:
             bpy.data.objects.remove(obj)
 
-        geometry = self.compute_geometry(context, operation)
         depth_end = operation.get_depth_end(context)
+        profiles = self.get_profiles(context, operation)
         indices = range(self.bridges_count)
-        suffixes = ["Length", "Height"]
-        iterator = chain(*([(lr, i, s) for i in indices for s in suffixes] for lr in geometry))
+        suffixes = ["Radius", "Height"]
+        iterator = chain(*([(lr, i, s) for i in indices for s in suffixes] for _, lr in profiles))
         previous_empty = None
         for lr, i, s in iterator:
             empty = bpy.data.objects.new(f"{operation.name}Bridge{s}", None)
             empty.lock_rotation = 3 * [True]
             empty.lock_scale = empty.lock_rotation
             location = 3 * (0.0,)
-            if s == "Length":
+            if s == "Radius":
                 location, *_ = lr.line_interpolate_point(i / self.bridges_count, True).coords
                 location += (depth_end,)
                 empty.empty_display_type = "CIRCLE"
@@ -719,9 +688,7 @@ class Profile(SourceMixin, PropertyGroup):
 
     def remove_bridges(self) -> None:
         if self.bridges_source is not None:
-            for obj in self.bridges:
-                for c in obj.children:
-                    bpy.data.objects.remove(c)
+            for obj in self.bridges_source.objects:
                 bpy.data.objects.remove(obj)
             bpy.data.collections.remove(self.bridges_source)
 

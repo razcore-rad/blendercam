@@ -18,11 +18,8 @@ class WorkArea(PropertyGroup):
     depth_end_type: EnumProperty(
         name="Depth End",
         items=[
-            ("SOURCE", "Source", ""),
+            ("OBJECT", "Object", ""),
             ("CUSTOM", "Custom", ""),
-            ("STOCK", "Stock", ""),
         ],
     )
-    layer_size: FloatProperty(
-        name="Layer Size", default=0, min=0, precision=PRECISION, unit="LENGTH"
-    )
+    layer_size: FloatProperty(name="Layer Size", default=0, min=0, precision=PRECISION, unit="LENGTH")

@@ -67,10 +67,7 @@ class Operation(PropertyGroup):
             (
                 "OUTLINE_FILL",
                 "Outline Fill",
-                (
-                    "Detect outline and fill it with paths as pocket then sample"
-                    " these paths on the 3D surface"
-                ),
+                ("Detect outline and fill it with paths as pocket then sample" " these paths on the 3D surface"),
             ),
             ("PARALLEL", "Parallel", "Parallel lines at any angle"),
             ("POCKET", "Pocket", "Pocket"),
@@ -100,9 +97,7 @@ class Operation(PropertyGroup):
     waterline_roughing_strategy: PointerProperty(type=strategy.WaterlineRoughing)
 
     tool_id: IntProperty(default=-1)
-    tool: StringProperty(
-        name="Tool", search=search_operation_tool, update=update_operation_tool
-    )
+    tool: StringProperty(name="Tool", search=search_operation_tool, update=update_operation_tool)
 
     feed: PointerProperty(type=feedmovementspindle.Feed)
     movement: PointerProperty(type=feedmovementspindle.Movement)
@@ -132,30 +127,22 @@ class Operation(PropertyGroup):
     def get_cutter(self, context: Context) -> PropertyGroup:
         return context.scene.cam_tools_library.tools[self.tool_id].cutter
 
-    def get_bound_box(self, context: Context, is_individual: bool = False) -> dict[str, tuple[Vector, Vector]] | tuple[Vector, Vector]:
-        result: dict = {}
+    def get_bound_box(self, context: Context) -> tuple[Vector, Vector]:
+        result = (Vector(), Vector())
         try:
-            for obj in self.strategy.get_source(context):
-                vectors = list(obj.matrix_world @ Vector(c) for c in obj.bound_box)
-                result[obj.name] = tuple(Vector(f(cs) for cs in zip(*ps)) for f, ps in zip((min, max), tee(vectors)))
-            if not is_individual and result:
-                result = tuple(Vector(f(cs) for cs in zip(*ps)) for f, ps in zip((min, max), tee(chain(*result.values()))))
-            elif not is_individual:
-                result = Vector(), Vector()
+            vectors = chain(*(self.strategy.get_bound_box(obj) for obj in self.strategy.get_source(context)))
+            result = tuple(Vector(f(cs) for cs in zip(*ps)) for f, ps in zip((min, max), tee(vectors)))
         except ValueError:
             pass
         return result
 
-    def get_depth_end(self, context: Context, is_individual = False) -> dict[str, float] | float:
-        result = 0
+    def get_depth_end(self, context: Context) -> float:
+        result = float("-inf")
         if self.work_area.depth_end_type == "CUSTOM":
             result = self.work_area.depth_end
-        elif self.work_area.depth_end_type == "SOURCE":
+        elif self.work_area.depth_end_type == "OBJECT":
             bound_box_min, _ = self.get_bound_box(context)
             result = bound_box_min.z
-        elif self.work_area.depth_end_type == "STOCK":
-            stock_bound_box_min, _ = context.scene.cam_job.get_stock_bound_box(context)
-            result = stock_bound_box_min.z
         return result
 
     def add_data(self, context: Context) -> None:

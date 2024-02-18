@@ -1,5 +1,6 @@
 from math import pi
 
+from bl_math import clamp
 from bpy.props import FloatProperty
 from bpy.types import PropertyGroup
 
@@ -7,7 +8,6 @@ from .utils import update_cam_tools_library
 from ...utils import (
     EPSILON,
     PRECISION,
-    clamp,
     get_scaled_prop,
     set_scaled_prop,
 )
@@ -140,9 +140,7 @@ class ConeCutter(BaseMixin, DiameterMixin, AngleMixin, LengthMixin, PropertyGrou
     pass
 
 
-class CylinderConeCutter(
-    BaseMixin, Diameter2Mixin, AngleMixin, LengthMixin, PropertyGroup
-):
+class CylinderConeCutter(BaseMixin, Diameter2Mixin, AngleMixin, LengthMixin, PropertyGroup):
     pass
 
 

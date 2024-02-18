@@ -21,24 +21,16 @@ def get_enum_item_icon(items: [(str, str, str, str, int)], item_type: str) -> st
 
 
 class CAM_UL_List(UIList):
-    def draw_item(
-        self, context, layout, data, item, icon, active_data, active_propname
-    ):
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname):
         if self.layout_type in {"DEFAULT", "COMPACT"}:
             if hasattr(item, "data") and item.data is not None:
-                layout.row().prop(
-                    item.data, "name", text="", emboss=False, icon_value=icon
-                )
-                layout.row(align=True).prop(
-                    item.data, "hide_viewport", text="", emboss=False
-                )
+                layout.row().prop(item.data, "name", text="", emboss=False, icon_value=icon)
+                layout.row(align=True).prop(item.data, "hide_viewport", text="", emboss=False)
             else:
                 layout.row().prop(item, "name", text="", emboss=False, icon_value=icon)
                 if isinstance(item, Operation):
                     icon = "HIDE_ON" if item.is_hidden else "HIDE_OFF"
-                    layout.row(align=True).prop(
-                        item, "is_hidden", text="", emboss=False, icon=icon
-                    )
+                    layout.row(align=True).prop(item, "is_hidden", text="", emboss=False, icon=icon)
         elif self.layout_type in {"GRID"}:
             layout.alignment = "CENTER"
             layout.label(text="", icon_value=icon)
@@ -124,9 +116,7 @@ class CAM_PT_MachinePresets(PresetPanel, Panel):
 
 
 class CAM_PT_Panel(CAM_PT_PanelBase):
-    def draw_list(
-        self, list_class, list_id, dataptr, propname, active_propname, suffix
-    ) -> None:
+    def draw_list(self, list_class, list_id, dataptr, propname, active_propname, suffix) -> None:
         list_is_sortable = len(getattr(dataptr, propname)) > 1
         rows = 5 if list_is_sortable else 3
 
@@ -239,14 +229,12 @@ class CAM_PT_PanelJobsOperations(CAM_PT_Panel):
                 col.row().prop(
                     strategy,
                     strategy.source_propname,
-                    icon=get_enum_item_icon(
-                        strategy.source_type_items, strategy.source_type
-                    ),
+                    icon=get_enum_item_icon(strategy.source_type_items, strategy.source_type),
                 )
                 extra_exclude_propnames = []
                 if operation.strategy_type == "PROFILE":
                     if strategy.bridges_count == 0:
-                        extra_exclude_propnames += ["bridges_height", "bridges_length"]
+                        extra_exclude_propnames += ["bridges_height", "bridges_radius"]
 
                     if strategy.cut_type == "ON_LINE":
                         extra_exclude_propnames += [
@@ -318,26 +306,6 @@ class CAM_PT_PanelJobsOperationWorkArea(CAM_PT_PanelJobsOperationSubPanel):
             row.prop(work_area, "depth_end_type", expand=True)
 
 
-class CAM_PT_PanelJobsStock(CAM_PT_PanelBase):
-    bl_label = "Stock"
-    bl_parent_id = "CAM_PT_PanelJobs"
-
-    @classmethod
-    def poll(cls, context: Context) -> bool:
-        return context.scene.cam_jobs
-
-    def draw(self, context: Context) -> None:
-        stock = context.scene.cam_job.stock
-
-        layout = self.layout
-        layout.row().prop(stock, "type", expand=True)
-        row = layout.row(align=True)
-        for propname in (
-            pn for pn in get_propnames(stock) if pn.startswith(stock.type.lower())
-        ):
-            row.column().prop(stock, propname)
-
-
 class CAM_PT_PanelJobsMachine(CAM_PT_PanelBase):
     bl_label = "Machine"
     bl_parent_id = "CAM_PT_PanelJobs"
@@ -363,9 +331,7 @@ class CAM_PT_PanelJobsMachine(CAM_PT_PanelBase):
 
 
 class CAM_UL_ToolList(UIList):
-    def draw_item(
-        self, context, layout, data, item, icon, active_data, active_propname, index
-    ):
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         if self.layout_type in {"DEFAULT", "COMPACT"}:
             row = layout.row(align=True)
             row.alignment = "LEFT"
@@ -420,7 +386,7 @@ CLASSES = [
     # CAM_PT_PanelJobsOperationCutter,
     CAM_PT_PanelJobsOperationFeedMovementSpindle,
     CAM_PT_PanelJobsOperationWorkArea,
-    CAM_PT_PanelJobsStock,
+    # CAM_PT_PanelJobsStock,
     CAM_PT_PanelJobsMachine,
 ]
 

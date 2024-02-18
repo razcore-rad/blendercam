@@ -14,7 +14,7 @@ from bpy.props import (
 from bpy.types import Collection, Context, Object, PropertyGroup
 from mathutils import Vector
 
-from . import machine, operation, stock
+from . import machine, operation
 from ...gcode import G
 from ...utils import LENGTH_UNIT_SCALE, ZERO_VECTOR, reduce_cancelled_or_finished
 
@@ -28,7 +28,6 @@ class CAMJob(PropertyGroup):
     gap: FloatVectorProperty(name="Gap", default=(0, 0), min=0, subtype="XYZ_LENGTH", size=2)
     operations: CollectionProperty(type=operation.Operation)
     operation_active_index: IntProperty(default=0, min=0)
-    stock: PointerProperty(type=stock.Stock)
     machine: PointerProperty(type=machine.Machine)
 
     @property
@@ -41,28 +40,6 @@ class CAMJob(PropertyGroup):
         bound_boxes = [(bb_min, bb_max) for bb_min, bb_max in bound_boxes if bb_max - bb_min != ZERO_VECTOR]
         if sum((bb_max - bb_min).length for bb_min, bb_max in bound_boxes) > 0:
             result = tuple(Vector(f(cs) for cs in zip(*vs)) for f, vs in zip((min, max), zip(*bound_boxes)))
-        return result
-
-    def get_stock_bound_box(self, context: Context) -> tuple[Vector, Vector]:
-        result = (Vector(), Vector())
-        if self.stock.type == "ESTIMATE":
-            bound_boxes = (o.get_bound_box(context) for o in self.operations)
-            bound_boxes = [(bb_min, bb_max) for bb_min, bb_max in bound_boxes if bb_max - bb_min != ZERO_VECTOR]
-            if sum((bb_max - bb_min).length for bb_min, bb_max in bound_boxes) > 0:
-                result = tuple(
-                    op(Vector(f(cs) for cs in zip(*vs)), eo)
-                    for (f, op, eo), vs in zip(
-                        (
-                            (min, sub, self.stock.estimate_offset),
-                            (max, add, self.stock.estimate_offset),
-                        ),
-                        zip(*bound_boxes),
-                    )
-                )
-        elif self.stock.type == "CUSTOM":
-            position = self.stock.custom_position.to_3d()
-            size = self.stock.custom_size
-            result = tuple(position + v for v in (Vector((0.0, 0.0, -size.z)), Vector((size.x, size.y, 0.0))))
         return result
 
     def add_data(self, context: Context) -> None:
