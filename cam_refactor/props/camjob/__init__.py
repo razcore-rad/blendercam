@@ -16,6 +16,7 @@ from mathutils import Vector
 
 from . import machine, operation
 from ...gcode import G
+from ...msgbus import on_cam_job_update_name
 from ...utils import LENGTH_UNIT_SCALE, ZERO_VECTOR, reduce_cancelled_or_finished
 
 
@@ -46,6 +47,12 @@ class CAMJob(PropertyGroup):
         if self.data is None:
             self.data = bpy.data.collections.new(self.NAME)
             context.collection.children.link(self.data)
+            bpy.msgbus.subscribe_rna(
+                key=self.data.path_resolve("name", False),
+                owner=self,
+                args=(self,),
+                notify=on_cam_job_update_name,
+            )
 
         if self.object is None:
             self.object = bpy.data.objects.new(self.NAME, bpy.data.meshes.new(self.NAME))

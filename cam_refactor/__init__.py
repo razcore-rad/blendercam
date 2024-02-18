@@ -28,14 +28,6 @@ from .utils import ADDON_PATH
 
 
 mods = [ops, props, ui, handlers]
-# mods = [".ops", ".props", ".ui", ".handlers"]
-
-# globals().update(
-#     {
-#         mod.lstrip("."): importlib.reload(importlib.import_module(mod, __package__))
-#         for mod in mods
-#     }
-# )
 
 bl_info = {
     "name": "CNC G-Code Tools",
@@ -82,13 +74,11 @@ def register() -> None:
     ensure_modules()
     for mod in mods:
         mod.register()
-        # globals()[mod.lstrip(".")].register()
 
 
 def unregister() -> None:
     for mod in reversed(mods):
         mod.unregister()
-        # globals()[mod.lstrip(".")].unregister()
 
     for mod in sorted(filter(lambda m: m.startswith(__name__), sys.modules)):
         del sys.modules[mod]
