@@ -54,7 +54,6 @@ class Operation(PropertyGroup):
             ),
             ("CIRCLES", "Circles", "Circles path"),
             ("CROSS", "Cross", "Cross paths"),
-            ("CURVE_TO_PATH", "Curve to Path", "Convert a curve object to G-code path"),
             ("DRILL", "Drill", "Drill"),
             (
                 "MEDIAL_AXIS",
@@ -64,6 +63,7 @@ class Operation(PropertyGroup):
                     " various width shapes with a single stroke"
                 ),
             ),
+            ("OBJECT_TO_PATH", "Object to Path", "Convert an object to G-code path"),
             (
                 "OUTLINE_FILL",
                 "Outline Fill",
@@ -86,9 +86,9 @@ class Operation(PropertyGroup):
     circles_strategy: PointerProperty(type=strategy.Circles)
     cross_strategy: PointerProperty(type=strategy.Cross)
     carve_project_strategy: PointerProperty(type=strategy.CarveProject)
-    curve_to_path_strategy: PointerProperty(type=strategy.CurveToPath)
     drill_strategy: PointerProperty(type=strategy.Drill)
     medial_axis_strategy: PointerProperty(type=strategy.MedialAxis)
+    object_to_path_strategy: PointerProperty(type=strategy.ObjectToPath)
     outline_fill_strategy: PointerProperty(type=strategy.OutlineFill)
     parallel_strategy: PointerProperty(type=strategy.Parallel)
     pocket_strategy: PointerProperty(type=strategy.Pocket)

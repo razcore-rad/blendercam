@@ -260,7 +260,7 @@ class CAM_PT_PanelJobsOperationFeedMovementSpindle(CAM_PT_PanelJobsOperationSubP
 
     def draw(self, context: Context) -> None:
         operation = context.scene.cam_job.operation
-        if operation.strategy_type == "CURVE_TO_PATH":
+        if operation.strategy_type == "OBJECT_TO_PATH":
             layout = self.layout
             row = layout.row(align=True)
             row.prop(operation.movement, "rapid_height")
@@ -288,7 +288,7 @@ class CAM_PT_PanelJobsOperationWorkArea(CAM_PT_PanelJobsOperationSubPanel):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        return super().poll(context) and context.scene.cam_job.operation.strategy_type not in {"CURVE_TO_PATH"}
+        return super().poll(context) and context.scene.cam_job.operation.strategy_type not in {"OBJECT_TO_PATH"}
 
     def draw(self, context: Context) -> None:
         operation = context.scene.cam_job.operation

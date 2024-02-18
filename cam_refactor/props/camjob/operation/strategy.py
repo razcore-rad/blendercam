@@ -308,7 +308,7 @@ class Cross(
     pass
 
 
-class CurveToPath(SourceMixin, PropertyGroup):
+class ObjectToPath(SourceMixin, PropertyGroup):
     EXCLUDE_PROPNAMES = [
         "name",
         "source_type",
