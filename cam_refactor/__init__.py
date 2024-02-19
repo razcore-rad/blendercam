@@ -17,17 +17,15 @@
 #
 # ***** END GPL LICENCE BLOCK *****
 
-import ensurepip
 import importlib
 import re
 import subprocess
 import sys
 
-from . import ops, props, ui, handlers
 from .utils import ADDON_PATH
 
 
-mods = [ops, props, ui, handlers]
+mods = []
 
 bl_info = {
     "name": "CNC G-Code Tools",
@@ -44,30 +42,40 @@ bl_info = {
 
 
 def ensure_modules() -> None:
-    # FIXME: more roboust solution with account for v3.11
-    requirements_path = ADDON_PATH / "requirements.txt"
+    requirements_path = str(ADDON_PATH / "requirements.txt")
+    dependencies_path = ADDON_PATH / "dependencies"
+    site_path = (
+        dependencies_path
+        / "lib"
+        / "python{major}.{minor}".format(major=sys.version_info.major, minor=sys.version_info.minor)
+        / "site-packages"
+    )
+    sys.path.insert(0, str(site_path))
+
     try:
-        with open(requirements_path) as r:
-            for line in r.readlines():
-                if (m := re.match(r"^\w*", line)) is not None:
-                    importlib.import_module(m.group(0))
+        import_dependencies(requirements_path)
     except ModuleNotFoundError:
-        ensurepip.bootstrap(upgrade=True, user=True)
-        out = subprocess.check_output(
-            [
-                sys.executable,
-                "-m",
-                "pip",
-                "install",
-                "--user",
-                "--update",
-                "-r",
-                requirements_path,
-            ]
-        )
-        print(out)
-    except IndexError:
-        pass
+        exec = [sys.executable, "-m", "pip", "--no-input", "--disable-pip-version-check"]
+        exec += ["install", "--prefix", str(dependencies_path), "--upgrade", "--requirement", requirements_path]
+        out = [
+            "",
+            "{name}::ensure_modules()".format(**bl_info),
+            *subprocess.check_output(exec).decode("utf8").splitlines(),
+            "",
+        ]
+        print("\n".join(out))
+        importlib.invalidate_caches()
+
+    from . import ops, props, ui, handlers
+
+    mods.extend([ops, props, ui, handlers])
+
+
+def import_dependencies(requirements_path: str) -> None:
+    with open(requirements_path) as r:
+        for line in r.readlines():
+            if (m := re.match(r"^\w*", line)) is not None:
+                importlib.import_module(m.group(0))
 
 
 def register() -> None:
